@@ -1,0 +1,797 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>cmdgraph &mdash; cmdgraph  documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" /> 
+
+  
+  <script src="../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> cmdgraph
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../01-installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../02-commands.html">Commands</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../03-records.html">Records</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../04-configuration.html">Configuration management</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../05-api.html">API reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../06-related-packages.html">Related packages</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">cmdgraph</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="index.html">Module code</a> &raquo;</li>
+        
+      <li>cmdgraph</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for cmdgraph</h1><div class="highlight"><pre>
+<span></span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">A small, in-development experiment-logging library designed to take advantage of</span>
+<span class="sd">YAML, JSON-Schema, HDF5-SWMR, and web-based visualization software.</span>
+<span class="sd">&#39;&#39;&#39;</span>
+<span class="kn">from</span> <span class="nn">argparse</span> <span class="k">import</span> <span class="n">ArgumentParser</span><span class="p">,</span> <span class="n">RawDescriptionHelpFormatter</span>
+<span class="kn">import</span> <span class="nn">importlib</span>
+<span class="kn">import</span> <span class="nn">io</span>
+<span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">from</span> <span class="nn">pathlib</span> <span class="k">import</span> <span class="n">Path</span>
+<span class="kn">import</span> <span class="nn">shutil</span>
+<span class="kn">from</span> <span class="nn">textwrap</span> <span class="k">import</span> <span class="n">dedent</span><span class="p">,</span> <span class="n">indent</span>
+<span class="kn">from</span> <span class="nn">time</span> <span class="k">import</span> <span class="n">sleep</span>
+<span class="kn">from</span> <span class="nn">types</span> <span class="k">import</span> <span class="n">SimpleNamespace</span> <span class="k">as</span> <span class="n">Ns</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="k">import</span> <span class="n">GenericMeta</span><span class="p">,</span> <span class="n">List</span>
+
+<span class="kn">import</span> <span class="nn">bottle</span>
+<span class="kn">import</span> <span class="nn">h5py</span> <span class="k">as</span> <span class="nn">h5</span>
+<span class="kn">import</span> <span class="nn">imageio</span>
+<span class="kn">import</span> <span class="nn">jsonschema</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">ruamel</span> <span class="k">import</span> <span class="n">yaml</span>
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s1">&#39;Configurable&#39;</span><span class="p">,</span> <span class="s1">&#39;Namespace&#39;</span><span class="p">,</span> <span class="s1">&#39;resolve&#39;</span><span class="p">,</span> <span class="s1">&#39;identify&#39;</span><span class="p">,</span> <span class="s1">&#39;create&#39;</span><span class="p">,</span> <span class="s1">&#39;describe&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;Command&#39;</span><span class="p">,</span> <span class="s1">&#39;Record&#39;</span><span class="p">,</span> <span class="s1">&#39;cli&#39;</span><span class="p">,</span> <span class="s1">&#39;require&#39;</span><span class="p">,</span> <span class="s1">&#39;serve&#39;</span><span class="p">]</span>
+
+<span class="c1">################################################################################</span>
+<span class="c1"># [Supporting definitions] Namespace &lt;-&gt; dict conversion</span>
+<span class="c1">################################################################################</span>
+
+<span class="k">def</span> <span class="nf">_namespacify</span><span class="p">(</span><span class="n">obj</span><span class="p">):</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">Ns</span><span class="p">(</span><span class="o">**</span><span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">_namespacify</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">obj</span><span class="o">.</span><span class="n">items</span><span class="p">()})</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="n">_namespacify</span><span class="p">,</span> <span class="n">obj</span><span class="p">))</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">obj</span>
+
+<span class="k">def</span> <span class="nf">_dictify</span><span class="p">(</span><span class="n">obj</span><span class="p">):</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">Ns</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">_dictify</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="nb">vars</span><span class="p">(</span><span class="n">obj</span><span class="p">)</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="n">_dictify</span><span class="p">,</span> <span class="n">obj</span><span class="p">))</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">obj</span>
+
+<span class="c1">################################################################################</span>
+<span class="c1"># [Supporting definitions] JSON-Schema generation</span>
+<span class="c1">################################################################################</span>
+
+<span class="k">class</span> <span class="nc">_Undef</span><span class="p">:</span> <span class="k">pass</span>
+<span class="n">_undef</span> <span class="o">=</span> <span class="n">_Undef</span><span class="p">()</span>
+
+<span class="k">def</span> <span class="nf">_parse_prop_desc</span><span class="p">(</span><span class="n">cm</span><span class="p">):</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">cm</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">):</span>
+        <span class="n">type_</span><span class="p">,</span> <span class="n">default</span><span class="p">,</span> <span class="n">doc</span> <span class="o">=</span> <span class="mi">3</span> <span class="o">*</span> <span class="p">[</span><span class="n">_undef</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">cm</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="nb">type</span><span class="p">):</span> <span class="n">type_</span> <span class="o">=</span> <span class="n">e</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span> <span class="n">default</span><span class="p">:</span> <span class="n">e</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span> <span class="n">doc</span> <span class="o">=</span> <span class="n">e</span>
+        <span class="k">return</span> <span class="n">Ns</span><span class="p">(</span><span class="nb">type</span><span class="o">=</span><span class="n">type_</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="n">default</span><span class="p">,</span> <span class="n">doc</span><span class="o">=</span><span class="n">doc</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">_parse_prop_desc</span><span class="p">((</span><span class="n">cm</span><span class="p">,))</span>
+
+<span class="k">def</span> <span class="nf">_to_json_schema</span><span class="p">(</span><span class="n">conf_type</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">is_list_type</span><span class="p">(</span><span class="n">t</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">GenericMeta</span><span class="p">)</span> <span class="ow">and</span> <span class="n">t</span><span class="o">.</span><span class="n">__base__</span> <span class="o">==</span> <span class="n">List</span>
+    <span class="k">def</span> <span class="nf">convert_type</span><span class="p">(</span><span class="n">t</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">t</span> <span class="o">==</span> <span class="nb">bool</span><span class="p">:</span> <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;boolean&#39;</span><span class="p">}</span>
+        <span class="k">elif</span> <span class="n">t</span> <span class="o">==</span> <span class="nb">int</span><span class="p">:</span> <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;integer&#39;</span><span class="p">}</span>
+        <span class="k">elif</span> <span class="n">t</span> <span class="o">==</span> <span class="nb">float</span><span class="p">:</span> <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;number&#39;</span><span class="p">}</span>
+        <span class="k">elif</span> <span class="n">t</span> <span class="o">==</span> <span class="nb">str</span><span class="p">:</span> <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;string&#39;</span><span class="p">}</span>
+        <span class="k">elif</span> <span class="n">is_list_type</span><span class="p">(</span><span class="n">t</span><span class="p">):</span> <span class="k">return</span> <span class="p">{</span>
+            <span class="s1">&#39;items&#39;</span><span class="p">:</span> <span class="n">convert_type</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">__args__</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span>
+            <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;array&#39;</span><span class="p">}</span>
+        <span class="k">else</span><span class="p">:</span> <span class="k">return</span> <span class="p">{}</span>
+    <span class="k">def</span> <span class="nf">convert_default</span><span class="p">(</span><span class="n">d</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">{}</span> <span class="k">if</span> <span class="n">d</span> <span class="ow">is</span> <span class="n">_undef</span> <span class="k">else</span> <span class="p">{</span><span class="s1">&#39;default&#39;</span><span class="p">:</span> <span class="n">_dictify</span><span class="p">(</span><span class="n">d</span><span class="p">)}</span>
+    <span class="k">def</span> <span class="nf">convert_doc</span><span class="p">(</span><span class="n">d</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">{}</span> <span class="k">if</span> <span class="n">d</span> <span class="ow">is</span> <span class="n">_undef</span> <span class="k">else</span> <span class="p">{</span><span class="s1">&#39;description&#39;</span><span class="p">:</span> <span class="n">d</span><span class="p">}</span>
+    <span class="n">prop_descs</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="n">k</span><span class="p">:</span> <span class="n">_parse_prop_desc</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="nb">vars</span><span class="p">(</span><span class="n">conf_type</span><span class="p">)</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">k</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;__&#39;</span><span class="p">)}</span>
+    <span class="k">return</span> <span class="p">{}</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">prop_descs</span><span class="o">.</span><span class="n">items</span><span class="p">())</span> <span class="o">==</span> <span class="mi">0</span> <span class="k">else</span> <span class="p">{</span>
+        <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;object&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;properties&#39;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="n">k</span><span class="p">:</span> <span class="p">{</span><span class="o">**</span><span class="n">convert_type</span><span class="p">(</span><span class="n">v</span><span class="o">.</span><span class="n">type</span><span class="p">),</span>
+                <span class="o">**</span><span class="n">convert_default</span><span class="p">(</span><span class="n">v</span><span class="o">.</span><span class="n">default</span><span class="p">),</span>
+                <span class="o">**</span><span class="n">convert_doc</span><span class="p">(</span><span class="n">v</span><span class="o">.</span><span class="n">doc</span><span class="p">)}</span>
+            <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">prop_descs</span><span class="o">.</span><span class="n">items</span><span class="p">()},</span>
+        <span class="s1">&#39;required&#39;</span><span class="p">:</span> <span class="nb">list</span><span class="p">(</span><span class="n">prop_descs</span><span class="o">.</span><span class="n">keys</span><span class="p">())}</span>
+
+<span class="c1">################################################################################</span>
+<span class="c1"># Serialization/deserialization</span>
+<span class="c1">################################################################################</span>
+
+<span class="n">_namespaces</span> <span class="o">=</span> <span class="p">[]</span>
+
+<div class="viewcode-block" id="Namespace"><a class="viewcode-back" href="../05-api.html#cmdgraph.Namespace">[docs]</a><span class="k">class</span> <span class="nc">Namespace</span><span class="p">(</span><span class="nb">dict</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    A `dict` context that makes its entries available to `resolve` when active.</span>
+
+<span class="sd">    If multiple namespaces are active, the innermost scope (the one entered</span>
+<span class="sd">    most recently) takes precedence.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">def</span> <span class="nf">__enter__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">_namespaces</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__exit__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">_</span><span class="p">):</span>
+        <span class="n">_namespaces</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="resolve"><a class="viewcode-back" href="../05-api.html#cmdgraph.resolve">[docs]</a><span class="k">def</span> <span class="nf">resolve</span><span class="p">(</span><span class="n">sym</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Search the namespace stack and module path for an object.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">for</span> <span class="n">ns</span> <span class="ow">in</span> <span class="nb">reversed</span><span class="p">(</span><span class="n">_namespaces</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">sym</span> <span class="ow">in</span> <span class="n">ns</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">ns</span><span class="p">[</span><span class="n">sym</span><span class="p">]</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">mod_name</span><span class="p">,</span> <span class="n">type_name</span> <span class="o">=</span> <span class="n">sym</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">)</span>
+        <span class="n">mod</span> <span class="o">=</span> <span class="n">importlib</span><span class="o">.</span><span class="n">import_module</span><span class="p">(</span><span class="n">mod_name</span><span class="p">)</span>
+        <span class="k">return</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">mod</span><span class="p">,</span> <span class="n">type_name</span><span class="p">)</span>
+    <span class="k">except</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span>
+            <span class="n">f</span><span class="s1">&#39;&quot;</span><span class="si">{sym}</span><span class="s1">&quot; is not present in the &#39;</span>
+            <span class="s1">&#39;CommandGraph namespace stack.&#39;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="identify"><a class="viewcode-back" href="../05-api.html#cmdgraph.identify">[docs]</a><span class="k">def</span> <span class="nf">identify</span><span class="p">(</span><span class="n">obj</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Search the namespace stack and module path for an object&#39;s name.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">for</span> <span class="n">ns</span> <span class="ow">in</span> <span class="nb">reversed</span><span class="p">(</span><span class="n">_namespaces</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">sym</span><span class="p">,</span> <span class="n">val</span> <span class="ow">in</span> <span class="n">ns</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">val</span> <span class="ow">is</span> <span class="n">obj</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">sym</span>
+    <span class="n">mod_name</span> <span class="o">=</span> <span class="n">obj</span><span class="o">.</span><span class="vm">__module__</span>
+    <span class="n">obj_name</span> <span class="o">=</span> <span class="n">obj</span><span class="o">.</span><span class="vm">__qualname__</span>
+    <span class="k">return</span> <span class="n">f</span><span class="s1">&#39;</span><span class="si">{mod_name}</span><span class="s1">/</span><span class="si">{obj_name}</span><span class="s1">&#39;</span></div>
+
+<div class="viewcode-block" id="create"><a class="viewcode-back" href="../05-api.html#cmdgraph.create">[docs]</a><span class="k">def</span> <span class="nf">create</span><span class="p">(</span><span class="n">spec</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Instantiate a configurable object from a specification.</span>
+
+<span class="sd">    A specification is a namespace with</span>
+
+<span class="sd">      - a `type` field; the innermost `Namespace` symbol corresponding to the</span>
+<span class="sd">        object&#39;s type, or &quot;{module_name}/{type_name}&quot;, if none exist.</span>
+<span class="sd">      - other fields corresponding to object&#39;s configuration properties (to be</span>
+<span class="sd">        passed into the constructor).</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">return</span> <span class="n">resolve</span><span class="p">(</span><span class="n">spec</span><span class="p">[</span><span class="s1">&#39;type&#39;</span><span class="p">])(</span><span class="o">**</span><span class="p">{</span>
+        <span class="n">k</span><span class="p">:</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">spec</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">k</span> <span class="o">!=</span> <span class="s1">&#39;type&#39;</span><span class="p">})</span></div>
+
+<div class="viewcode-block" id="describe"><a class="viewcode-back" href="../05-api.html#cmdgraph.describe">[docs]</a><span class="k">def</span> <span class="nf">describe</span><span class="p">(</span><span class="n">obj</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Generate a specification from a configurable object.</span>
+
+<span class="sd">    A specification is a namespace with</span>
+
+<span class="sd">      - a `type` field; the innermost `Namespace` symbol corresponding to the</span>
+<span class="sd">        object&#39;s type, or &quot;{module_name}/{type_name}&quot;, if none exist.</span>
+<span class="sd">      - other fields corresponding to object&#39;s configuration properties (to be</span>
+<span class="sd">        passed into the constructor).</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">return</span> <span class="n">Ns</span><span class="p">(</span><span class="nb">type</span><span class="o">=</span><span class="n">identify</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">obj</span><span class="p">)),</span> <span class="o">**</span><span class="nb">vars</span><span class="p">(</span><span class="n">obj</span><span class="o">.</span><span class="n">conf</span><span class="p">))</span></div>
+
+<span class="c1">################################################################################</span>
+<span class="c1"># Configurable objects</span>
+<span class="c1">################################################################################</span>
+
+<div class="viewcode-block" id="Configurable"><a class="viewcode-back" href="../05-api.html#cmdgraph.Configurable">[docs]</a><span class="k">class</span> <span class="nc">Configurable</span><span class="p">:</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    An object that can be constructed from JSON-object-like structures.</span>
+
+<span class="sd">    A JSON-object-like structure is a string-keyed `dict` composed of</span>
+<span class="sd">    arbitrarily nested `bool`, `int`, `float`, `str`, `NoneType`, `list`, and</span>
+<span class="sd">    string-keyed `dict` instances.</span>
+
+<span class="sd">    A `Configurable`&#39;s configuration should be passed its the constructor as a</span>
+<span class="sd">    set of keyword arguments.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+<div class="viewcode-block" id="Configurable.Conf"><a class="viewcode-back" href="../05-api.html#cmdgraph.Configurable.Conf">[docs]</a>    <span class="k">class</span> <span class="nc">Conf</span><span class="p">:</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Override this to specify a configuration schema.</span>
+
+<span class="sd">        Members of `Conf` are interpreted in the following way:</span>
+
+<span class="sd">        - The member&#39;s name corresponds to the expected property&#39;s name.</span>
+<span class="sd">        - A `type` value specify the property&#39;s expected type.</span>
+<span class="sd">        - A single-element `list` value specifies the property&#39;s default value.</span>
+<span class="sd">        - A `str` value specifies the property&#39;s docstring.</span>
+<span class="sd">        - A `tuple` value may specify any combination of the above.</span>
+
+<span class="sd">        Examples:</span>
+
+<span class="sd">        .. code-block:: python</span>
+
+<span class="sd">            class Person(cg.Configurable):</span>
+<span class="sd">                class Conf:</span>
+<span class="sd">                    name = str, &#39;a long-winded pointer&#39;</span>
+<span class="sd">                    age = int, [0], &#39;solar rotation count&#39;</span>
+<span class="sd">                    shoe_size = &#39;European standard as of 2018-08-17&#39;</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">pass</span></div>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">conf</span><span class="p">):</span>
+        <span class="k">assert</span> <span class="p">(</span><span class="s1">&#39;type&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">conf</span><span class="p">),</span> <span class="p">(</span>
+            <span class="s1">&#39;&quot;type&quot; can</span><span class="se">\&#39;</span><span class="s1">t be used as a key in configurations&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">conf</span> <span class="o">=</span> <span class="n">_namespacify</span><span class="p">(</span><span class="n">conf</span><span class="p">)</span></div>
+
+<span class="c1">################################################################################</span>
+<span class="c1"># Commands</span>
+<span class="c1">################################################################################</span>
+
+<div class="viewcode-block" id="Command"><a class="viewcode-back" href="../05-api.html#cmdgraph.Command">[docs]</a><span class="k">class</span> <span class="nc">Command</span><span class="p">(</span><span class="n">Configurable</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    An operation that creates a `Record`.</span>
+
+<span class="sd">    To specify the output path, define an `output_path` property or define</span>
+<span class="sd">    `output_path` as a class-level format string to be resolved with the</span>
+<span class="sd">    command configuration.</span>
+
+<span class="sd">    Override `run` to do something useful.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">conf</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">conf</span><span class="p">)</span>
+        <span class="k">if</span> <span class="p">(</span><span class="nb">hasattr</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="s1">&#39;output_path&#39;</span><span class="p">)</span> <span class="ow">and</span>
+            <span class="nb">isinstance</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">output_path</span><span class="p">,</span> <span class="nb">str</span><span class="p">)):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">output_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">output_path</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">conf</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">output</span> <span class="o">=</span> <span class="n">Record</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">output_path</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__del__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">dst</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">output_path</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="s1">&#39;running&#39;</span><span class="p">:</span>
+            <span class="p">(</span><span class="n">dst</span><span class="o">/</span><span class="s1">&#39;_cmd-status.yaml&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="s1">&#39;stopped&#39;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Command.run"><a class="viewcode-back" href="../05-api.html#cmdgraph.Command.run">[docs]</a>    <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="s1">&#39;Override this, writing the output of the command to `cmd.output`.&#39;</span></div>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">status</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="s1">&#39;&quot;running&quot;, &quot;done&quot;, &quot;stopped&quot;, or &quot;unbegun&quot;.&#39;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">dst</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">output_path</span><span class="p">)</span>
+            <span class="n">spec</span> <span class="o">=</span> <span class="n">yaml</span><span class="o">.</span><span class="n">safe_load</span><span class="p">((</span><span class="n">dst</span><span class="o">/</span><span class="s1">&#39;_cmd-spec.yaml&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">read_text</span><span class="p">())</span>
+            <span class="n">status</span> <span class="o">=</span> <span class="n">yaml</span><span class="o">.</span><span class="n">safe_load</span><span class="p">((</span><span class="n">dst</span><span class="o">/</span><span class="s1">&#39;_cmd-status.yaml&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">read_text</span><span class="p">())</span>
+            <span class="k">return</span> <span class="n">status</span> <span class="k">if</span> <span class="n">spec</span> <span class="o">==</span> <span class="n">_dictify</span><span class="p">(</span><span class="n">describe</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span> <span class="k">else</span> <span class="s1">&#39;unbegun&#39;</span>
+        <span class="k">except</span> <span class="ne">FileNotFoundError</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s1">&#39;unbegun&#39;</span>
+
+    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Execute the command.</span>
+
+<span class="sd">        Performs the following operations:</span>
+
+<span class="sd">          - Ensures that the output directory exist **and clears it**.</span>
+<span class="sd">          - Writes the configuration to `{cmd.output_path}/_cmd-spec.yaml`.</span>
+<span class="sd">          - Writes &quot;running&quot; to `{cmd.output_path}/_cmd-status.yaml`.</span>
+<span class="sd">          - Calls `cmd.run`.</span>
+<span class="sd">          - Writes &quot;done&quot; to `{cmd.output_path}/_cmd-status.yaml`.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">dst</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">output_path</span><span class="p">)</span>
+        <span class="n">shutil</span><span class="o">.</span><span class="n">rmtree</span><span class="p">(</span><span class="n">dst</span><span class="p">,</span> <span class="n">ignore_errors</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">dst</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">spec_dict</span> <span class="o">=</span> <span class="n">_dictify</span><span class="p">(</span><span class="n">describe</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>
+        <span class="n">spec_str</span> <span class="o">=</span> <span class="n">yaml</span><span class="o">.</span><span class="n">safe_dump</span><span class="p">(</span><span class="n">spec_dict</span><span class="p">,</span> <span class="n">allow_unicode</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="p">(</span><span class="n">dst</span><span class="o">/</span><span class="s1">&#39;_cmd-spec.yaml&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="n">spec_str</span><span class="p">)</span>
+        <span class="p">(</span><span class="n">dst</span><span class="o">/</span><span class="s1">&#39;_cmd-status.yaml&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="s1">&#39;running&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+        <span class="p">(</span><span class="n">dst</span><span class="o">/</span><span class="s1">&#39;_cmd-status.yaml&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="s1">&#39;done&#39;</span><span class="p">)</span></div>
+
+<span class="c1">################################################################################</span>
+<span class="c1"># Command records</span>
+<span class="c1">################################################################################</span>
+
+<span class="k">class</span> <span class="nc">_HDF5Entry</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">path</span> <span class="o">=</span> <span class="n">path</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dset</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">f</span> <span class="o">=</span> <span class="n">h5</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">libver</span><span class="o">=</span><span class="s1">&#39;latest&#39;</span><span class="p">,</span> <span class="n">swmr</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">f</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">][()]</span>
+
+    <span class="k">def</span> <span class="nf">put</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">val</span><span class="p">):</span>
+        <span class="n">val</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">val</span><span class="p">)</span>
+        <span class="n">f</span> <span class="o">=</span> <span class="n">h5</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="p">,</span> <span class="n">libver</span><span class="o">=</span><span class="s1">&#39;latest&#39;</span><span class="p">)</span>
+        <span class="n">f</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">val</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">append</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">val</span><span class="p">):</span>
+        <span class="n">val</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">val</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dset</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">f</span> <span class="o">=</span> <span class="n">h5</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="p">,</span> <span class="n">libver</span><span class="o">=</span><span class="s1">&#39;latest&#39;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dset</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">require_dataset</span><span class="p">(</span>
+                <span class="n">name</span><span class="o">=</span><span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">maxshape</span><span class="o">=</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="o">*</span><span class="n">val</span><span class="o">.</span><span class="n">shape</span><span class="p">),</span>
+                <span class="n">dtype</span><span class="o">=</span><span class="n">val</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="o">*</span><span class="n">val</span><span class="o">.</span><span class="n">shape</span><span class="p">),</span> <span class="n">val</span><span class="o">.</span><span class="n">dtype</span><span class="p">),</span>
+                <span class="n">chunks</span><span class="o">=</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="mi">2</span><span class="o">**</span><span class="mi">12</span> <span class="o">/</span> <span class="n">val</span><span class="o">.</span><span class="n">size</span><span class="p">)),</span> <span class="o">*</span><span class="n">val</span><span class="o">.</span><span class="n">shape</span><span class="p">))</span>
+            <span class="n">f</span><span class="o">.</span><span class="n">swmr_mode</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dset</span><span class="o">.</span><span class="n">resize</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dset</span><span class="o">.</span><span class="n">len</span><span class="p">()</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dset</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">val</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dset</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+
+<span class="k">class</span> <span class="nc">_ImageEntry</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">path</span> <span class="o">=</span> <span class="n">path</span>
+
+    <span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">imageio</span><span class="o">.</span><span class="n">imread</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">put</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">val</span><span class="p">):</span>
+        <span class="n">imageio</span><span class="o">.</span><span class="n">imwrite</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="p">,</span> <span class="n">val</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">append</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">val</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">get</span><span class="p">(),</span> <span class="n">val</span><span class="p">],</span> <span class="mi">0</span><span class="p">))</span>
+
+<div class="viewcode-block" id="Record"><a class="viewcode-back" href="../05-api.html#cmdgraph.Record">[docs]</a><span class="k">class</span> <span class="nc">Record</span><span class="p">:</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    A record of the execution of a `Command`.</span>
+
+<span class="sd">    A `Record` is an array-friendly view of a directory. It also supports</span>
+<span class="sd">    reading command metadata (stored in &quot;_cmd-spec.yaml&quot; and &quot;_cmd-status.yaml&quot;).</span>
+
+<span class="sd">    TODO: Document this more.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_cache</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="k">def</span> <span class="nf">_get_entry</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
+        <span class="n">entry_types</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s1">&#39;.bmp&#39;</span><span class="p">:</span> <span class="n">_ImageEntry</span><span class="p">,</span>
+            <span class="s1">&#39;.png&#39;</span><span class="p">:</span> <span class="n">_ImageEntry</span><span class="p">,</span>
+            <span class="s1">&#39;.jpg&#39;</span><span class="p">:</span> <span class="n">_ImageEntry</span><span class="p">,</span>
+            <span class="s1">&#39;.jpeg&#39;</span><span class="p">:</span> <span class="n">_ImageEntry</span><span class="p">,</span>
+            <span class="s1">&#39;.h5&#39;</span><span class="p">:</span> <span class="n">_HDF5Entry</span><span class="p">}</span>
+        <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cache</span><span class="p">:</span>
+            <span class="n">type_</span> <span class="o">=</span> <span class="n">entry_types</span><span class="p">[</span><span class="n">Path</span><span class="p">(</span><span class="n">key</span><span class="p">)</span><span class="o">.</span><span class="n">suffix</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_cache</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">type_</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="o">/</span><span class="n">key</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cache</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">_get_record</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cache</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_cache</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">Record</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="o">/</span><span class="n">key</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cache</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">_forget</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_cache</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__iter__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">iterdir</span><span class="p">():</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">p</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;_&#39;</span><span class="p">):</span>
+                <span class="k">yield</span> <span class="n">p</span><span class="o">.</span><span class="n">name</span>
+
+    <span class="k">def</span> <span class="nf">__getitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
+        <span class="k">if</span> <span class="s1">&#39;/&#39;</span> <span class="ow">in</span> <span class="n">key</span><span class="p">:</span>
+            <span class="n">head</span><span class="p">,</span> <span class="o">*</span><span class="n">tail</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">key</span><span class="p">)</span><span class="o">.</span><span class="n">parts</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_record</span><span class="p">(</span><span class="n">head</span><span class="p">)[</span><span class="s1">&#39;/&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">tail</span><span class="p">)]</span>
+        <span class="k">elif</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="o">/</span><span class="n">key</span><span class="p">)</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_entry</span><span class="p">(</span><span class="n">key</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+        <span class="k">elif</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="o">/</span><span class="n">key</span><span class="p">)</span><span class="o">.</span><span class="n">is_dir</span><span class="p">():</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_record</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">__setitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">val</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">val</span><span class="p">,</span> <span class="p">(</span><span class="nb">dict</span><span class="p">,</span> <span class="n">Record</span><span class="p">)):</span>
+            <span class="k">for</span> <span class="n">subkey</span><span class="p">,</span> <span class="n">subval</span> <span class="ow">in</span> <span class="n">val</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="bp">self</span><span class="p">[</span><span class="n">f</span><span class="s1">&#39;</span><span class="si">{key}</span><span class="s1">/</span><span class="si">{subkey}</span><span class="s1">&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">subval</span>
+        <span class="k">elif</span> <span class="s1">&#39;/&#39;</span> <span class="ow">in</span> <span class="n">key</span><span class="p">:</span>
+            <span class="n">head</span><span class="p">,</span> <span class="o">*</span><span class="n">tail</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">key</span><span class="p">)</span><span class="o">.</span><span class="n">parts</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_get_record</span><span class="p">(</span><span class="n">head</span><span class="p">)[</span><span class="s1">&#39;/&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">tail</span><span class="p">)]</span> <span class="o">=</span> <span class="n">val</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_get_entry</span><span class="p">(</span><span class="n">key</span><span class="p">)</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">val</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__delitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
+        <span class="k">if</span> <span class="s1">&#39;/&#39;</span> <span class="ow">in</span> <span class="n">key</span><span class="p">:</span>
+            <span class="n">head</span><span class="p">,</span> <span class="o">*</span><span class="n">tail</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">key</span><span class="p">)</span><span class="o">.</span><span class="n">parts</span>
+            <span class="n">rec</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_record</span><span class="p">(</span><span class="n">head</span><span class="p">)</span>
+            <span class="k">del</span> <span class="n">rec</span><span class="p">[</span><span class="s1">&#39;/&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">tail</span><span class="p">)]</span>
+        <span class="k">elif</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="o">/</span><span class="n">key</span><span class="p">)</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
+            <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="o">/</span><span class="n">key</span><span class="p">)</span><span class="o">.</span><span class="n">unlink</span><span class="p">()</span>
+        <span class="k">elif</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="o">/</span><span class="n">key</span><span class="p">)</span><span class="o">.</span><span class="n">is_dir</span><span class="p">():</span>
+            <span class="n">rec</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_record</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">rec</span><span class="p">:</span> <span class="k">del</span> <span class="n">rec</span><span class="p">[</span><span class="n">k</span><span class="p">]</span>
+            <span class="n">shutil</span><span class="o">.</span><span class="n">rmtree</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="o">/</span><span class="n">key</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_forget</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">([</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">iterdir</span><span class="p">()])</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">rmdir</span><span class="p">()</span>
+
+<div class="viewcode-block" id="Record.append"><a class="viewcode-back" href="../05-api.html#cmdgraph.Record.append">[docs]</a>    <span class="k">def</span> <span class="nf">append</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">val</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">val</span><span class="p">,</span> <span class="p">(</span><span class="nb">dict</span><span class="p">,</span> <span class="n">Record</span><span class="p">)):</span>
+            <span class="k">for</span> <span class="n">subkey</span><span class="p">,</span> <span class="n">subval</span> <span class="ow">in</span> <span class="n">val</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">f</span><span class="s1">&#39;</span><span class="si">{key}</span><span class="s1">/</span><span class="si">{subkey}</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">subval</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="s1">&#39;/&#39;</span> <span class="ow">in</span> <span class="n">key</span><span class="p">:</span>
+            <span class="n">head</span><span class="p">,</span> <span class="o">*</span><span class="n">tail</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">key</span><span class="p">)</span><span class="o">.</span><span class="n">parts</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_get_record</span><span class="p">(</span><span class="n">head</span><span class="p">)</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">tail</span><span class="p">),</span> <span class="n">val</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_get_entry</span><span class="p">(</span><span class="n">key</span><span class="p">)</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">val</span><span class="p">)</span></div>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">cmd_status</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">spec</span> <span class="o">=</span> <span class="n">yaml</span><span class="o">.</span><span class="n">safe_load</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="o">/</span><span class="s1">&#39;_cmd-spec.yaml&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">read_text</span><span class="p">())</span>
+            <span class="n">status</span> <span class="o">=</span> <span class="n">yaml</span><span class="o">.</span><span class="n">safe_load</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="o">/</span><span class="s1">&#39;_cmd-status.yaml&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">read_text</span><span class="p">())</span>
+            <span class="k">return</span> <span class="n">status</span> <span class="k">if</span> <span class="n">spec</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">cmd_spec</span> <span class="k">else</span> <span class="s1">&#39;unbegun&#39;</span>
+        <span class="k">except</span> <span class="ne">FileNotFoundError</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s1">&#39;unbegun&#39;</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">cmd_spec</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">yaml</span><span class="o">.</span><span class="n">safe_load</span><span class="p">(</span>
+                <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="o">/</span><span class="s1">&#39;_cmd-spec.yaml&#39;</span><span class="p">)</span>
+                <span class="o">.</span><span class="n">read_text</span><span class="p">())</span>
+        <span class="k">except</span> <span class="ne">FileNotFoundError</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+
+<div class="viewcode-block" id="Record.keys"><a class="viewcode-back" href="../05-api.html#cmdgraph.Record.keys">[docs]</a>    <span class="k">def</span> <span class="nf">keys</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">yield from</span> <span class="bp">self</span></div>
+
+<div class="viewcode-block" id="Record.values"><a class="viewcode-back" href="../05-api.html#cmdgraph.Record.values">[docs]</a>    <span class="k">def</span> <span class="nf">values</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="k">yield</span> <span class="bp">self</span><span class="p">[</span><span class="n">k</span><span class="p">]</span></div>
+
+<div class="viewcode-block" id="Record.items"><a class="viewcode-back" href="../05-api.html#cmdgraph.Record.items">[docs]</a>    <span class="k">def</span> <span class="nf">items</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">yield from</span> <span class="nb">zip</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">keys</span><span class="p">(),</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">values</span><span class="p">())</span></div>
+
+<div class="viewcode-block" id="Record.flat_keys"><a class="viewcode-back" href="../05-api.html#cmdgraph.Record.flat_keys">[docs]</a>    <span class="k">def</span> <span class="nf">flat_keys</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="s1">&#39;**&#39;</span><span class="p">):</span>
+            <span class="n">p_rel</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">relative_to</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">part</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;_&#39;</span><span class="p">)</span>
+                   <span class="k">for</span> <span class="n">part</span> <span class="ow">in</span> <span class="n">p_rel</span><span class="o">.</span><span class="n">parts</span><span class="p">):</span>
+                <span class="k">yield</span> <span class="nb">str</span><span class="p">(</span><span class="n">p_rel</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Record.flat_values"><a class="viewcode-back" href="../05-api.html#cmdgraph.Record.flat_values">[docs]</a>    <span class="k">def</span> <span class="nf">flat_values</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">flat_keys</span><span class="p">():</span>
+            <span class="k">yield</span> <span class="bp">self</span><span class="p">[</span><span class="n">k</span><span class="p">]</span></div>
+
+<div class="viewcode-block" id="Record.flat_items"><a class="viewcode-back" href="../05-api.html#cmdgraph.Record.flat_items">[docs]</a>    <span class="k">def</span> <span class="nf">flat_items</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">yield from</span> <span class="nb">zip</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">flat_keys</span><span class="p">(),</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">flat_values</span><span class="p">())</span></div></div>
+
+<span class="c1">################################################################################</span>
+<span class="c1"># Command execution</span>
+<span class="c1">################################################################################</span>
+
+<span class="k">def</span> <span class="nf">_known_cmds</span><span class="p">():</span>
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="n">k</span><span class="p">:</span> <span class="n">v</span>
+        <span class="k">for</span> <span class="n">ns</span> <span class="ow">in</span> <span class="n">_namespaces</span>
+        <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">ns</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+        <span class="k">if</span> <span class="nb">issubclass</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">Command</span><span class="p">)}</span>
+
+<span class="k">def</span> <span class="nf">_ind_a</span><span class="p">(</span><span class="n">text</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">indent</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="s1">&#39;  &#39;</span><span class="p">,</span> <span class="k">lambda</span> <span class="n">_</span><span class="p">:</span> <span class="kc">True</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">_ind_b</span><span class="p">(</span><span class="n">text</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">indent</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="s1">&#39;│ &#39;</span><span class="p">,</span> <span class="k">lambda</span> <span class="n">_</span><span class="p">:</span> <span class="kc">True</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">_cmd_desc</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">cmd</span><span class="p">):</span>
+    <span class="n">json_schema</span> <span class="o">=</span> <span class="n">_to_json_schema</span><span class="p">(</span><span class="n">cmd</span><span class="o">.</span><span class="n">Conf</span><span class="p">)</span>
+    <span class="n">schema_str</span> <span class="o">=</span> <span class="n">yaml</span><span class="o">.</span><span class="n">safe_dump</span><span class="p">(</span><span class="n">json_schema</span><span class="p">,</span> <span class="n">allow_unicode</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">conf_desc</span> <span class="o">=</span> <span class="s1">&#39;conf-schema:</span><span class="se">\n</span><span class="s1">&#39;</span> <span class="o">+</span> <span class="n">_ind_b</span><span class="p">(</span><span class="n">schema_str</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">name</span> <span class="o">+</span> <span class="s1">&#39;:</span><span class="se">\n</span><span class="s1">&#39;</span> <span class="o">+</span> <span class="n">_ind_b</span><span class="p">(</span><span class="n">dedent</span><span class="p">(</span><span class="n">cmd</span><span class="o">.</span><span class="vm">__doc__</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span> <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span> <span class="o">+</span> <span class="n">conf_desc</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">_cmd_dict_desc</span><span class="p">():</span>
+    <span class="k">return</span> <span class="s1">&#39;commands:</span><span class="se">\n</span><span class="s1">&#39;</span> <span class="o">+</span> <span class="n">_ind_a</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+        <span class="n">_cmd_desc</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">cmd</span><span class="p">)</span> <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">cmd</span>
+        <span class="ow">in</span> <span class="n">_known_cmds</span><span class="p">()</span><span class="o">.</span><span class="n">items</span><span class="p">()))</span>
+
+<div class="viewcode-block" id="cli"><a class="viewcode-back" href="../05-api.html#cmdgraph.cli">[docs]</a><span class="k">def</span> <span class="nf">cli</span><span class="p">():</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Run a command-line interface.</span>
+
+<span class="sd">    All commands in the current scope (defined by entering `Namespace`</span>
+<span class="sd">    contexts) are available.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">parser</span> <span class="o">=</span> <span class="n">ArgumentParser</span><span class="p">(</span>
+        <span class="n">formatter_class</span><span class="o">=</span><span class="n">RawDescriptionHelpFormatter</span><span class="p">,</span>
+        <span class="n">epilog</span><span class="o">=</span><span class="n">_cmd_dict_desc</span><span class="p">())</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s1">&#39;cmd&#39;</span><span class="p">,</span> <span class="n">metavar</span><span class="o">=</span><span class="s1">&#39;cmd&#39;</span><span class="p">,</span> <span class="n">choices</span><span class="o">=</span><span class="n">_known_cmds</span><span class="p">()</span><span class="o">.</span><span class="n">keys</span><span class="p">(),</span> <span class="n">help</span><span class="o">=</span><span class="p">(</span>
+            <span class="s1">&#39;the command to execute&#39;</span><span class="p">))</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s1">&#39;conf&#39;</span><span class="p">,</span> <span class="n">nargs</span><span class="o">=</span><span class="s1">&#39;?&#39;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="sa">r</span><span class="s1">&#39;</span><span class="si">{}</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="p">(</span>
+            <span class="s1">&#39;the command configuration, in YAML format, or &#39;</span>
+            <span class="s1">&#39;the path to a YAML configuration file&#39;</span><span class="p">))</span>
+    <span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
+    <span class="n">cmd</span> <span class="o">=</span> <span class="n">resolve</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">cmd</span><span class="p">)</span>
+    <span class="n">conf</span> <span class="o">=</span> <span class="n">yaml</span><span class="o">.</span><span class="n">safe_load</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">conf</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">conf</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">conf</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">conf</span> <span class="o">=</span> <span class="n">yaml</span><span class="o">.</span><span class="n">safe_load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+    <span class="n">schema</span> <span class="o">=</span> <span class="n">_to_json_schema</span><span class="p">(</span><span class="n">cmd</span><span class="o">.</span><span class="n">Conf</span><span class="p">)</span>
+    <span class="n">jsonschema</span><span class="o">.</span><span class="n">validate</span><span class="p">(</span><span class="n">conf</span><span class="p">,</span> <span class="n">schema</span><span class="p">)</span>
+    <span class="n">cmd</span><span class="p">(</span><span class="o">**</span><span class="n">conf</span><span class="p">)()</span></div>
+
+<div class="viewcode-block" id="require"><a class="viewcode-back" href="../05-api.html#cmdgraph.require">[docs]</a><span class="k">def</span> <span class="nf">require</span><span class="p">(</span><span class="n">cmd</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Ensure that a command has started and block until it is finished.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">cmd</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span> <span class="n">cmd</span> <span class="o">=</span> <span class="n">create</span><span class="p">(</span><span class="n">cmd</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">cmd</span><span class="o">.</span><span class="n">status</span> <span class="ow">in</span> <span class="p">{</span><span class="s1">&#39;unbegun&#39;</span><span class="p">,</span> <span class="s1">&#39;stopped&#39;</span><span class="p">}:</span> <span class="n">cmd</span><span class="p">()</span>
+    <span class="k">while</span> <span class="n">cmd</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="s1">&#39;running&#39;</span><span class="p">:</span> <span class="n">sleep</span><span class="p">(</span><span class="mf">0.01</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">Record</span><span class="p">(</span><span class="n">cmd</span><span class="o">.</span><span class="n">output_path</span><span class="p">)</span></div>
+
+<span class="c1">################################################################################</span>
+<span class="c1"># Web API</span>
+<span class="c1">################################################################################</span>
+
+<div class="viewcode-block" id="serve"><a class="viewcode-back" href="../05-api.html#cmdgraph.serve">[docs]</a><span class="k">def</span> <span class="nf">serve</span><span class="p">(</span><span class="n">rec_path</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="mi">3000</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Start a server providing access to the records in a directory.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">root</span> <span class="o">=</span> <span class="n">Record</span><span class="p">(</span><span class="n">rec_path</span><span class="p">)</span>
+    <span class="n">app</span> <span class="o">=</span> <span class="n">bottle</span><span class="o">.</span><span class="n">default_app</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">json_res</span><span class="p">(</span><span class="n">obj</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">bottle</span><span class="o">.</span><span class="n">HTTPResponse</span><span class="p">(</span>
+            <span class="n">headers</span><span class="o">=</span><span class="p">{</span>
+                <span class="s1">&#39;Content-Type&#39;</span><span class="p">:</span> <span class="s1">&#39;application/json&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;Access-Control-Allow-Origin&#39;</span><span class="p">:</span> <span class="s1">&#39;*&#39;</span><span class="p">},</span>
+            <span class="n">body</span><span class="o">=</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">obj</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">buffer_res</span><span class="p">(</span><span class="n">obj</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">bottle</span><span class="o">.</span><span class="n">HTTPResponse</span><span class="p">(</span>
+            <span class="n">headers</span><span class="o">=</span><span class="p">{</span>
+                <span class="s1">&#39;Content-Type&#39;</span><span class="p">:</span> <span class="s1">&#39;application/octet-stream&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;Access-Control-Allow-Origin&#39;</span><span class="p">:</span> <span class="s1">&#39;*&#39;</span><span class="p">},</span>
+            <span class="n">body</span><span class="o">=</span><span class="n">io</span><span class="o">.</span><span class="n">BytesIO</span><span class="p">(</span><span class="n">obj</span><span class="p">))</span>
+
+    <span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/&lt;:re:.*&gt;&#39;</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s1">&#39;OPTIONS&#39;</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">_</span><span class="p">(</span><span class="o">*</span><span class="n">_</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">bottle</span><span class="o">.</span><span class="n">HTTPResponse</span><span class="p">(</span><span class="n">headers</span><span class="o">=</span><span class="p">{</span>
+            <span class="s1">&#39;Allow&#39;</span><span class="p">:</span> <span class="s1">&#39;OPTIONS, GET, HEAD&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;Access-Control-Allow-Headers&#39;</span><span class="p">:</span> <span class="s1">&#39;*&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;Access-Control-Allow-Origin&#39;</span><span class="p">:</span> <span class="s1">&#39;*&#39;</span><span class="p">})</span>
+
+    <span class="nd">@app</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;/_entry-names&#39;</span><span class="p">)</span>
+    <span class="nd">@app</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;/&lt;rec_id:path&gt;/_entry-names&#39;</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">_</span><span class="p">(</span><span class="n">rec_id</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">root</span><span class="o">.</span><span class="n">path</span><span class="o">/</span><span class="n">rec_id</span><span class="p">)</span><span class="o">.</span><span class="n">is_dir</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="n">bottle</span><span class="o">.</span><span class="n">HTTPError</span><span class="p">(</span><span class="mi">404</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">json_res</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">root</span><span class="p">[</span><span class="n">rec_id</span><span class="p">]))</span>
+
+    <span class="nd">@app</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;/_cmd-info&#39;</span><span class="p">)</span>
+    <span class="nd">@app</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;/&lt;rec_id:path&gt;/_cmd-info&#39;</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">_</span><span class="p">(</span><span class="n">rec_id</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">root</span><span class="o">.</span><span class="n">path</span><span class="o">/</span><span class="n">rec_id</span><span class="p">)</span><span class="o">.</span><span class="n">is_dir</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="n">bottle</span><span class="o">.</span><span class="n">HTTPError</span><span class="p">(</span><span class="mi">404</span><span class="p">)</span>
+        <span class="n">spec</span> <span class="o">=</span> <span class="n">root</span><span class="p">[</span><span class="n">rec_id</span><span class="p">]</span><span class="o">.</span><span class="n">cmd_spec</span>
+        <span class="n">status</span> <span class="o">=</span> <span class="n">root</span><span class="p">[</span><span class="n">rec_id</span><span class="p">]</span><span class="o">.</span><span class="n">cmd_status</span>
+        <span class="k">return</span> <span class="n">json_res</span><span class="p">(</span>
+            <span class="kc">None</span> <span class="k">if</span> <span class="n">spec</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span>
+            <span class="p">{</span><span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="n">spec</span><span class="p">[</span><span class="s1">&#39;type&#39;</span><span class="p">],</span>
+             <span class="s1">&#39;desc&#39;</span><span class="p">:</span> <span class="n">dedent</span><span class="p">(</span><span class="n">create</span><span class="p">(</span><span class="n">spec</span><span class="p">)</span><span class="o">.</span><span class="vm">__doc__</span><span class="p">[</span><span class="mi">1</span><span class="p">:]),</span>
+             <span class="s1">&#39;conf&#39;</span><span class="p">:</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">spec</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">k</span> <span class="o">!=</span> <span class="s1">&#39;type&#39;</span><span class="p">},</span>
+             <span class="s1">&#39;status&#39;</span><span class="p">:</span> <span class="n">status</span><span class="p">})</span>
+
+    <span class="nd">@app</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;/&lt;ent_id:path&gt;&#39;</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">_</span><span class="p">(</span><span class="n">ent_id</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">root</span><span class="o">.</span><span class="n">path</span><span class="o">/</span><span class="n">ent_id</span><span class="p">)</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="n">bottle</span><span class="o">.</span><span class="n">HTTPError</span><span class="p">(</span><span class="mi">404</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">bottle</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">query</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;mode&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="o">==</span> <span class="s1">&#39;file&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">bottle</span><span class="o">.</span><span class="n">static_file</span><span class="p">(</span><span class="n">ent_id</span><span class="p">,</span> <span class="n">root</span><span class="o">=</span><span class="n">root</span><span class="o">.</span><span class="n">path</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">dtypes</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s1">&#39;uint8&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;uint16&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;uint32&#39;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span>
+                <span class="s1">&#39;int8&#39;</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span> <span class="s1">&#39;int16&#39;</span><span class="p">:</span> <span class="mi">4</span><span class="p">,</span> <span class="s1">&#39;int32&#39;</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span>
+                <span class="s1">&#39;float32&#39;</span><span class="p">:</span> <span class="mi">6</span><span class="p">,</span> <span class="s1">&#39;float64&#39;</span><span class="p">:</span> <span class="mi">7</span><span class="p">}</span>
+            <span class="n">ent</span> <span class="o">=</span> <span class="n">root</span><span class="p">[</span><span class="n">ent_id</span><span class="p">]</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="nb">bytearray</span><span class="p">(</span><span class="n">ent</span><span class="o">.</span><span class="n">nbytes</span> <span class="o">+</span> <span class="mi">40</span><span class="p">)</span>
+            <span class="n">msg</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">4</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">uint32</span><span class="p">(</span><span class="n">dtypes</span><span class="p">[</span><span class="n">ent</span><span class="o">.</span><span class="n">dtype</span><span class="o">.</span><span class="n">name</span><span class="p">])</span><span class="o">.</span><span class="n">data</span>
+            <span class="n">msg</span><span class="p">[</span><span class="mi">4</span><span class="p">:</span><span class="mi">8</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">uint32</span><span class="p">(</span><span class="n">ent</span><span class="o">.</span><span class="n">ndim</span><span class="p">)</span><span class="o">.</span><span class="n">data</span>
+            <span class="n">msg</span><span class="p">[</span><span class="mi">8</span><span class="p">:</span><span class="mi">8</span><span class="o">+</span><span class="mi">4</span><span class="o">*</span><span class="nb">len</span><span class="p">(</span><span class="n">ent</span><span class="o">.</span><span class="n">shape</span><span class="p">)]</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="n">np</span><span class="o">.</span><span class="n">uint32</span><span class="p">(</span><span class="n">ent</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+            <span class="n">msg</span><span class="p">[</span><span class="mi">40</span><span class="p">:]</span> <span class="o">=</span> <span class="n">ent</span><span class="o">.</span><span class="n">data</span>
+            <span class="k">return</span> <span class="n">buffer_res</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+    <span class="n">app</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">host</span><span class="o">=</span><span class="s1">&#39;localhost&#39;</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="n">port</span><span class="p">)</span></div>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2018, Mason McGill.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../',
+            VERSION:'',
+            LANGUAGE:'en',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="../_static/jquery.js"></script>
+      <script type="text/javascript" src="../_static/underscore.js"></script>
+      <script type="text/javascript" src="../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

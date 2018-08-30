@@ -1,0 +1,271 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>CommandGraph &mdash; cmdgraph  documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Installation" href="01-installation.html" /> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="#" class="icon icon-home"> cmdgraph
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="01-installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="02-commands.html">Commands</a></li>
+<li class="toctree-l1"><a class="reference internal" href="03-records.html">Records</a></li>
+<li class="toctree-l1"><a class="reference internal" href="04-configuration.html">Configuration management</a></li>
+<li class="toctree-l1"><a class="reference internal" href="05-api.html">API reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="06-related-packages.html">Related packages</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="#">cmdgraph</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="#">Docs</a> &raquo;</li>
+        
+      <li>CommandGraph</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/index.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="commandgraph">
+<h1>CommandGraph<a class="headerlink" href="#commandgraph" title="Permalink to this headline">¶</a></h1>
+<p>CommandGraph is a small set of complimentary tools for exploratory computational research. It provides functionality to simplify the following tasks:</p>
+<ul class="simple">
+<li>Routing, validating, and storing command configurations</li>
+<li>Keeping track of command states and executing command dependencies when necessary</li>
+<li>Storing and accessing command outputs</li>
+<li>Generating command-line and web-based user interfaces</li>
+</ul>
+<div class="section" id="design">
+<h2>Design<a class="headerlink" href="#design" title="Permalink to this headline">¶</a></h2>
+<p>CommandGraph attempts to provide a minimal, coherent interface based on standard, cross-language technologies, including</p>
+<ul class="simple">
+<li><a class="reference external" href="http://yaml.org/">YAML</a>/<a class="reference external" href="https://www.json.org/">JSON</a> for configuration authoring</li>
+<li><a class="reference external" href="http://json-schema.org/">JSON-Schema</a> for configuration validation</li>
+<li><a class="reference external" href="http://docs.h5py.org/en/latest/swmr.html">HDF5-SWMR</a> for concurrency-safe array serialization, and</li>
+<li><a class="reference external" href="https://en.wikipedia.org/wiki/Representational_state_transfer">REST/HTTP</a> for exploring command outputs.</li>
+</ul>
+<p>It should take a few minutes to learn and a few days to rewrite in your favorite programming language.</p>
+</div>
+<div class="section" id="table-of-contents">
+<h2>Table of contents<a class="headerlink" href="#table-of-contents" title="Permalink to this headline">¶</a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="01-installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="02-commands.html">Commands</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="02-commands.html#defining-commands">Defining commands</a></li>
+<li class="toctree-l2"><a class="reference internal" href="02-commands.html#accessing-command-metadata">Accessing command metadata</a></li>
+<li class="toctree-l2"><a class="reference internal" href="02-commands.html#executing-commands">Executing commands</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="03-records.html">Records</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="03-records.html#obtaining-a-record">Obtaining a record</a></li>
+<li class="toctree-l2"><a class="reference internal" href="03-records.html#reading-entries">Reading entries</a></li>
+<li class="toctree-l2"><a class="reference internal" href="03-records.html#writing-entries">Writing entries</a></li>
+<li class="toctree-l2"><a class="reference internal" href="03-records.html#appending-to-entries">Appending to entries</a></li>
+<li class="toctree-l2"><a class="reference internal" href="03-records.html#deleting-entries">Deleting entries</a></li>
+<li class="toctree-l2"><a class="reference internal" href="03-records.html#accessing-command-metadata">Accessing command metadata</a></li>
+<li class="toctree-l2"><a class="reference internal" href="03-records.html#running-a-data-server">Running a data server</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="04-configuration.html">Configuration management</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="04-configuration.html#configurable-object-properties">Configurable object properties</a></li>
+<li class="toctree-l2"><a class="reference internal" href="04-configuration.html#creating-objects-from-specifications">Creating objects from specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="04-configuration.html#defining-namespaces">Defining namespaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="04-configuration.html#defining-schemas">Defining schemas</a></li>
+<li class="toctree-l2"><a class="reference internal" href="04-configuration.html#generating-a-command-line-interface">Generating a command-line interface</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="05-api.html">API reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="06-related-packages.html">Related packages</a></li>
+</ul>
+</div>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="01-installation.html" class="btn btn-neutral float-right" title="Installation" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2018, Mason McGill.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'',
+            LANGUAGE:'en',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  <script type="text/javascript" src="_static/js/theme.js"></script>
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

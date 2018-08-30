@@ -1,2 +1,2 @@
-doc/_build/
-doc/.doctrees/
+doc-src/.doctrees/
+dist/

@@ -1,0 +1,462 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>API reference &mdash; cmdgraph  documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Related packages" href="06-related-packages.html" />
+    <link rel="prev" title="Configuration management" href="04-configuration.html" /> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="index.html" class="icon icon-home"> cmdgraph
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="01-installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="02-commands.html">Commands</a></li>
+<li class="toctree-l1"><a class="reference internal" href="03-records.html">Records</a></li>
+<li class="toctree-l1"><a class="reference internal" href="04-configuration.html">Configuration management</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">API reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="06-related-packages.html">Related packages</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">cmdgraph</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+      <li>API reference</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/05-api.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="api-reference">
+<h1>API reference<a class="headerlink" href="#api-reference" title="Permalink to this headline">¶</a></h1>
+<p>Configuration management:</p>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><a class="reference internal" href="#cmdgraph.Configurable" title="cmdgraph.Configurable"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Configurable</span></code></a>(**conf)</td>
+<td>An object that can be constructed from JSON-object-like structures.</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#cmdgraph.Namespace" title="cmdgraph.Namespace"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Namespace</span></code></a></td>
+<td>A <code class="xref py py-obj docutils literal notranslate"><span class="pre">dict</span></code> context that makes its entries available to <a class="reference internal" href="#cmdgraph.resolve" title="cmdgraph.resolve"><code class="xref py py-obj docutils literal notranslate"><span class="pre">resolve</span></code></a> when active.</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#cmdgraph.create" title="cmdgraph.create"><code class="xref py py-obj docutils literal notranslate"><span class="pre">create</span></code></a>(spec)</td>
+<td>Instantiate a configurable object from a specification.</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#cmdgraph.describe" title="cmdgraph.describe"><code class="xref py py-obj docutils literal notranslate"><span class="pre">describe</span></code></a>(obj)</td>
+<td>Generate a specification from a configurable object.</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#cmdgraph.identify" title="cmdgraph.identify"><code class="xref py py-obj docutils literal notranslate"><span class="pre">identify</span></code></a>(obj)</td>
+<td>Search the namespace stack and module path for an object’s name.</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#cmdgraph.resolve" title="cmdgraph.resolve"><code class="xref py py-obj docutils literal notranslate"><span class="pre">resolve</span></code></a>(sym)</td>
+<td>Search the namespace stack and module path for an object.</td>
+</tr>
+</tbody>
+</table>
+<p>Commands and records:</p>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><a class="reference internal" href="#cmdgraph.Command" title="cmdgraph.Command"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Command</span></code></a>(**conf)</td>
+<td>An operation that creates a <a class="reference internal" href="#cmdgraph.Record" title="cmdgraph.Record"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Record</span></code></a>.</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#cmdgraph.Record" title="cmdgraph.Record"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Record</span></code></a>(path)</td>
+<td>A record of the execution of a <a class="reference internal" href="#cmdgraph.Command" title="cmdgraph.Command"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Command</span></code></a>.</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#cmdgraph.require" title="cmdgraph.require"><code class="xref py py-obj docutils literal notranslate"><span class="pre">require</span></code></a>(cmd)</td>
+<td>Ensure that a command has started and block until it is finished.</td>
+</tr>
+</tbody>
+</table>
+<p>User interfaces:</p>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><a class="reference internal" href="#cmdgraph.cli" title="cmdgraph.cli"><code class="xref py py-obj docutils literal notranslate"><span class="pre">cli</span></code></a>()</td>
+<td>Run a command-line interface.</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#cmdgraph.serve" title="cmdgraph.serve"><code class="xref py py-obj docutils literal notranslate"><span class="pre">serve</span></code></a>(rec_path[,&nbsp;port])</td>
+<td>Start a server providing access to the records in a directory.</td>
+</tr>
+</tbody>
+</table>
+<hr class="docutils" />
+<dl class="class">
+<dt id="cmdgraph.Configurable">
+<em class="property">class </em><code class="descname">Configurable</code><span class="sig-paren">(</span><em>**conf</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cmdgraph.html#Configurable"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cmdgraph.Configurable" title="Permalink to this definition">¶</a></dt>
+<dd><p>An object that can be constructed from JSON-object-like structures.</p>
+<p>A JSON-object-like structure is a string-keyed <code class="xref py py-obj docutils literal notranslate"><span class="pre">dict</span></code> composed of
+arbitrarily nested <code class="xref py py-obj docutils literal notranslate"><span class="pre">bool</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">str</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">NoneType</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">list</span></code>, and
+string-keyed <code class="xref py py-obj docutils literal notranslate"><span class="pre">dict</span></code> instances.</p>
+<p>A <a class="reference internal" href="#cmdgraph.Configurable" title="cmdgraph.Configurable"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Configurable</span></code></a>’s configuration should be passed its the constructor as a
+set of keyword arguments.</p>
+<dl class="class">
+<dt id="cmdgraph.Configurable.Conf">
+<em class="property">class </em><code class="descname">Conf</code><a class="reference internal" href="_modules/cmdgraph.html#Configurable.Conf"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cmdgraph.Configurable.Conf" title="Permalink to this definition">¶</a></dt>
+<dd><p>Override this to specify a configuration schema.</p>
+<p>Members of <code class="xref py py-obj docutils literal notranslate"><span class="pre">Conf</span></code> are interpreted in the following way:</p>
+<ul class="simple">
+<li>The member’s name corresponds to the expected property’s name.</li>
+<li>A <code class="xref py py-obj docutils literal notranslate"><span class="pre">type</span></code> value specify the property’s expected type.</li>
+<li>A single-element <code class="xref py py-obj docutils literal notranslate"><span class="pre">list</span></code> value specifies the property’s default value.</li>
+<li>A <code class="xref py py-obj docutils literal notranslate"><span class="pre">str</span></code> value specifies the property’s docstring.</li>
+<li>A <code class="xref py py-obj docutils literal notranslate"><span class="pre">tuple</span></code> value may specify any combination of the above.</li>
+</ul>
+<p>Examples:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">Person</span><span class="p">(</span><span class="n">cg</span><span class="o">.</span><span class="n">Configurable</span><span class="p">):</span>
+    <span class="k">class</span> <span class="nc">Conf</span><span class="p">:</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="nb">str</span><span class="p">,</span> <span class="s1">&#39;a long-winded pointer&#39;</span>
+        <span class="n">age</span> <span class="o">=</span> <span class="nb">int</span><span class="p">,</span> <span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="s1">&#39;solar rotation count&#39;</span>
+        <span class="n">shoe_size</span> <span class="o">=</span> <span class="s1">&#39;European standard as of 2018-08-17&#39;</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="cmdgraph.Namespace">
+<em class="property">class </em><code class="descname">Namespace</code><a class="reference internal" href="_modules/cmdgraph.html#Namespace"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cmdgraph.Namespace" title="Permalink to this definition">¶</a></dt>
+<dd><p>A <code class="xref py py-obj docutils literal notranslate"><span class="pre">dict</span></code> context that makes its entries available to <a class="reference internal" href="#cmdgraph.resolve" title="cmdgraph.resolve"><code class="xref py py-obj docutils literal notranslate"><span class="pre">resolve</span></code></a> when active.</p>
+<p>If multiple namespaces are active, the innermost scope (the one entered
+most recently) takes precedence.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="cmdgraph.create">
+<code class="descname">create</code><span class="sig-paren">(</span><em>spec</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cmdgraph.html#create"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cmdgraph.create" title="Permalink to this definition">¶</a></dt>
+<dd><p>Instantiate a configurable object from a specification.</p>
+<p>A specification is a namespace with</p>
+<blockquote>
+<div><ul class="simple">
+<li>a <code class="xref py py-obj docutils literal notranslate"><span class="pre">type</span></code> field; the innermost <a class="reference internal" href="#cmdgraph.Namespace" title="cmdgraph.Namespace"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Namespace</span></code></a> symbol corresponding to the
+object’s type, or “{module_name}/{type_name}”, if none exist.</li>
+<li>other fields corresponding to object’s configuration properties (to be
+passed into the constructor).</li>
+</ul>
+</div></blockquote>
+</dd></dl>
+
+<dl class="function">
+<dt id="cmdgraph.describe">
+<code class="descname">describe</code><span class="sig-paren">(</span><em>obj</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cmdgraph.html#describe"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cmdgraph.describe" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate a specification from a configurable object.</p>
+<p>A specification is a namespace with</p>
+<blockquote>
+<div><ul class="simple">
+<li>a <code class="xref py py-obj docutils literal notranslate"><span class="pre">type</span></code> field; the innermost <a class="reference internal" href="#cmdgraph.Namespace" title="cmdgraph.Namespace"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Namespace</span></code></a> symbol corresponding to the
+object’s type, or “{module_name}/{type_name}”, if none exist.</li>
+<li>other fields corresponding to object’s configuration properties (to be
+passed into the constructor).</li>
+</ul>
+</div></blockquote>
+</dd></dl>
+
+<dl class="function">
+<dt id="cmdgraph.identify">
+<code class="descname">identify</code><span class="sig-paren">(</span><em>obj</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cmdgraph.html#identify"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cmdgraph.identify" title="Permalink to this definition">¶</a></dt>
+<dd><p>Search the namespace stack and module path for an object’s name.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="cmdgraph.resolve">
+<code class="descname">resolve</code><span class="sig-paren">(</span><em>sym</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cmdgraph.html#resolve"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cmdgraph.resolve" title="Permalink to this definition">¶</a></dt>
+<dd><p>Search the namespace stack and module path for an object.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="cmdgraph.Record">
+<em class="property">class </em><code class="descname">Record</code><span class="sig-paren">(</span><em>path</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cmdgraph.html#Record"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cmdgraph.Record" title="Permalink to this definition">¶</a></dt>
+<dd><p>A record of the execution of a <a class="reference internal" href="#cmdgraph.Command" title="cmdgraph.Command"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Command</span></code></a>.</p>
+<p>A <a class="reference internal" href="#cmdgraph.Record" title="cmdgraph.Record"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Record</span></code></a> is an array-friendly view of a directory. It also supports
+reading command metadata (stored in “_cmd-spec.yaml” and “_cmd-status.yaml”).</p>
+<p>TODO: Document this more.</p>
+<dl class="method">
+<dt id="cmdgraph.Record.append">
+<code class="descname">append</code><span class="sig-paren">(</span><em>key</em>, <em>val</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cmdgraph.html#Record.append"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cmdgraph.Record.append" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="cmdgraph.Record.cmd_status">
+<code class="descname">cmd_status</code><a class="headerlink" href="#cmdgraph.Record.cmd_status" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="cmdgraph.Record.cmd_spec">
+<code class="descname">cmd_spec</code><a class="headerlink" href="#cmdgraph.Record.cmd_spec" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="cmdgraph.Record.keys">
+<code class="descname">keys</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/cmdgraph.html#Record.keys"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cmdgraph.Record.keys" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="cmdgraph.Record.values">
+<code class="descname">values</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/cmdgraph.html#Record.values"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cmdgraph.Record.values" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="cmdgraph.Record.items">
+<code class="descname">items</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/cmdgraph.html#Record.items"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cmdgraph.Record.items" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="cmdgraph.Record.flat_keys">
+<code class="descname">flat_keys</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/cmdgraph.html#Record.flat_keys"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cmdgraph.Record.flat_keys" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="cmdgraph.Record.flat_values">
+<code class="descname">flat_values</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/cmdgraph.html#Record.flat_values"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cmdgraph.Record.flat_values" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="cmdgraph.Record.flat_items">
+<code class="descname">flat_items</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/cmdgraph.html#Record.flat_items"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cmdgraph.Record.flat_items" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="cmdgraph.Command">
+<em class="property">class </em><code class="descname">Command</code><span class="sig-paren">(</span><em>**conf</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cmdgraph.html#Command"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cmdgraph.Command" title="Permalink to this definition">¶</a></dt>
+<dd><p>An operation that creates a <a class="reference internal" href="#cmdgraph.Record" title="cmdgraph.Record"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Record</span></code></a>.</p>
+<p>To specify the output path, define an <code class="xref py py-obj docutils literal notranslate"><span class="pre">output_path</span></code> property or define
+<code class="xref py py-obj docutils literal notranslate"><span class="pre">output_path</span></code> as a class-level format string to be resolved with the
+command configuration.</p>
+<p>Override <a class="reference internal" href="#cmdgraph.Command.run" title="cmdgraph.Command.run"><code class="xref py py-obj docutils literal notranslate"><span class="pre">run</span></code></a> to do something useful.</p>
+<dl class="method">
+<dt id="cmdgraph.Command.run">
+<code class="descname">run</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/cmdgraph.html#Command.run"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cmdgraph.Command.run" title="Permalink to this definition">¶</a></dt>
+<dd><p>Override this, writing the output of the command to <code class="xref py py-obj docutils literal notranslate"><span class="pre">cmd.output</span></code>.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cmdgraph.Command.status">
+<code class="descname">status</code><a class="headerlink" href="#cmdgraph.Command.status" title="Permalink to this definition">¶</a></dt>
+<dd><p>“running”, “done”, “stopped”, or “unbegun”.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="cmdgraph.require">
+<code class="descname">require</code><span class="sig-paren">(</span><em>cmd</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cmdgraph.html#require"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cmdgraph.require" title="Permalink to this definition">¶</a></dt>
+<dd><p>Ensure that a command has started and block until it is finished.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="cmdgraph.cli">
+<code class="descname">cli</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/cmdgraph.html#cli"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cmdgraph.cli" title="Permalink to this definition">¶</a></dt>
+<dd><p>Run a command-line interface.</p>
+<p>All commands in the current scope (defined by entering <a class="reference internal" href="#cmdgraph.Namespace" title="cmdgraph.Namespace"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Namespace</span></code></a>
+contexts) are available.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="cmdgraph.serve">
+<code class="descname">serve</code><span class="sig-paren">(</span><em>rec_path</em>, <em>port=3000</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cmdgraph.html#serve"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cmdgraph.serve" title="Permalink to this definition">¶</a></dt>
+<dd><p>Start a server providing access to the records in a directory.</p>
+</dd></dl>
+
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="06-related-packages.html" class="btn btn-neutral float-right" title="Related packages" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="04-configuration.html" class="btn btn-neutral" title="Configuration management" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2018, Mason McGill.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'',
+            LANGUAGE:'en',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  <script type="text/javascript" src="_static/js/theme.js"></script>
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

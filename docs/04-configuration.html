@@ -1,0 +1,309 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Configuration management &mdash; cmdgraph  documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="API reference" href="05-api.html" />
+    <link rel="prev" title="Records" href="03-records.html" /> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="index.html" class="icon icon-home"> cmdgraph
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="01-installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="02-commands.html">Commands</a></li>
+<li class="toctree-l1"><a class="reference internal" href="03-records.html">Records</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Configuration management</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#configurable-object-properties">Configurable object properties</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#creating-objects-from-specifications">Creating objects from specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#defining-namespaces">Defining namespaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#defining-schemas">Defining schemas</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#generating-a-command-line-interface">Generating a command-line interface</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="05-api.html">API reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="06-related-packages.html">Related packages</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">cmdgraph</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+      <li>Configuration management</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/04-configuration.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="configuration-management">
+<h1>Configuration management<a class="headerlink" href="#configuration-management" title="Permalink to this headline">¶</a></h1>
+<p>CommandGraph <code class="docutils literal notranslate"><span class="pre">Command</span></code>s are <code class="docutils literal notranslate"><span class="pre">Configurable</span></code> objects, which means they can be constructed from JSON-like objects and support configuration schema specification (to document and validate configuration fields).</p>
+<p>Non-command configurable objects can be defined as well, which can be useful when components are shared between multiple commands:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">Muppet</span><span class="p">(</span><span class="n">cg</span><span class="o">.</span><span class="n">Configurable</span><span class="p">):</span>
+  <span class="o">...</span>
+
+<span class="n">kermit</span> <span class="o">=</span> <span class="n">Muppet</span><span class="p">(</span><span class="n">color</span><span class="o">=</span><span class="s1">&#39;green&#39;</span><span class="p">,</span> <span class="n">has_it_easy</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="section" id="configurable-object-properties">
+<h2>Configurable object properties<a class="headerlink" href="#configurable-object-properties" title="Permalink to this headline">¶</a></h2>
+<p>An object’s configuration can be accessed via <code class="docutils literal notranslate"><span class="pre">obj.conf</span></code>. <code class="docutils literal notranslate"><span class="pre">obj.spec</span></code> provides its specification: its configuration augmented with a field indicating its type.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">kermit</span><span class="o">.</span><span class="n">conf</span> <span class="c1"># =&gt; Namespace(color=&#39;green&#39;, has_it_easy=False)</span>
+<span class="n">kermit</span><span class="o">.</span><span class="n">spec</span> <span class="c1"># =&gt; Namespace(color=&#39;green&#39;, has_it_easy=False, type=&#39;__main__/Muppet&#39;)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="creating-objects-from-specifications">
+<h2>Creating objects from specifications<a class="headerlink" href="#creating-objects-from-specifications" title="Permalink to this headline">¶</a></h2>
+<p>Objects can be instantiated from specifications using the <code class="docutils literal notranslate"><span class="pre">create</span></code> function. This can be helpful when instantiating configurable objects within commands.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">PutOnAShow</span><span class="p">(</span><span class="n">cg</span><span class="o">.</span><span class="n">Command</span><span class="p">):</span>
+  <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="n">muppet</span> <span class="o">=</span> <span class="n">cg</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">conf</span><span class="o">.</span><span class="n">muppet</span><span class="p">)</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">muppet</span><span class="o">.</span><span class="n">tell_a_joke</span><span class="p">())</span>
+
+<span class="n">PutOnAShow</span><span class="p">(</span><span class="n">muppet</span><span class="o">=</span><span class="n">load_muppet_spec</span><span class="p">())()</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="defining-namespaces">
+<h2>Defining namespaces<a class="headerlink" href="#defining-namespaces" title="Permalink to this headline">¶</a></h2>
+<p>By default, the <code class="xref py py-obj docutils literal notranslate"><span class="pre">type</span></code> field in an object’s specification is derived from it’s type’s name and module path, which may be volatile over the course of a project’s development. This limits the usefulness of stored specifications.</p>
+<p>Entering a <code class="docutils literal notranslate"><span class="pre">Namespace</span></code> can override this default behavior with more stable (and often more readable) bindings:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">cg</span><span class="o">.</span><span class="n">Namespace</span><span class="p">({</span><span class="s1">&#39;Muppet&#39;</span><span class="p">:</span> <span class="n">a</span><span class="o">.</span><span class="n">b</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">Something</span><span class="p">}):</span>
+  <span class="n">a</span><span class="o">.</span><span class="n">b</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">Something</span><span class="p">()</span><span class="o">.</span><span class="n">spec</span> <span class="c1"># =&gt; Namespace(type=&#39;Muppet&#39;)</span>
+</pre></div>
+</div>
+<div class="admonition-todo admonition" id="index-0">
+<p class="first admonition-title">Todo</p>
+<p class="last">Fix the “conflicting meanings of namespace” issue. Maybe <code class="xref py py-obj docutils literal notranslate"><span class="pre">types.SimpleNamespace</span></code> should be dropped in favor of <code class="xref py py-obj docutils literal notranslate"><span class="pre">dict</span></code>s? Maybe <code class="xref py py-obj docutils literal notranslate"><span class="pre">cg.Namespace</span></code> should be called <code class="xref py py-obj docutils literal notranslate"><span class="pre">cg.Scope</span></code>?</p>
+</div>
+</div>
+<div class="section" id="defining-schemas">
+<h2>Defining schemas<a class="headerlink" href="#defining-schemas" title="Permalink to this headline">¶</a></h2>
+<p>Override a configurable type’s <code class="docutils literal notranslate"><span class="pre">Conf</span></code> class to specify a configuration schema.</p>
+<p>Members of <code class="xref py py-obj docutils literal notranslate"><span class="pre">Conf</span></code> are interpreted in the following way:</p>
+<ul class="simple">
+<li>The member’s name corresponds to the expected property’s name.</li>
+<li>A <code class="xref py py-obj docutils literal notranslate"><span class="pre">type</span></code> value specify the property’s expected type.</li>
+<li>A single-element <code class="xref py py-obj docutils literal notranslate"><span class="pre">list</span></code> value specifies the property’s default value.</li>
+<li>A <code class="xref py py-obj docutils literal notranslate"><span class="pre">str</span></code> value specifies the property’s docstring.</li>
+<li>A <code class="xref py py-obj docutils literal notranslate"><span class="pre">tuple</span></code> value may specify any combination of the above.</li>
+</ul>
+<p>Example:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">Person</span><span class="p">(</span><span class="n">cg</span><span class="o">.</span><span class="n">Configurable</span><span class="p">):</span>
+  <span class="k">class</span> <span class="nc">Conf</span><span class="p">:</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="nb">str</span><span class="p">,</span> <span class="s1">&#39;a long-winded pointer&#39;</span>
+    <span class="n">age</span> <span class="o">=</span> <span class="nb">int</span><span class="p">,</span> <span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="s1">&#39;solar rotation count&#39;</span>
+    <span class="n">shoe_size</span> <span class="o">=</span> <span class="s1">&#39;European standard as of 2018-08-17&#39;</span>
+</pre></div>
+</div>
+<p>Defining configuration schemas is completely optional, but it enables configuration validation and provides nice documentation, both in the code, and in CommandGraph-generated web and command-line interfaces.</p>
+<div class="admonition-todo admonition" id="index-1">
+<p class="first admonition-title">Todo</p>
+<p class="last">Make config schemas available as JSON-like objects.</p>
+</div>
+<div class="admonition-todo admonition" id="index-2">
+<p class="first admonition-title">Todo</p>
+<p class="last">Expose schemas in the web interface.</p>
+</div>
+</div>
+<div class="section" id="generating-a-command-line-interface">
+<h2>Generating a command-line interface<a class="headerlink" href="#generating-a-command-line-interface" title="Permalink to this headline">¶</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">cli</span></code> generates a command-line interface exposing every function in the current namespace stack.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Generates the branching interface</span>
+<span class="c1">#   `&lt;this-file&gt; {a|b} [&lt;conf&gt;]`.</span>
+<span class="k">with</span> <span class="n">cg</span><span class="o">.</span><span class="n">Namespace</span><span class="p">({</span><span class="s1">&#39;a&#39;</span><span class="p">:</span> <span class="n">DoA</span><span class="p">,</span> <span class="s1">&#39;b&#39;</span><span class="p">:</span> <span class="n">DoB</span><span class="p">}):</span>
+  <span class="n">cg</span><span class="o">.</span><span class="n">cli</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="05-api.html" class="btn btn-neutral float-right" title="API reference" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="03-records.html" class="btn btn-neutral" title="Records" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2018, Mason McGill.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'',
+            LANGUAGE:'en',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  <script type="text/javascript" src="_static/js/theme.js"></script>
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
