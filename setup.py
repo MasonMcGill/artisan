@@ -4,7 +4,7 @@ from setuptools import setup
 short_desc = (
     'A small set of complimentary tools for '
     'exploratory computational research')
-long_desc = Path('doc/index.rst').read_text()
+long_desc = Path('readme.rst').read_text()
 
 setup(
     py_modules=['cmdgraph'],
@@ -12,6 +12,7 @@ setup(
     version='0.1',
     description=short_desc,
     long_description=long_desc,
+    long_description_content_type='text/markdown',
     url='http://github.com/MasonMcGill/cmdgraph',
     author='Mason McGill',
     author_email='mmcgill@caltech.edu',
