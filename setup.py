@@ -4,12 +4,12 @@ from setuptools import setup
 short_desc = (
     'A small set of complimentary tools for '
     'exploratory computational research')
-long_desc = Path('readme.rst').read_text()
+long_desc = Path('readme.md').read_text()
 
 setup(
     py_modules=['cmdgraph'],
     name='cmdgraph',
-    version='0.1',
+    version='0.1.2',
     description=short_desc,
     long_description=long_desc,
     long_description_content_type='text/markdown',
