@@ -6,3 +6,9 @@ CommandGraph is a small set of complimentary tools for exploratory computational
 - Generating command-line and web-based user interfaces
 
 The full documentation is available [here](https://masonmcgill.github.io/cmdgraph/).
+
+For the most up-to-date version, install from GitHub:
+
+```
+> pip install --upgrade https://github.com/MasonMcGill/cmdgraph/tarball/master
+```
