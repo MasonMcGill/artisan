@@ -30,10 +30,6 @@ Accessing command metadata
 
 ``cmd.status`` returns the command's execution status: *“running”*, *“done”*, *“stopped”*, or *“unbegun”*.
 
-.. todo::
-
-  Reimplement `cmd.spec`.
-
 Executing commands
 ------------------
 

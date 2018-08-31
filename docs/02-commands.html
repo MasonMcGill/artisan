@@ -179,10 +179,6 @@
 <h2>Accessing command metadata<a class="headerlink" href="#accessing-command-metadata" title="Permalink to this headline">¶</a></h2>
 <p><code class="docutils literal notranslate"><span class="pre">cmd.spec</span></code> returns a command’s specification—its configuration, augmented with a field encoding its type—as a JSON-like object (an arbitrarily nested combination of <code class="xref py py-obj docutils literal notranslate"><span class="pre">bool</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">str</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">NoneType</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">list</span></code>, and <code class="xref py py-obj docutils literal notranslate"><span class="pre">SimpleNamespace</span></code> instances).</p>
 <p><code class="docutils literal notranslate"><span class="pre">cmd.status</span></code> returns the command’s execution status: <em>“running”</em>, <em>“done”</em>, <em>“stopped”</em>, or <em>“unbegun”</em>.</p>
-<div class="admonition-todo admonition" id="index-0">
-<p class="first admonition-title">Todo</p>
-<p class="last">Reimplement <code class="xref py py-obj docutils literal notranslate"><span class="pre">cmd.spec</span></code>.</p>
-</div>
 </div>
 <div class="section" id="executing-commands">
 <h2>Executing commands<a class="headerlink" href="#executing-commands" title="Permalink to this headline">¶</a></h2>

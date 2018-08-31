@@ -210,6 +210,22 @@ class Configurable:
             '"type" can\'t be used as a key in configurations')
         self.conf = _namespacify(conf)
 
+    @property
+    def spec(self):
+        '''
+        Return the object's specification.
+
+        A specification is a namespace with
+
+          - a `type` field; the innermost `Namespace` symbol corresponding to
+            the object's type, or "{module_name}/{type_name}", if none exist.
+          - other fields corresponding to object's configuration properties (to
+            be passed into the constructor).
+
+        (This is equivalent to ``cg.describe(self)``.)
+        '''
+        return describe(self)
+
 ################################################################################
 # Commands
 ################################################################################
