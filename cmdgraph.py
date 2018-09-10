@@ -149,8 +149,8 @@ def create(spec):
       - other fields corresponding to object's configuration properties (to be
         passed into the constructor).
     '''
-    return resolve(spec['type'])(**{
-        k: v for k, v in spec.items()
+    return resolve(spec.type)(**{
+        k: v for k, v in vars(spec).items()
         if k != 'type'})
 
 def describe(obj):
@@ -579,7 +579,7 @@ def serve(rec_path, port=3000):
         return json_res(
             None if spec is None else
             {'type': spec['type'],
-             'desc': dedent(create(spec).__doc__[1:]),
+             'desc': dedent(create(_namespacify(spec)).__doc__[1:]),
              'conf': {k: v for k, v in spec.items() if k != 'type'},
              'status': status})
 
