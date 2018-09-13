@@ -18,6 +18,7 @@ import bottle
 import h5py as h5
 import imageio
 import jsonschema
+import msgpack
 import numpy as np
 from ruamel import yaml
 
@@ -540,26 +541,24 @@ def require(cmd):
 # Web API
 ################################################################################
 
+def _json_res(obj):
+    return bottle.HTTPResponse(
+        headers={'Content-Type': 'application/json',
+                 'Access-Control-Allow-Origin': '*'},
+        body=json.dumps(obj))
+
+def _buffer_res(obj):
+    return bottle.HTTPResponse(
+        headers={'Content-Type': 'application/octet-stream',
+                 'Access-Control-Allow-Origin': '*'},
+        body=io.BytesIO(obj))
+
 def serve(rec_path, port=3000):
     '''
     Start a server providing access to the records in a directory.
     '''
     root = Record(rec_path)
     app = bottle.default_app()
-
-    def json_res(obj):
-        return bottle.HTTPResponse(
-            headers={
-                'Content-Type': 'application/json',
-                'Access-Control-Allow-Origin': '*'},
-            body=json.dumps(obj))
-
-    def buffer_res(obj):
-        return bottle.HTTPResponse(
-            headers={
-                'Content-Type': 'application/octet-stream',
-                'Access-Control-Allow-Origin': '*'},
-            body=io.BytesIO(obj))
 
     @app.route('/<:re:.*>', method='OPTIONS')
     def _(*_):
@@ -573,7 +572,7 @@ def serve(rec_path, port=3000):
     def _(rec_id=''):
         if not (root.path/rec_id).is_dir():
             raise bottle.HTTPError(404)
-        return json_res(list(root[rec_id]))
+        return _json_res(list(root[rec_id]))
 
     @app.get('/_cmd-info')
     @app.get('/<rec_id:path>/_cmd-info')
@@ -582,7 +581,7 @@ def serve(rec_path, port=3000):
             raise bottle.HTTPError(404)
         spec = root[rec_id].cmd_spec
         status = root[rec_id].cmd_status
-        return json_res(
+        return _json_res(
             None if spec is None else
             {'type': spec['type'],
              'desc': _doc(resolve(spec['type'])),
@@ -596,17 +595,6 @@ def serve(rec_path, port=3000):
         elif bottle.request.query.get('mode', None) == 'file':
             return bottle.static_file(ent_id, root=root.path)
         else:
-            dtypes = {
-                'uint8': 0, 'uint16': 1, 'uint32': 2,
-                'int8': 3, 'int16': 4, 'int32': 5,
-                'float32': 6, 'float64': 7}
-            ent = root[ent_id]
-            msg = bytearray(ent.nbytes + 40)
-            msg[0:4] = np.uint32(dtypes[ent.dtype.name]).data
-            msg[4:8] = np.uint32(ent.ndim).data
-            msg[8:8+4*len(ent.shape)] = (
-                np.uint32(ent.shape).data)
-            msg[40:] = ent.data
-            return buffer_res(msg)
+            return _buffer_res(msgpack.packb(root[ent_id].tolist()))
 
     app.run(host='localhost', port=port)
