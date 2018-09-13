@@ -4,11 +4,12 @@ YAML, JSON-Schema, HDF5-SWMR, and web-based visualization software.
 '''
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 import importlib
+from inspect import cleandoc
 import io
 import json
 from pathlib import Path
 import shutil
-from textwrap import dedent, indent
+from textwrap import indent
 from time import sleep
 from types import SimpleNamespace as Ns
 from typing import GenericMeta, List
@@ -470,6 +471,11 @@ class Record:
 # Command execution
 ################################################################################
 
+def _doc(obj):
+    return (cleandoc(obj.__doc__)
+            if isinstance(obj.__doc__, str)
+            else '')
+
 def _known_cmds():
     return {
         k: v
@@ -487,7 +493,7 @@ def _cmd_desc(name, cmd):
     json_schema = _to_json_schema(cmd.Conf)
     schema_str = yaml.safe_dump(json_schema, allow_unicode=True)
     conf_desc = 'conf-schema:\n' + _ind_b(schema_str)
-    return name + ':\n' + _ind_b(dedent(cmd.__doc__[1:]) + '\n' + conf_desc)
+    return name + ':\n' + _ind_b(_doc(cmd) + '\n' + conf_desc)
 
 def _cmd_dict_desc():
     return 'commands:\n' + _ind_a('\n'.join(
@@ -579,7 +585,7 @@ def serve(rec_path, port=3000):
         return json_res(
             None if spec is None else
             {'type': spec['type'],
-             'desc': dedent(create(_namespacify(spec)).__doc__[1:]),
+             'desc': _doc(resolve(spec['type'])),
              'conf': {k: v for k, v in spec.items() if k != 'type'},
              'status': status})
 
