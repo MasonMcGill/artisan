@@ -392,6 +392,8 @@ class Record:
             self._get_record(head)['/'.join(tail)] = val
         else:
             self.path.mkdir(parents=True, exist_ok=True)
+            if (self.path/key).exists():
+                (self.path/key).unlink()
             self._get_entry(key).put(val)
 
     def __delitem__(self, key):
