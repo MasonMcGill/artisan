@@ -541,17 +541,11 @@ def require(cmd):
 # Web API
 ################################################################################
 
-def _json_res(obj):
+def _response(obj):
     return bottle.HTTPResponse(
-        headers={'Content-Type': 'application/json',
+        headers={'Content-Type': 'application/msgpack',
                  'Access-Control-Allow-Origin': '*'},
-        body=json.dumps(obj))
-
-def _buffer_res(obj):
-    return bottle.HTTPResponse(
-        headers={'Content-Type': 'application/octet-stream',
-                 'Access-Control-Allow-Origin': '*'},
-        body=io.BytesIO(obj))
+        body=io.BytesIO(msgpack.packb(obj)))
 
 def serve(rec_path, port=3000):
     '''
@@ -572,7 +566,7 @@ def serve(rec_path, port=3000):
     def _(rec_id=''):
         if not (root.path/rec_id).is_dir():
             raise bottle.HTTPError(404)
-        return _json_res(list(root[rec_id]))
+        return _response(list(root[rec_id]))
 
     @app.get('/_cmd-info')
     @app.get('/<rec_id:path>/_cmd-info')
@@ -581,7 +575,7 @@ def serve(rec_path, port=3000):
             raise bottle.HTTPError(404)
         spec = root[rec_id].cmd_spec
         status = root[rec_id].cmd_status
-        return _json_res(
+        return _response(
             None if spec is None else
             {'type': spec['type'],
              'desc': _doc(resolve(spec['type'])),
@@ -595,6 +589,6 @@ def serve(rec_path, port=3000):
         elif bottle.request.query.get('mode', None) == 'file':
             return bottle.static_file(ent_id, root=root.path)
         else:
-            return _buffer_res(msgpack.packb(root[ent_id].tolist()))
+            return _response(root[ent_id].tolist())
 
     app.run(host='localhost', port=port)
