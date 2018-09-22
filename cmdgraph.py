@@ -543,6 +543,22 @@ def require(cmd):
 # Web API
 ################################################################################
 
+_web_dtypes = dict(
+    bool='uint8',
+    uint8='uint8',
+    uint16='uint16',
+    uint32='uint32',
+    uint64='uint32',
+    int8='int8',
+    int16='int16',
+    int32='int32',
+    int64='int32',
+    float16='float32',
+    float32='float32',
+    float64='float64',
+    float96='float64',
+    float128='float64')
+
 def _response(obj):
     return bottle.HTTPResponse(
         headers={'Content-Type': 'application/msgpack',
@@ -595,10 +611,10 @@ def serve(rec_path, port=3000):
             if ent.dtype.kind in ['U', 'S']:
                 return _response(ent.astype('U').tolist())
             else:
-                return _response({
-                    '$type': 'array',
-                    'data': ent.data.tobytes(),
-                    'dtype': ent.dtype.name,
-                    'shape': ent.shape})
+                ent = ent.astype(_web_dtypes[ent.dtype.name])
+                return _response({'$type': 'array',
+                                  'data': ent.data.tobytes(),
+                                  'dtype': ent.dtype.name,
+                                  'shape': ent.shape})
 
     app.run(host='localhost', port=port)
