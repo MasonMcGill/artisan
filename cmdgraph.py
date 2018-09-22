@@ -15,10 +15,10 @@ from types import SimpleNamespace as Ns
 from typing import GenericMeta, List
 
 import bottle
+import cbor2
 import h5py as h5
 import imageio
 import jsonschema
-import msgpack
 import numpy as np
 from ruamel import yaml
 
@@ -547,7 +547,7 @@ def _response(obj):
     return bottle.HTTPResponse(
         headers={'Content-Type': 'application/msgpack',
                  'Access-Control-Allow-Origin': '*'},
-        body=io.BytesIO(msgpack.packb(obj)))
+        body=io.BytesIO(cbor2.dumps(obj)))
 
 def serve(rec_path, port=3000):
     '''
@@ -591,6 +591,11 @@ def serve(rec_path, port=3000):
         elif bottle.request.query.get('mode', None) == 'file':
             return bottle.static_file(ent_id, root=root.path)
         else:
-            return _response(root[ent_id].tolist())
+            ent = root[ent_id]
+            return _response({
+                '$type': 'array',
+                'data': ent.data.tobytes(),
+                'dtype': ent.dtype.name,
+                'shape': ent.shape})
 
     app.run(host='localhost', port=port)
