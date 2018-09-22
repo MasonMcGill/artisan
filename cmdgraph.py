@@ -592,10 +592,13 @@ def serve(rec_path, port=3000):
             return bottle.static_file(ent_id, root=root.path)
         else:
             ent = root[ent_id]
-            return _response({
-                '$type': 'array',
-                'data': ent.data.tobytes(),
-                'dtype': ent.dtype.name,
-                'shape': ent.shape})
+            if ent.dtype.kind in ['U', 'S']:
+                return _response(ent.astype('U').tolist())
+            else:
+                return _response({
+                    '$type': 'array',
+                    'data': ent.data.tobytes(),
+                    'dtype': ent.dtype.name,
+                    'shape': ent.shape})
 
     app.run(host='localhost', port=port)
