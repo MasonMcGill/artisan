@@ -17,7 +17,6 @@ from typing import GenericMeta, List
 import bottle
 import cbor2
 import h5py as h5
-import imageio
 import jsonschema
 import numpy as np
 from ruamel import yaml
@@ -321,19 +320,6 @@ class _HDF5Entry:
         self.dset[-1] = val
         self.dset.flush()
 
-class _ImageEntry:
-    def __init__(self, path):
-        self.path = path
-
-    def get(self):
-        return imageio.imread(self.path)
-
-    def put(self, val):
-        imageio.imwrite(self.path, val)
-
-    def append(self, val):
-        self.put(np.concatenate([self.get(), val], 0))
-
 class Record:
     '''
     A record of the execution of a `Command`.
@@ -348,15 +334,8 @@ class Record:
         self._cache = {}
 
     def _get_entry(self, key):
-        entry_types = {
-            '.bmp': _ImageEntry,
-            '.png': _ImageEntry,
-            '.jpg': _ImageEntry,
-            '.jpeg': _ImageEntry,
-            '.h5': _HDF5Entry}
         if key not in self._cache:
-            type_ = entry_types[Path(key).suffix]
-            self._cache[key] = type_(self.path/key)
+            self._cache[key] = _HDF5Entry(self.path/f'{key}.h5')
         return self._cache[key]
 
     def _get_record(self, key):
@@ -370,58 +349,74 @@ class Record:
     def __iter__(self):
         for p in self.path.iterdir():
             if not p.name.startswith('_'):
-                yield p.name
+                if p.suffix == '.h5': yield p.name[:-3]
+                else: yield p.name
 
     def __getitem__(self, key):
-        if '/' in key:
-            head, *tail = Path(key).parts
-            return self._get_record(head)['/'.join(tail)]
-        elif (self.path/key).is_file():
-            return self._get_entry(key).get()
-        elif (self.path/key).is_dir():
+        key = Path(key)
+        path = self.path/key
+        if len(key.parts) > 1: # Forward to a subrecord
+            subrec = self._get_record(key.parts[0])
+            return subrec['/'.join(key.parts[1:])]
+        elif path.is_dir(): # Return a subrecord
             return self._get_record(key)
+        elif path.with_suffix('.h5').is_file(): # Return an array
+            return self._get_entry(key).get()
+        elif path.is_file(): # Return a file path
+            return path
         else:
-            raise KeyError()
+            raise FileNotFoundError()
 
     def __setitem__(self, key, val):
-        if isinstance(val, (dict, Record)):
+        key = Path(key)
+        path = self.path/key
+        assert key.suffix == '', 'Can\'t write to encoded files'
+        if len(key.parts) > 1: # Forward to a subrecord
+            subrec = self._get_record(key.parts[0])
+            subrec['/'.join(key.parts[1:])] = val
+        elif isinstance(val, (dict, Record)): # Forward to all subrecords
             for subkey, subval in val.items():
                 self[f'{key}/{subkey}'] = subval
-        elif '/' in key:
-            head, *tail = Path(key).parts
-            self._get_record(head)['/'.join(tail)] = val
-        else:
-            self.path.mkdir(parents=True, exist_ok=True)
-            if (self.path/key).exists():
-                (self.path/key).unlink()
+        else: # Write an array
+            path.parent.mkdir(parents=True, exist_ok=True)
+            if path.with_suffix('.h5').exists():
+                path.with_suffix('.h5').unlink()
             self._get_entry(key).put(val)
 
     def __delitem__(self, key):
-        if '/' in key:
-            head, *tail = Path(key).parts
-            rec = self._get_record(head)
-            del rec['/'.join(tail)]
-        elif (self.path/key).is_file():
-            (self.path/key).unlink()
-        elif (self.path/key).is_dir():
+        key = Path(key)
+        path = self.path/key
+        if len(key.parts) > 1: # Forward to a subrecord
+            subrec = self._get_record(key.parts[0])
+            del subrec['/'.join(key.parts[1:])]
+        elif path.is_dir(): # Delete a subrecord
             rec = self._get_record(key)
             for k in rec: del rec[k]
-            shutil.rmtree(self.path/key, True)
+            shutil.rmtree(path, True)
+        elif path.with_extension('.h5').is_file(): # Delete an array
+            path.with_extension('.h5').unlink()
+        elif path.is_file(): # Delete a non-array file
+            path.unlink()
         else:
-            raise KeyError()
+            raise FileNotFoundError()
         self._forget(key)
-        if len([*self.path.iterdir()]) == 0:
+        if self.path.stat().st_nlink == 0:
             self.path.rmdir()
 
     def append(self, key, val):
-        if isinstance(val, (dict, Record)):
+        key = Path(key)
+        path = self.path/key
+        assert key.suffix == '', 'Can\'t write to encoded files'
+        if len(key.parts) > 1: # Forward to a subrecord
+            subrec = self._get_record(key.parts[0])
+            subrec.append('/'.join(key.parts[1:]), val)
+        elif isinstance(val, (dict, Record)): # Forward to all subrecords
             for subkey, subval in val.items():
                 self.append(f'{key}/{subkey}', subval)
-        elif '/' in key:
-            head, *tail = Path(key).parts
-            self._get_record(head).append('/'.join(tail), val)
-        else:
-            self.path.mkdir(parents=True, exist_ok=True)
+        else: # Append to an array
+            path.parent.mkdir(parents=True, exist_ok=True)
+            if path.with_suffix('.h5').exists():
+                path.with_suffix('.h5').unlink()
             self._get_entry(key).append(val)
 
     @property
@@ -457,18 +452,17 @@ class Record:
     def flat_keys(self):
         for p in self.path.glob('**'):
             p_rel = p.relative_to(self.path)
-            if any(part.startswith('_')
-                   for part in p_rel.parts):
-                yield str(p_rel)
+            if not any(part.startswith('_') for part in p_rel.parts):
+                if p_rel.suffix == '.h5': yield str(p_rel)[:-3]
+                else: yield str(p_rel)
 
     def flat_values(self):
         for k in self.flat_keys():
             yield self[k]
 
     def flat_items(self):
-        yield from zip(
-            self.flat_keys(),
-            self.flat_values())
+        for k in self.flat_keys():
+            yield k, self[k]
 
 ################################################################################
 # Command execution
