@@ -171,13 +171,16 @@
 </div>
 <div class="section" id="reading-entries">
 <h2>Reading entries<a class="headerlink" href="#reading-entries" title="Permalink to this headline">¶</a></h2>
-<p>Subscripting a record with a key corresponding to a file returns an array:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">array</span> <span class="o">=</span> <span class="n">record</span><span class="p">[</span><span class="s1">&#39;file/path.h5&#39;</span><span class="p">]</span>
+<p>Subscripting a record with a key corresponding to an HDF5 file (minus the extension) returns an array:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">array</span> <span class="o">=</span> <span class="n">record</span><span class="p">[</span><span class="s1">&#39;file/path&#39;</span><span class="p">]</span>
 </pre></div>
 </div>
-<p>HDF5 (“.h5”), JPEG (“.jpg”/”.jpeg”), PNG (“.png”), and bitmap (“.bmp”) formats are currently supported. Files with other extensions are treated as plain text files. Open a GitHub issue or pull request to request new format support.</p>
+<p>Subscripting a record with a key corresponding to a non-HDF5 file returns the file’s path (the file is presumed to be encoded in an application-specific format):</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">image_path</span> <span class="o">=</span> <span class="n">record</span><span class="p">[</span><span class="s1">&#39;image/path.jpg&#39;</span><span class="p">]</span>
+</pre></div>
+</div>
 <p>Subscripting a record with a key corresponding to a directory returns a subrecord:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">subrecord</span> <span class="o">=</span> <span class="n">record</span><span class="p">[</span><span class="s1">&#39;directory/path/&#39;</span><span class="p">]</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">subrecord</span> <span class="o">=</span> <span class="n">record</span><span class="p">[</span><span class="s1">&#39;directory/path&#39;</span><span class="p">]</span>
 </pre></div>
 </div>
 <p>Records also have <code class="xref py py-obj docutils literal notranslate"><span class="pre">dict</span></code>-style iteration methods (<code class="docutils literal notranslate"><span class="pre">keys</span></code>, <code class="docutils literal notranslate"><span class="pre">values</span></code>, and <code class="docutils literal notranslate"><span class="pre">items</span></code>). These methods iterate over all entries in the directory corresponding to the record, with the exception of those with names beginning with “_”.</p>
@@ -185,26 +188,26 @@
 <div class="section" id="writing-entries">
 <h2>Writing entries<a class="headerlink" href="#writing-entries" title="Permalink to this headline">¶</a></h2>
 <p>Subscript-assigning can be used to write an array to a file.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">record</span><span class="p">[</span><span class="s1">&#39;file/path.h5&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">array</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">record</span><span class="p">[</span><span class="s1">&#39;file/path&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">array</span>
 </pre></div>
 </div>
 <p>Subscript-assigning can also be used to copy the contents of one record into another, deleting its previous contents.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">record</span><span class="p">[</span><span class="s1">&#39;directory/path/&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">another_record</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">record</span><span class="p">[</span><span class="s1">&#39;directory/path&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">another_record</span>
 </pre></div>
 </div>
 <p>A [nested] <code class="xref py py-obj docutils literal notranslate"><span class="pre">dict</span></code> of array-like objects can also be used to tersely write to multiple files.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">record</span><span class="p">[</span><span class="s1">&#39;beings/animals/&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
-  <span class="s1">&#39;dogs&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;snoopy.h5&#39;</span><span class="p">:</span> <span class="n">snoopy_data</span><span class="p">},</span>
-  <span class="s1">&#39;cats&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;garfield.png&#39;</span><span class="p">:</span> <span class="n">garfield_data</span><span class="p">}}</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">record</span><span class="p">[</span><span class="s1">&#39;beings/animals&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+  <span class="s1">&#39;dogs&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;snoopy&#39;</span><span class="p">:</span> <span class="n">snoopy_data</span><span class="p">},</span>
+  <span class="s1">&#39;cats&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;garfield&#39;</span><span class="p">:</span> <span class="n">garfield_data</span><span class="p">}}</span>
 </pre></div>
 </div>
 </div>
 <div class="section" id="appending-to-entries">
 <h2>Appending to entries<a class="headerlink" href="#appending-to-entries" title="Permalink to this headline">¶</a></h2>
 <p>Appending works analogously to writing, and creates files and directories as necessary.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">record</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;file/path.h5&#39;</span><span class="p">,</span> <span class="n">array</span><span class="p">)</span>
-<span class="n">record</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;directory/path/&#39;</span><span class="p">,</span> <span class="n">another_record</span><span class="p">)</span>
-<span class="n">record</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;directory/path/&#39;</span><span class="p">,</span> <span class="n">dict_of_arrays</span><span class="p">)</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">record</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;file/path&#39;</span><span class="p">,</span> <span class="n">array</span><span class="p">)</span>
+<span class="n">record</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;directory/path&#39;</span><span class="p">,</span> <span class="n">another_record</span><span class="p">)</span>
+<span class="n">record</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;directory/path&#39;</span><span class="p">,</span> <span class="n">dict_of_arrays</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>

@@ -17,19 +17,23 @@ Since a record is just a *view* into a directory, constructing it does not perfo
 Reading entries
 ---------------
 
-Subscripting a record with a key corresponding to a file returns an array:
+Subscripting a record with a key corresponding to an HDF5 file (minus the extension) returns an array:
 
 .. code-block:: python
 
-  array = record['file/path.h5']
+  array = record['file/path']
 
-HDF5 (".h5"), JPEG (".jpg"/".jpeg"), PNG (".png"), and bitmap (".bmp") formats are currently supported. Files with other extensions are treated as plain text files. Open a GitHub issue or pull request to request new format support.
+Subscripting a record with a key corresponding to a non-HDF5 file returns the file's path (the file is presumed to be encoded in an application-specific format):
+
+.. code-block:: python
+
+  image_path = record['image/path.jpg']
 
 Subscripting a record with a key corresponding to a directory returns a subrecord:
 
 .. code-block:: python
 
-  subrecord = record['directory/path/']
+  subrecord = record['directory/path']
 
 Records also have `dict`-style iteration methods (``keys``, ``values``, and ``items``). These methods iterate over all entries in the directory corresponding to the record, with the exception of those with names beginning with "_".
 
@@ -40,21 +44,21 @@ Subscript-assigning can be used to write an array to a file.
 
 .. code-block:: python
 
-  record['file/path.h5'] = array
+  record['file/path'] = array
 
 Subscript-assigning can also be used to copy the contents of one record into another, deleting its previous contents.
 
 .. code-block:: python
 
-  record['directory/path/'] = another_record
+  record['directory/path'] = another_record
 
 A [nested] `dict` of array-like objects can also be used to tersely write to multiple files.
 
 .. code-block:: python
 
-  record['beings/animals/'] = {
-    'dogs': {'snoopy.h5': snoopy_data},
-    'cats': {'garfield.png': garfield_data}}
+  record['beings/animals'] = {
+    'dogs': {'snoopy': snoopy_data},
+    'cats': {'garfield': garfield_data}}
 
 Appending to entries
 --------------------
@@ -63,9 +67,9 @@ Appending works analogously to writing, and creates files and directories as nec
 
 .. code-block:: python
 
-  record.append('file/path.h5', array)
-  record.append('directory/path/', another_record)
-  record.append('directory/path/', dict_of_arrays)
+  record.append('file/path', array)
+  record.append('directory/path', another_record)
+  record.append('directory/path', dict_of_arrays)
 
 Deleting entries
 ----------------

@@ -243,6 +243,22 @@ set of keyword arguments.</p>
 </div>
 </dd></dl>
 
+<dl class="attribute">
+<dt id="cmdgraph.Configurable.spec">
+<code class="descname">spec</code><a class="headerlink" href="#cmdgraph.Configurable.spec" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the object’s specification.</p>
+<p>A specification is a namespace with</p>
+<blockquote>
+<div><ul class="simple">
+<li>a <code class="xref py py-obj docutils literal notranslate"><span class="pre">type</span></code> field; the innermost <a class="reference internal" href="#cmdgraph.Namespace" title="cmdgraph.Namespace"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Namespace</span></code></a> symbol corresponding to
+the object’s type, or “{module_name}/{type_name}”, if none exist.</li>
+<li>other fields corresponding to object’s configuration properties (to
+be passed into the constructor).</li>
+</ul>
+</div></blockquote>
+<p>(This is equivalent to <code class="docutils literal notranslate"><span class="pre">cg.describe(self)</span></code>.)</p>
+</dd></dl>
+
 </dd></dl>
 
 <dl class="class">
