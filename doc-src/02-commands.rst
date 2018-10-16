@@ -16,7 +16,7 @@ A minimal command with input and output looks like this:
     output_path = 'greetings/{name}' # Config fields are substituted automatically
                                      # (though using this shorthand is optional).
     def run(self):
-      self.output['message'] = (  # Records provide a concurrency-safe,
+      self.output['message'] = (     # Records provide a concurrency-safe,
         f'Hello, {self.conf.name}!') # array-friendly view into the filesystem.
 
   SayHello(name='Sven')() # This writes "Hello, Sven!" to /greetins/Sven/message.h5,
@@ -44,4 +44,4 @@ Calling a command (``cmd()``) invokes it unconditionally.
 
     def run(self):
       cats = cg.require(GetCats(source='the-internet')) # `require` returns the dependent
-      self.output['result'] = warp_thoroughly(cats) # command's output record.
+      self.output['result'] = warp_thoroughly(cats)     # command's output record.

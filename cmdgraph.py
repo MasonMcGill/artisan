@@ -11,7 +11,6 @@ from pathlib import Path
 import shutil
 from textwrap import indent
 from time import sleep
-from types import SimpleNamespace as Ns
 from typing import GenericMeta, List
 
 import bottle
@@ -26,22 +25,18 @@ __all__ = [
     'Command', 'Record', 'cli', 'require', 'serve']
 
 ################################################################################
-# [Supporting definitions] Namespace <-> dict conversion
+# Attribute-access-supporting dictionaries
 ################################################################################
 
-def _namespacify(obj):
-    if isinstance(obj, dict):
-        return Ns(**{k: _namespacify(v) for k, v in obj.items()})
-    elif isinstance(obj, list):
-        return list(map(_namespacify, obj))
-    else:
-        return obj
+class AttrDict(dict):
+    __getattr__ = dict.__getitem__
+    __setattr__ = dict.__setitem__
 
-def _dictify(obj):
-    if isinstance(obj, Ns):
-        return {k: _dictify(v) for k, v in vars(obj).items()}
+def _to_attr_dict(obj):
+    if isinstance(obj, dict):
+        return AttrDict({k: _to_attr_dict(v) for k, v in obj.items()})
     elif isinstance(obj, list):
-        return list(map(_dictify, obj))
+        return list(map(_to_attr_dict, obj))
     else:
         return obj
 
@@ -59,7 +54,7 @@ def _parse_prop_desc(cm):
             if isinstance(e, type): type_ = e
             if isinstance(e, list): default = e[0]
             if isinstance(e, str): doc = e
-        return Ns(type=type_, default=default, doc=doc)
+        return AttrDict(type=type_, default=default, doc=doc)
     else:
         return _parse_prop_desc((cm,))
 
@@ -76,7 +71,7 @@ def _to_json_schema(conf_type):
             'type': 'array'}
         else: return {}
     def convert_default(d):
-        return {} if d is _undef else {'default': _dictify(d)}
+        return {} if d is _undef else {'default': d}
     def convert_doc(d):
         return {} if d is _undef else {'description': d}
     prop_descs = {
@@ -96,26 +91,26 @@ def _to_json_schema(conf_type):
 # Serialization/deserialization
 ################################################################################
 
-_namespaces = []
+_scopes = []
 
-class Namespace(dict):
+class Scope(dict):
     '''
     A `dict` context that makes its entries available to `resolve` when active.
 
-    If multiple namespaces are active, the innermost scope (the one entered
+    If multiple scopes are active, the innermost scope (the one entered
     most recently) takes precedence.
     '''
     def __enter__(self):
-        _namespaces.append(self)
+        _scopes.append(self)
 
     def __exit__(self, *_):
-        _namespaces.remove(self)
+        _scopes.remove(self)
 
 def resolve(sym):
     '''
-    Search the namespace stack and module path for an object.
+    Search the scope stack and module path for an object.
     '''
-    for ns in reversed(_namespaces):
+    for ns in reversed(_scopes):
         if sym in ns:
             return ns[sym]
     try:
@@ -125,13 +120,13 @@ def resolve(sym):
     except:
         raise KeyError(
             f'"{sym}" is not present in the '
-            'CommandGraph namespace stack.')
+            'CommandGraph scope stack.')
 
 def identify(obj):
     '''
-    Search the namespace stack and module path for an object's name.
+    Search the scope stack and module path for an object's name.
     '''
-    for ns in reversed(_namespaces):
+    for ns in reversed(_scopes):
         for sym, val in ns.items():
             if val is obj:
                 return sym
@@ -143,9 +138,9 @@ def create(spec):
     '''
     Instantiate a configurable object from a specification.
 
-    A specification is a namespace with
+    A specification is a `dict` with
 
-      - a `type` field; the innermost `Namespace` symbol corresponding to the
+      - a "type" field; the innermost `Scope` symbol corresponding to the
         object's type, or "{module_name}/{type_name}", if none exist.
       - other fields corresponding to object's configuration properties (to be
         passed into the constructor).
@@ -158,14 +153,14 @@ def describe(obj):
     '''
     Generate a specification from a configurable object.
 
-    A specification is a namespace with
+    A specification is a `dict` with
 
-      - a `type` field; the innermost `Namespace` symbol corresponding to the
+      - a "type" field; the innermost `Scope` symbol corresponding to the
         object's type, or "{module_name}/{type_name}", if none exist.
       - other fields corresponding to object's configuration properties (to be
         passed into the constructor).
     '''
-    return Ns(type=identify(type(obj)), **vars(obj.conf))
+    return AttrDict(type=identify(type(obj)), **vars(obj.conf))
 
 ################################################################################
 # Configurable objects
@@ -209,16 +204,16 @@ class Configurable:
     def __init__(self, **conf):
         assert ('type' not in conf), (
             '"type" can\'t be used as a key in configurations')
-        self.conf = _namespacify(conf)
+        self.conf = _to_attr_dict(conf)
 
     @property
     def spec(self):
         '''
         Return the object's specification.
 
-        A specification is a namespace with
+        A specification is a `dict` with
 
-          - a `type` field; the innermost `Namespace` symbol corresponding to
+          - a "type" field; the innermost `Scope` symbol corresponding to
             the object's type, or "{module_name}/{type_name}", if none exist.
           - other fields corresponding to object's configuration properties (to
             be passed into the constructor).
@@ -263,7 +258,7 @@ class Command(Configurable):
             dst = Path(self.output_path)
             spec = yaml.safe_load((dst/'_cmd-spec.yaml').read_text())
             status = yaml.safe_load((dst/'_cmd-status.yaml').read_text())
-            return status if spec == _dictify(describe(self)) else 'unbegun'
+            return status if spec == describe(self) else 'unbegun'
         except FileNotFoundError:
             return 'unbegun'
 
@@ -282,7 +277,7 @@ class Command(Configurable):
         dst = Path(self.output_path)
         shutil.rmtree(dst, ignore_errors=True)
         dst.mkdir(parents=True, exist_ok=True)
-        spec_dict = _dictify(describe(self))
+        spec_dict = describe(self)
         spec_str = yaml.safe_dump(spec_dict, allow_unicode=True)
         (dst/'_cmd-spec.yaml').write_text(spec_str)
         (dst/'_cmd-status.yaml').write_text('running')
@@ -476,7 +471,7 @@ def _doc(obj):
 def _known_cmds():
     return {
         k: v
-        for ns in _namespaces
+        for ns in _scopes
         for k, v in ns.items()
         if issubclass(v, Command)}
 
