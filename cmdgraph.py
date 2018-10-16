@@ -28,15 +28,16 @@ __all__ = [
 # Attribute-access-supporting dictionaries
 ################################################################################
 
-class AttrDict(dict):
+class Namespace(dict):
+    'An `dict` that supports accessing items as attributes'
     __getattr__ = dict.__getitem__
     __setattr__ = dict.__setitem__
 
-def _to_attr_dict(obj):
+def _namespacify(obj):
     if isinstance(obj, dict):
-        return AttrDict({k: _to_attr_dict(v) for k, v in obj.items()})
+        return Namespace({k: _namespacify(v) for k, v in obj.items()})
     elif isinstance(obj, list):
-        return list(map(_to_attr_dict, obj))
+        return list(map(_namespacify, obj))
     else:
         return obj
 
@@ -54,7 +55,7 @@ def _parse_prop_desc(cm):
             if isinstance(e, type): type_ = e
             if isinstance(e, list): default = e[0]
             if isinstance(e, str): doc = e
-        return AttrDict(type=type_, default=default, doc=doc)
+        return Namespace(type=type_, default=default, doc=doc)
     else:
         return _parse_prop_desc((cm,))
 
@@ -160,7 +161,7 @@ def describe(obj):
       - other fields corresponding to object's configuration properties (to be
         passed into the constructor).
     '''
-    return AttrDict(type=identify(type(obj)), **vars(obj.conf))
+    return Namespace(type=identify(type(obj)), **vars(obj.conf))
 
 ################################################################################
 # Configurable objects
@@ -204,7 +205,7 @@ class Configurable:
     def __init__(self, **conf):
         assert ('type' not in conf), (
             '"type" can\'t be used as a key in configurations')
-        self.conf = _to_attr_dict(conf)
+        self.conf = _namespacify(conf)
 
     @property
     def spec(self):
