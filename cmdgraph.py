@@ -21,7 +21,8 @@ import numpy as np
 from ruamel import yaml
 
 __all__ = [
-    'Configurable', 'Namespace', 'resolve', 'identify', 'create', 'describe',
+    'Namespace', 'Configurable',
+    'Scope', 'resolve', 'identify', 'create', 'describe',
     'Command', 'Record', 'cli', 'require', 'serve']
 
 ################################################################################
