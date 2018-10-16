@@ -57,7 +57,7 @@ def _parse_prop_desc(cm):
         type_, default, doc = 3 * [_undef]
         for e in cm:
             if isinstance(e, type): type_ = e
-            if isinstance(e, list): default: e[0]
+            if isinstance(e, list): default = e[0]
             if isinstance(e, str): doc = e
         return Ns(type=type_, default=default, doc=doc)
     else:
