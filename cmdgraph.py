@@ -43,52 +43,6 @@ def _namespacify(obj):
         return obj
 
 ################################################################################
-# [Supporting definitions] JSON-Schema generation
-################################################################################
-
-def _schema_from_basic_type(t):
-    if t == bool:
-        return dict(type='boolean')
-    elif t == int:
-        return dict(type='integer')
-    elif t == float:
-        return dict(type='number')
-    elif t == str:
-        return dict(type='string')
-    elif type(t) == GenericMeta and t.__base__ == List:
-        return dict(type='array', items=_schema_from_basic_type(t.__args__[0]))
-    else:
-        raise ValueError(f'Type "{t}" can\'t be mapped to a schema.')
-
-def _schema_from_prop_spec(prop_spec):
-    if not isinstance(prop_spec, tuple):
-        prop_spec = (prop_spec,)
-    schema = {}
-    for e in prop_spec:
-        if isinstance(e, type):
-            schema.update(_schema_from_basic_type(e))
-        elif isinstance(e, list):
-            schema['default'] = e[0]
-        elif isinstance(e, str):
-            schema['description'] = e
-        elif isinstance(e, dict):
-            schema.update(e)
-    return schema
-
-def _schema_from_conf_type(t):
-    prop_schemas = {
-        k: _schema_from_prop_spec(v)
-        for k, v in vars(t).items()
-        if not k.startswith('__')}
-    required = [
-        k for k, v in prop_schemas.items()
-        if 'default' not in v]
-    return dict(
-        type='object',
-        properties=prop_schemas,
-        **([{}, {'required': required}][len(required)]))
-
-################################################################################
 # Serialization/deserialization
 ################################################################################
 
@@ -133,7 +87,7 @@ def identify(obj):
                 return sym
     mod_name = obj.__module__
     obj_name = obj.__qualname__
-    return f'{mod_name}/{obj_name}'
+    return f'{mod_name}|{obj_name}'
 
 def create(spec):
     '''
@@ -142,12 +96,12 @@ def create(spec):
     A specification is a `dict` with
 
       - a "type" field; the innermost `Scope` symbol corresponding to the
-        object's type, or "{module_name}/{type_name}", if none exist.
+        object's type, or "{module_name}|{type_name}", if none exist.
       - other fields corresponding to object's configuration properties (to be
         passed into the constructor).
     '''
     return resolve(spec.type)(**{
-        k: v for k, v in vars(spec).items()
+        k: v for k, v in spec.items()
         if k != 'type'})
 
 def describe(comp):
@@ -157,15 +111,44 @@ def describe(comp):
     A specification is a `dict` with
 
       - a "type" field; the innermost `Scope` symbol corresponding to the
-        object's type, or "{module_name}/{type_name}", if none exist.
+        object's type, or "{module_name}|{type_name}", if none exist.
       - other fields corresponding to object's configuration properties (to be
         passed into the constructor).
     '''
-    return Namespace(type=identify(type(comp)), **vars(comp.conf))
+    return Namespace(type=identify(type(comp)), **comp.conf)
 
 ################################################################################
 # Components (configurable objects)
 ################################################################################
+
+def _schema_from_type(t):
+    if t == bool:
+        return dict(type='boolean')
+    elif t == int:
+        return dict(type='integer')
+    elif t == float:
+        return dict(type='number')
+    elif t == str:
+        return dict(type='string')
+    elif type(t) == GenericMeta and t.__base__ == List:
+        return dict(type='array', items=_schema_from_type(t.__args__[0]))
+    else:
+        raise ValueError(f'Type "{t}" can\'t be mapped to a schema.')
+
+def _schema_from_prop_spec(prop_spec):
+    if not isinstance(prop_spec, tuple):
+        prop_spec = (prop_spec,)
+    schema = {}
+    for e in prop_spec:
+        if isinstance(e, type):
+            schema.update(_schema_from_type(e))
+        elif isinstance(e, list):
+            schema['default'] = e[0]
+        elif isinstance(e, str):
+            schema['description'] = e
+        elif isinstance(e, dict):
+            schema.update(e)
+    return schema
 
 class Component:
     '''
@@ -215,7 +198,7 @@ class Component:
         A specification is a `dict` with
 
           - a "type" field; the innermost `Scope` symbol corresponding to
-            the object's type, or "{module_name}/{type_name}", if none exist.
+            the object's type, or "{module_name}|{type_name}", if none exist.
           - other fields corresponding to object's configuration properties (to
             be passed into the constructor).
 
@@ -225,7 +208,21 @@ class Component:
 
     @classmethod
     def conf_schema(cls):
-        return _schema_from_conf_type(cls.Conf)
+        prop_schemas = {
+            k: _schema_from_prop_spec(v)
+            for k, v in vars(cls.Conf).items()
+            if not k.startswith('__')}
+        required = [
+            k for k, v in prop_schemas.items()
+            if 'default' not in v]
+        return dict(
+            type='object',
+            properties=prop_schemas,
+            **([{}, {'required': required}][bool(required)]))
+
+    @classmethod
+    def spec_schema(cls):
+        return {'$ref': f'#/definitions/{cls.__module__}|{cls.__qualname__}'}
 
 ################################################################################
 # Commands
@@ -288,6 +285,15 @@ class Command(Component):
         (dst/'_cmd-status.yaml').write_text('running')
         self.run()
         (dst/'_cmd-status.yaml').write_text('done')
+
+def require(cmd):
+    '''
+    Ensure that a command has started and block until it is finished.
+    '''
+    if isinstance(cmd, str): cmd = create(cmd)
+    if cmd.status in {'unbegun', 'stopped'}: cmd()
+    while cmd.status == 'running': sleep(0.01)
+    return Record(cmd.output_path)
 
 ################################################################################
 # Command records
@@ -465,7 +471,7 @@ class Record:
             yield k, self[k]
 
 ################################################################################
-# Command execution
+# Command-line interface
 ################################################################################
 
 def _doc(obj):
@@ -523,15 +529,6 @@ def cli():
     schema = cmd.conf_schema
     jsonschema.validate(conf, schema)
     cmd(**conf)()
-
-def require(cmd):
-    '''
-    Ensure that a command has started and block until it is finished.
-    '''
-    if isinstance(cmd, str): cmd = create(cmd)
-    if cmd.status in {'unbegun', 'stopped'}: cmd()
-    while cmd.status == 'running': sleep(0.01)
-    return Record(cmd.output_path)
 
 ################################################################################
 # Web API
