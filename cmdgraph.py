@@ -67,9 +67,7 @@ class Scope(dict):
         _scopes.remove(self)
 
 def resolve(sym):
-    '''
-    Search the scope stack and module path for an object.
-    '''
+    'Search the scope stack and module path for an object.'
     for scope in reversed(_scopes):
         if sym in scope:
             return scope[sym]
@@ -83,9 +81,7 @@ def resolve(sym):
             'CommandGraph scope stack.')
 
 def identify(obj):
-    '''
-    Search the scope stack and module path for an object's name.
-    '''
+    'Search the scope stack and module path for an object\'s name.'
     for scope in reversed(_scopes):
         for sym, val in scope.items():
             if val is obj:
@@ -102,8 +98,7 @@ def create(spec):
 
       - a "type" field; the innermost `Scope` symbol corresponding to the
         object's type, or "{module_name}|{type_name}", if none exist.
-      - other fields corresponding to object's configuration properties (to be
-        passed into the constructor).
+      - other fields corresponding to the object's configuration properties.
     '''
     return resolve(spec.type)(**dissoc(spec, 'type'))
 
@@ -115,8 +110,7 @@ def describe(comp):
 
       - a "type" field; the innermost `Scope` symbol corresponding to the
         object's type, or "{module_name}|{type_name}", if none exist.
-      - other fields corresponding to object's configuration properties (to be
-        passed into the constructor).
+      - other fields corresponding to the object's configuration properties.
     '''
     return Namespace(type=identify(type(comp)), **getattr(comp, 'conf', {}))
 
@@ -185,7 +179,7 @@ class Component:
     arbitrarily nested `bool`, `int`, `float`, `str`, `NoneType`, `list`, and
     string-keyed `dict` instances.
 
-    A `Component`'s configuration should be passed its the constructor as a
+    A `Component`'s configuration should be passed to its constructor as a
     set of keyword arguments.
     '''
     class Conf:
@@ -198,6 +192,7 @@ class Component:
         - A `type` value specify the property's expected type.
         - A single-element `list` value specifies the property's default value.
         - A `str` value specifies the property's docstring.
+        - A `dict` value specifies raw JSON-Schema constraints.
         - A `tuple` value may specify any combination of the above.
 
         Examples:
@@ -224,10 +219,9 @@ class Component:
 
         A specification is a `dict` with
 
-          - a "type" field; the innermost `Scope` symbol corresponding to
-            the object's type, or "{module_name}|{type_name}", if none exist.
-          - other fields corresponding to object's configuration properties (to
-            be passed into the constructor).
+          - a "type" field; the innermost `Scope` symbol corresponding to the
+            object's type, or "{module_name}|{type_name}", if none exist.
+          - other fields corresponding to the object's configuration properties.
 
         (This is equivalent to ``cg.describe(self)``.)
         '''
