@@ -8,6 +8,7 @@ from inspect import cleandoc
 import io
 import json
 from pathlib import Path
+import re
 import shutil
 from textwrap import indent
 from time import sleep
@@ -19,6 +20,7 @@ import h5py as h5
 import jsonschema
 import numpy as np
 from ruamel import yaml
+from toolz import dissoc, merge, valmap
 
 __all__ = [
     'Namespace', 'Component',
@@ -36,7 +38,7 @@ class Namespace(dict):
 
 def _namespacify(obj):
     if isinstance(obj, dict):
-        return Namespace({k: _namespacify(v) for k, v in obj.items()})
+        return Namespace(valmap(_namespacify, obj))
     elif isinstance(obj, list):
         return list(map(_namespacify, obj))
     else:
@@ -49,10 +51,7 @@ def _namespacify(obj):
 _scopes = []
 
 def _flat_scope():
-    res = {}
-    for scope in _scopes:
-        res.update(scope)
-    return res
+    return merge(_scopes)
 
 class Scope(dict):
     '''
@@ -75,7 +74,7 @@ def resolve(sym):
         if sym in scope:
             return scope[sym]
     try:
-        mod_name, type_name = sym.split('/')
+        mod_name, type_name = sym.split('|')
         mod = importlib.import_module(mod_name)
         return getattr(mod, type_name)
     except:
@@ -106,9 +105,7 @@ def create(spec):
       - other fields corresponding to object's configuration properties (to be
         passed into the constructor).
     '''
-    return resolve(spec.type)(**{
-        k: v for k, v in spec.items()
-        if k != 'type'})
+    return resolve(spec.type)(**dissoc(spec, 'type'))
 
 def describe(comp):
     '''
@@ -121,9 +118,7 @@ def describe(comp):
       - other fields corresponding to object's configuration properties (to be
         passed into the constructor).
     '''
-    return Namespace(
-        type=identify(type(comp)),
-        **getattr(comp, 'conf', {}))
+    return Namespace(type=identify(type(comp)), **getattr(comp, 'conf', {}))
 
 ################################################################################
 # Components (configurable objects)
@@ -217,17 +212,11 @@ class Component:
     @property
     @classmethod
     def conf_schema(cls):
-        prop_schemas = {
-            k: _schema_from_prop_spec(v)
-            for k, v in vars(cls.Conf).items()
-            if not k.startswith('__')}
-        required = [
-            k for k, v in prop_schemas.items()
-            if 'default' not in v]
-        return dict(
-            type='object',
-            properties=prop_schemas,
-            **([{}, {'required': required}][bool(required)]))
+        prop_specs = keyfilter(re.compile('^__'), vars(cls.Conf))
+        prop_schemas = valmap(_schema_from_prop_spec, prop_specs)
+        required = [*valfilter(lambda v: 'default' in v, prop_schemas)]
+        return dict(type='object', properties=prop_schemas,
+                    **([{}, {'required': required}][bool(required)]))
 
     @property
     @classmethod
@@ -484,16 +473,7 @@ class Record:
 ################################################################################
 
 def _doc(obj):
-    return (cleandoc(obj.__doc__)
-            if isinstance(obj.__doc__, str)
-            else '')
-
-def _known_cmds():
-    return {
-        k: v
-        for ns in _scopes
-        for k, v in ns.items()
-        if issubclass(v, Command)}
+    return cleandoc(obj.__doc__ or '')
 
 def _ind_a(text):
     return indent(text, '  ', lambda _: True)
@@ -509,8 +489,8 @@ def _cmd_desc(name, cmd):
 
 def _cmd_dict_desc():
     return 'commands:\n' + _ind_a('\n'.join(
-        _cmd_desc(name, cmd)
-        for name, cmd in _flat_scope().items()
+        _cmd_desc(name, comp)
+        for name, comp in _flat_scope().items()
         if isinstance(comp, Command)))
 
 def _update_refs(schema):
@@ -520,22 +500,19 @@ def _update_refs(schema):
         new_sym = identify(resolve(old_sym))
         return {'$ref': prefix + new_sym}
     elif isinstance(schema, dict):
-        return {k: _update_refs(v) for k, v in schema.items()}
+        return valmap(_update_refs, schema)
     elif isinstance(schema, list):
-        return [*map(_update_refs, schema)]
+        return list(map(_update_refs, schema))
     else:
         return schema
 
 def cli():
     'Run a command-line interface derived from the current scope stack.'
     schema = dict(
-        definitions={
-            sym: _update_refs(describe(val))
-            for sym, val in _flat_scope().items()},
-        oneOf=[
-            {'$ref': f'#/definitions/{sym}'}
-            for sym, val in _flat_scope().items()
-            if isinstance(val, Command)])
+        definitions=_update_refs(valmap(describe, _flat_scope())),
+        oneOf=[{'$ref': f'#/definitions/{sym}'}
+               for sym, val in _flat_scope().items()
+               if isinstance(val, Command)])
     parser = ArgumentParser(
         formatter_class=RawDescriptionHelpFormatter,
         epilog=_cmd_dict_desc())
