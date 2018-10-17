@@ -48,6 +48,12 @@ def _namespacify(obj):
 
 _scopes = []
 
+def _flat_scope():
+    res = {}
+    for scope in _scopes:
+        res.update(scope)
+    return res
+
 class Scope(dict):
     '''
     A `dict` context that makes its entries available to `resolve` when active.
@@ -65,9 +71,9 @@ def resolve(sym):
     '''
     Search the scope stack and module path for an object.
     '''
-    for ns in reversed(_scopes):
-        if sym in ns:
-            return ns[sym]
+    for scope in reversed(_scopes):
+        if sym in scope:
+            return scope[sym]
     try:
         mod_name, type_name = sym.split('/')
         mod = importlib.import_module(mod_name)
@@ -81,8 +87,8 @@ def identify(obj):
     '''
     Search the scope stack and module path for an object's name.
     '''
-    for ns in reversed(_scopes):
-        for sym, val in ns.items():
+    for scope in reversed(_scopes):
+        for sym, val in scope.items():
             if val is obj:
                 return sym
     mod_name = obj.__module__
@@ -115,7 +121,9 @@ def describe(comp):
       - other fields corresponding to object's configuration properties (to be
         passed into the constructor).
     '''
-    return Namespace(type=identify(type(comp)), **comp.conf)
+    return Namespace(
+        type=identify(type(comp)),
+        **getattr(comp, 'conf', {}))
 
 ################################################################################
 # Components (configurable objects)
@@ -206,6 +214,7 @@ class Component:
         '''
         return describe(self)
 
+    @property
     @classmethod
     def conf_schema(cls):
         prop_schemas = {
@@ -220,6 +229,7 @@ class Component:
             properties=prop_schemas,
             **([{}, {'required': required}][bool(required)]))
 
+    @property
     @classmethod
     def spec_schema(cls):
         return {'$ref': f'#/definitions/{cls.__module__}|{cls.__qualname__}'}
@@ -240,8 +250,7 @@ class Command(Component):
     '''
     def __init__(self, **conf):
         super().__init__(**conf)
-        if (hasattr(type(self), 'output_path') and
-            isinstance(type(self).output_path, str)):
+        if isinstance(getattr(type(self), 'output_path', None), str):
             self.output_path = Path(type(self).output_path.format(conf))
         self.output = Record(self.output_path)
 
@@ -500,35 +509,46 @@ def _cmd_desc(name, cmd):
 
 def _cmd_dict_desc():
     return 'commands:\n' + _ind_a('\n'.join(
-        _cmd_desc(name, cmd) for name, cmd
-        in _known_cmds().items()))
+        _cmd_desc(name, cmd)
+        for name, cmd in _flat_scope().items()
+        if isinstance(comp, Command)))
+
+def _update_refs(schema):
+    if isinstance(schema, dict) and '$ref' in schema:
+        prefix = '#/definitions/'
+        old_sym = schema['$ref'][len(prefix):]
+        new_sym = identify(resolve(old_sym))
+        return {'$ref': prefix + new_sym}
+    elif isinstance(schema, dict):
+        return {k: _update_refs(v) for k, v in schema.items()}
+    elif isinstance(schema, list):
+        return [*map(_update_refs, schema)]
+    else:
+        return schema
 
 def cli():
-    '''
-    Run a command-line interface.
-
-    All commands in the current scope (defined by entering `Namespace`
-    contexts) are available.
-    '''
+    'Run a command-line interface derived from the current scope stack.'
+    schema = dict(
+        definitions={
+            sym: _update_refs(describe(val))
+            for sym, val in _flat_scope().items()},
+        oneOf=[
+            {'$ref': f'#/definitions/{sym}'}
+            for sym, val in _flat_scope().items()
+            if isinstance(val, Command)])
     parser = ArgumentParser(
         formatter_class=RawDescriptionHelpFormatter,
         epilog=_cmd_dict_desc())
-    parser.add_argument(
-        'cmd', metavar='cmd', choices=_known_cmds().keys(), help=(
-            'the command to execute'))
-    parser.add_argument(
-        'conf', nargs='?', default=r'{}', help=(
-            'the command configuration, in YAML format, or '
-            'the path to a YAML configuration file'))
+    parser.add_argument('cmd-spec', help=(
+        'the command specification, in YAML format, or '
+        'the path to a YAML configuration file'))
     args = parser.parse_args()
-    cmd = resolve(args.cmd)
-    conf = yaml.safe_load(args.conf)
-    if isinstance(conf, str):
-        with open(conf) as f:
-            conf = yaml.safe_load(f)
-    schema = cmd.conf_schema
-    jsonschema.validate(conf, schema)
-    cmd(**conf)()
+    cmd_spec = yaml.safe_load(args.cmd_spec)
+    if isinstance(cmd_spec, str):
+        with open(cmd_spec) as f:
+            cmd_spec = yaml.safe_load(f)
+    jsonschema.validate(cmd_spec, schema)
+    create(cmd_spec)()
 
 ################################################################################
 # Web API
