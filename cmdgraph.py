@@ -46,48 +46,47 @@ def _namespacify(obj):
 # [Supporting definitions] JSON-Schema generation
 ################################################################################
 
-class _Undef: pass
-_undef = _Undef()
-
-def _parse_prop_desc(cm):
-    if isinstance(cm, tuple):
-        type_, default, doc = 3 * [_undef]
-        for e in cm:
-            if isinstance(e, type): type_ = e
-            if isinstance(e, list): default = e[0]
-            if isinstance(e, str): doc = e
-        return Namespace(type=type_, default=default, doc=doc)
+def _schema_from_basic_type(t):
+    if t == bool:
+        return dict(type='boolean')
+    elif t == int:
+        return dict(type='integer')
+    elif t == float:
+        return dict(type='number')
+    elif t == str:
+        return dict(type='string')
+    elif type(t) == GenericMeta and t.__base__ == List:
+        return dict(type='array', items=_schema_from_basic_type(t.__args__[0]))
     else:
-        return _parse_prop_desc((cm,))
+        raise ValueError(f'Type {t} can\'t be mapped to a schema.')
 
-def _to_json_schema(conf_type):
-    def is_list_type(t):
-        return isinstance(t, GenericMeta) and t.__base__ == List
-    def convert_type(t):
-        if t == bool: return {'type': 'boolean'}
-        elif t == int: return {'type': 'integer'}
-        elif t == float: return {'type': 'number'}
-        elif t == str: return {'type': 'string'}
-        elif is_list_type(t): return {
-            'items': convert_type(t.__args__[0]),
-            'type': 'array'}
-        else: return {}
-    def convert_default(d):
-        return {} if d is _undef else {'default': d}
-    def convert_doc(d):
-        return {} if d is _undef else {'description': d}
-    prop_descs = {
-        k: _parse_prop_desc(v)
-        for k, v in vars(conf_type).items()
+def _schema_from_prop_spec(prop_spec):
+    if not isinstance(prop_spec, tuple):
+        prop_spec = (prop_spec,)
+    schema = {}
+    for e in prop_spec:
+        if isinstance(e, type):
+            schema.update(_schema_from_basic_type(e))
+        elif isinstance(e, list):
+            schema['default'] = e[0]
+        elif isinstance(e, str):
+            schema['description'] = e
+        elif isinstance(e, dict):
+            schema.update(e)
+    return schema
+
+def _schema_from_conf_type(t):
+    prop_schemas = {
+        k: _schema_from_prop_spec(v)
+        for k, v in vars(t).items()
         if not k.startswith('__')}
-    return {} if len(prop_descs.items()) == 0 else {
-        'type': 'object',
-        'properties': {
-            k: {**convert_type(v.type),
-                **convert_default(v.default),
-                **convert_doc(v.doc)}
-            for k, v in prop_descs.items()},
-        'required': list(prop_descs.keys())}
+    required = [
+        k for k, v in prop_schemas.items()
+        if 'default' not in v]
+    return dict(
+        type='object',
+        properties=prop_schemas,
+        **([{}, {'required': required}][len(required)]))
 
 ################################################################################
 # Serialization/deserialization
@@ -223,6 +222,10 @@ class Configurable:
         (This is equivalent to ``cg.describe(self)``.)
         '''
         return describe(self)
+
+    @classmethod
+    def conf_schema(cls):
+        return _schema_from_conf_type(cls.Conf)
 
 ################################################################################
 # Commands
@@ -484,7 +487,7 @@ def _ind_b(text):
     return indent(text, '│ ', lambda _: True)
 
 def _cmd_desc(name, cmd):
-    json_schema = _to_json_schema(cmd.Conf)
+    json_schema = cmd.conf_schema['properties']
     schema_str = yaml.safe_dump(json_schema, allow_unicode=True)
     conf_desc = 'conf-schema:\n' + _ind_b(schema_str)
     return name + ':\n' + _ind_b(_doc(cmd) + '\n' + conf_desc)
@@ -517,7 +520,7 @@ def cli():
     if isinstance(conf, str):
         with open(conf) as f:
             conf = yaml.safe_load(f)
-    schema = _to_json_schema(cmd.Conf)
+    schema = cmd.conf_schema
     jsonschema.validate(conf, schema)
     cmd(**conf)()
 
