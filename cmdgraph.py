@@ -58,7 +58,7 @@ def _schema_from_basic_type(t):
     elif type(t) == GenericMeta and t.__base__ == List:
         return dict(type='array', items=_schema_from_basic_type(t.__args__[0]))
     else:
-        raise ValueError(f'Type {t} can\'t be mapped to a schema.')
+        raise ValueError(f'Type "{t}" can\'t be mapped to a schema.')
 
 def _schema_from_prop_spec(prop_spec):
     if not isinstance(prop_spec, tuple):
