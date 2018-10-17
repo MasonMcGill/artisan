@@ -21,7 +21,7 @@ import numpy as np
 from ruamel import yaml
 
 __all__ = [
-    'Namespace', 'Configurable',
+    'Namespace', 'Component',
     'Scope', 'resolve', 'identify', 'create', 'describe',
     'Command', 'Record', 'cli', 'require', 'serve']
 
@@ -137,7 +137,7 @@ def identify(obj):
 
 def create(spec):
     '''
-    Instantiate a configurable object from a specification.
+    Instantiate a Component object from a specification.
 
     A specification is a `dict` with
 
@@ -150,9 +150,9 @@ def create(spec):
         k: v for k, v in vars(spec).items()
         if k != 'type'})
 
-def describe(obj):
+def describe(comp):
     '''
-    Generate a specification from a configurable object.
+    Generate a specification for a component.
 
     A specification is a `dict` with
 
@@ -161,13 +161,13 @@ def describe(obj):
       - other fields corresponding to object's configuration properties (to be
         passed into the constructor).
     '''
-    return Namespace(type=identify(type(obj)), **vars(obj.conf))
+    return Namespace(type=identify(type(comp)), **vars(comp.conf))
 
 ################################################################################
-# Configurable objects
+# Components (configurable objects)
 ################################################################################
 
-class Configurable:
+class Component:
     '''
     An object that can be constructed from JSON-object-like structures.
 
@@ -175,7 +175,7 @@ class Configurable:
     arbitrarily nested `bool`, `int`, `float`, `str`, `NoneType`, `list`, and
     string-keyed `dict` instances.
 
-    A `Configurable`'s configuration should be passed its the constructor as a
+    A `Component`'s configuration should be passed its the constructor as a
     set of keyword arguments.
     '''
     class Conf:
@@ -194,7 +194,7 @@ class Configurable:
 
         .. code-block:: python
 
-            class Person(cg.Configurable):
+            class Person(cg.Component):
                 class Conf:
                     name = str, 'a long-winded pointer'
                     age = int, [0], 'solar rotation count'
@@ -231,7 +231,7 @@ class Configurable:
 # Commands
 ################################################################################
 
-class Command(Configurable):
+class Command(Component):
     '''
     An operation that creates a `Record`.
 
