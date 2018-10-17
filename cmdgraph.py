@@ -121,7 +121,7 @@ def describe(comp):
     return Namespace(type=identify(type(comp)), **getattr(comp, 'conf', {}))
 
 ################################################################################
-# Components (configurable objects)
+# JSON-Schema generation
 ################################################################################
 
 def _schema_from_type(t):
@@ -152,6 +152,30 @@ def _schema_from_prop_spec(prop_spec):
         elif isinstance(e, dict):
             schema.update(e)
     return schema
+
+def _update_refs(schema):
+    if isinstance(schema, dict) and '$ref' in schema:
+        prefix = '#/definitions/'
+        old_sym = schema['$ref'][len(prefix):]
+        new_sym = identify(resolve(old_sym))
+        return {'$ref': prefix + new_sym}
+    elif isinstance(schema, dict):
+        return valmap(_update_refs, schema)
+    elif isinstance(schema, list):
+        return list(map(_update_refs, schema))
+    else:
+        return schema
+
+def _command_schema():
+    return dict(
+        definitions=_update_refs(valmap(describe, _flat_scope())),
+        oneOf=[{'$ref': f'#/definitions/{sym}'}
+               for sym, val in _flat_scope().items()
+               if isinstance(val, Command)])
+
+################################################################################
+# Components (configurable objects)
+################################################################################
 
 class Component:
     '''
@@ -493,26 +517,9 @@ def _cmd_dict_desc():
         for name, comp in _flat_scope().items()
         if isinstance(comp, Command)))
 
-def _update_refs(schema):
-    if isinstance(schema, dict) and '$ref' in schema:
-        prefix = '#/definitions/'
-        old_sym = schema['$ref'][len(prefix):]
-        new_sym = identify(resolve(old_sym))
-        return {'$ref': prefix + new_sym}
-    elif isinstance(schema, dict):
-        return valmap(_update_refs, schema)
-    elif isinstance(schema, list):
-        return list(map(_update_refs, schema))
-    else:
-        return schema
-
 def cli():
     'Run a command-line interface derived from the current scope stack.'
-    schema = dict(
-        definitions=_update_refs(valmap(describe, _flat_scope())),
-        oneOf=[{'$ref': f'#/definitions/{sym}'}
-               for sym, val in _flat_scope().items()
-               if isinstance(val, Command)])
+    schema = _command_schema()
     parser = ArgumentParser(
         formatter_class=RawDescriptionHelpFormatter,
         epilog=_cmd_dict_desc())
