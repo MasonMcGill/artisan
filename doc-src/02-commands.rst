@@ -26,7 +26,7 @@ A minimal command with input and output looks like this:
 Accessing command metadata
 --------------------------
 
-``cmd.spec`` returns a command's specification---its configuration, augmented with a field encoding its type---as a JSON-like object (an arbitrarily nested combination of `bool`, `int`, `float`, `str`, `NoneType`, `list`, and `SimpleNamespace` instances).
+``cmd.spec`` returns a command's specification---its configuration, augmented with a field encoding its type---as a JSON-like object (an arbitrarily nested combination of `bool`, `int`, `float`, `str`, `NoneType`, `list`, and `Namespace` instances).
 
 ``cmd.status`` returns the command's execution status: *“running”*, *“done”*, *“stopped”*, or *“unbegun”*.
 

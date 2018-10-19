@@ -9,6 +9,7 @@ Configuration management:
 
   Configurable
   Namespace
+  Scope
   create
   describe
   identify
@@ -36,6 +37,8 @@ User interfaces:
   :undoc-members:
 
 .. autoclass:: Namespace
+
+.. autoclass:: Scope
 
 .. autofunction:: create
 
