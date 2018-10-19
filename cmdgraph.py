@@ -513,7 +513,6 @@ def _cmd_dict_desc():
 
 def cli():
     'Run a command-line interface derived from the current scope stack.'
-    schema = _command_schema()
     parser = ArgumentParser(
         formatter_class=RawDescriptionHelpFormatter,
         epilog=_cmd_dict_desc())
@@ -522,9 +521,16 @@ def cli():
         'the path to a YAML configuration file'))
     args = parser.parse_args()
     cmd_spec = yaml.safe_load(args.cmd_spec)
+
     if isinstance(cmd_spec, str):
         with open(cmd_spec) as f:
             cmd_spec = yaml.safe_load(f)
+
+    cmds = valfilter(lambda c: isinstance(c, Command), _flat_scope())
+    if len(cmds) == 1 and 'type' not in cmd_spec:
+        cmd_spec['type'] = [*cmds][0]
+
+    schema = _command_schema()
     jsonschema.validate(cmd_spec, schema)
     create(cmd_spec)()
 
