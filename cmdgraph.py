@@ -23,7 +23,7 @@ from ruamel import yaml
 from toolz import dissoc, merge, valmap
 
 __all__ = [
-    'Namespace', 'Component',
+    'Namespace', 'Configurable',
     'Scope', 'resolve', 'identify', 'create', 'describe',
     'Command', 'Record', 'cli', 'require', 'serve']
 
@@ -92,7 +92,7 @@ def identify(obj):
 
 def create(spec):
     '''
-    Instantiate a Component object from a specification.
+    Instantiate a configurable object from a specification.
 
     A specification is a `dict` with
 
@@ -102,9 +102,9 @@ def create(spec):
     '''
     return resolve(spec.type)(**dissoc(spec, 'type'))
 
-def describe(comp):
+def describe(obj):
     '''
-    Generate a specification for a component.
+    Generate the specification for a configurable object.
 
     A specification is a `dict` with
 
@@ -112,7 +112,7 @@ def describe(comp):
         object's type, or "{module_name}|{type_name}", if none exist.
       - other fields corresponding to the object's configuration properties.
     '''
-    return Namespace(type=identify(type(comp)), **getattr(comp, 'conf', {}))
+    return Namespace(type=identify(type(obj)), **getattr(obj, 'conf', {}))
 
 ################################################################################
 # JSON-Schema generation
@@ -168,10 +168,10 @@ def _command_schema():
                if isinstance(val, Command)])
 
 ################################################################################
-# Components (configurable objects)
+# Configurable objects
 ################################################################################
 
-class Component:
+class Configurable:
     '''
     An object that can be constructed from JSON-object-like structures.
 
@@ -179,8 +179,8 @@ class Component:
     arbitrarily nested `bool`, `int`, `float`, `str`, `NoneType`, `list`, and
     string-keyed `dict` instances.
 
-    A `Component`'s configuration should be passed to its constructor as a
-    set of keyword arguments.
+    An object's configuration should be passed to its constructor as a set of
+    keyword arguments.
     '''
     class Conf:
         '''
@@ -199,7 +199,7 @@ class Component:
 
         .. code-block:: python
 
-            class Person(cg.Component):
+            class Person(cg.Configurable):
                 class Conf:
                     name = str, 'a long-winded pointer'
                     age = int, [0], 'solar rotation count'
@@ -245,7 +245,7 @@ class Component:
 # Commands
 ################################################################################
 
-class Command(Component):
+class Command(Configurable):
     '''
     An operation that creates a `Record`.
 
@@ -507,9 +507,9 @@ def _cmd_desc(name, cmd):
 
 def _cmd_dict_desc():
     return 'commands:\n' + _ind_a('\n'.join(
-        _cmd_desc(name, comp)
-        for name, comp in _flat_scope().items()
-        if isinstance(comp, Command)))
+        _cmd_desc(name, val)
+        for name, val in _flat_scope().items()
+        if isinstance(val, Command)))
 
 def cli():
     'Run a command-line interface derived from the current scope stack.'
