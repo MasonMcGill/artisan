@@ -20,7 +20,7 @@ import h5py as h5
 import jsonschema
 import numpy as np
 from ruamel import yaml
-from toolz import dissoc, merge, valmap
+from toolz import dissoc, keyfilter, merge, valfilter, valmap
 
 __all__ = [
     'Namespace', 'Configurable',
@@ -100,7 +100,7 @@ def create(spec):
         object's type, or "{module_name}|{type_name}", if none exist.
       - other fields corresponding to the object's configuration properties.
     '''
-    return resolve(spec.type)(**dissoc(spec, 'type'))
+    return resolve(spec['type'])(**dissoc(spec, 'type'))
 
 def describe(obj):
     '''
@@ -147,6 +147,17 @@ def _schema_from_prop_spec(prop_spec):
             schema.update(e)
     return schema
 
+def _conf_schema(type_):
+    prop_specs = keyfilter(re.compile('!(^__)').match, vars(type_.Conf))
+    prop_schemas = valmap(_schema_from_prop_spec, prop_specs)
+    required = [*valfilter(lambda v: 'default' not in v, prop_schemas)]
+    return dict(type='object', properties=prop_schemas)
+
+def _spec_schema(type_):
+    schema = _conf_schema(type_)
+    schema['properties']['type'] = {'const': identify(type_)}
+    return schema
+
 def _update_refs(schema):
     if isinstance(schema, dict) and '$ref' in schema:
         prefix = '#/definitions/'
@@ -162,16 +173,22 @@ def _update_refs(schema):
 
 def _command_schema():
     return dict(
-        definitions=_update_refs(valmap(describe, _flat_scope())),
+        definitions=_update_refs(valmap(_spec_schema, _flat_scope())),
         oneOf=[{'$ref': f'#/definitions/{sym}'}
                for sym, val in _flat_scope().items()
-               if isinstance(val, Command)])
+               if issubclass(val, Command)])
 
 ################################################################################
 # Configurable objects
 ################################################################################
 
-class Configurable:
+class ConfigurableMeta(type):
+    def __init__(self, *args, **kwargs):
+        id_ = self.__module__+'|'+self.__qualname__
+        self.conf_schema = _conf_schema(self)
+        self.spec_schema = {'$ref': f'#/definitions/{id_}'}
+
+class Configurable(metaclass=ConfigurableMeta):
     '''
     An object that can be constructed from JSON-object-like structures.
 
@@ -227,20 +244,6 @@ class Configurable:
         '''
         return describe(self)
 
-    @property
-    @classmethod
-    def conf_schema(cls):
-        prop_specs = keyfilter(re.compile('^__'), vars(cls.Conf))
-        prop_schemas = valmap(_schema_from_prop_spec, prop_specs)
-        required = [*valfilter(lambda v: 'default' in v, prop_schemas)]
-        return dict(type='object', properties=prop_schemas,
-                    **([{}, {'required': required}][bool(required)]))
-
-    @property
-    @classmethod
-    def spec_schema(cls):
-        return {'$ref': f'#/definitions/{cls.__module__}|{cls.__qualname__}'}
-
 ################################################################################
 # Commands
 ################################################################################
@@ -295,7 +298,7 @@ class Command(Configurable):
         dst = Path(self.output_path)
         shutil.rmtree(dst, ignore_errors=True)
         dst.mkdir(parents=True, exist_ok=True)
-        spec_dict = describe(self)
+        spec_dict = dict(describe(self))
         spec_str = yaml.safe_dump(spec_dict, allow_unicode=True)
         (dst/'_cmd-spec.yaml').write_text(spec_str)
         (dst/'_cmd-status.yaml').write_text('running')
@@ -516,7 +519,7 @@ def cli():
     parser = ArgumentParser(
         formatter_class=RawDescriptionHelpFormatter,
         epilog=_cmd_dict_desc())
-    parser.add_argument('cmd-spec', help=(
+    parser.add_argument('cmd_spec', help=(
         'the command specification, in YAML format, or '
         'the path to a YAML configuration file'))
     args = parser.parse_args()
