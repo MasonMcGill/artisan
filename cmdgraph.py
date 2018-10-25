@@ -374,6 +374,12 @@ class Record:
     def _forget(self, key):
         self._cache.pop(key, None)
 
+    def __contains__(self, key):
+        path = self.path/key
+        return path.exists or (
+            path.suffix == '' and
+            path.with_suffix('.h5').is_file())
+
     def __iter__(self):
         for p in self.path.iterdir():
             if not p.name.startswith('_'):
@@ -603,11 +609,9 @@ def serve(rec_path, port=3000):
 
     @app.get('/<ent_id:path>')
     def _(ent_id):
-        if not (root.path/ent_id).is_file():
-            raise bottle.HTTPError(404)
-        elif bottle.request.query.get('mode', None) == 'file':
+        if Path(ent_id).suffix != '':
             return bottle.static_file(ent_id, root=root.path)
-        else:
+        elif ent_id in root:
             ent = root[ent_id]
             if ent.dtype.kind in ['U', 'S']:
                 return _response(ent.astype('U').tolist())
@@ -617,5 +621,7 @@ def serve(rec_path, port=3000):
                                   'data': ent.data.tobytes(),
                                   'dtype': ent.dtype.name,
                                   'shape': ent.shape})
+        else:
+            raise bottle.HTTPError(404)
 
     app.run(host='localhost', port=port)
