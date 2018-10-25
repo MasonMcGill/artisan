@@ -100,7 +100,7 @@ def create(spec):
         object's type, or "{module_name}|{type_name}", if none exist.
       - other fields corresponding to the object's configuration properties.
     '''
-    return resolve(spec['type'])(**dissoc(spec, 'type'))
+    return resolve(spec['type'])(**dissoc(dict(spec), 'type'))
 
 def describe(obj):
     '''
@@ -299,7 +299,10 @@ class Command(Configurable):
         shutil.rmtree(dst, ignore_errors=True)
         dst.mkdir(parents=True, exist_ok=True)
         spec_dict = dict(describe(self))
-        spec_str = yaml.safe_dump(spec_dict, allow_unicode=True)
+
+        # spec_str = yaml.safe_dump(spec_dict, allow_unicode=True)
+        import json; spec_str = json.dumps(spec_dict)
+
         (dst/'_cmd-spec.yaml').write_text(spec_str)
         (dst/'_cmd-status.yaml').write_text('running')
         self.run()
