@@ -374,6 +374,10 @@ class Record:
     def _forget(self, key):
         self._cache.pop(key, None)
 
+    def __len__(self):
+        return len([p for p in self.path.iterdir()
+                    if not p.name.startswith('_')])
+
     def __contains__(self, key):
         path = self.path/key
         return path.exists or (
