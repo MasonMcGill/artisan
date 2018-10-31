@@ -453,8 +453,6 @@ class Record:
                 self.append(f'{key}/{subkey}', subval)
         else: # Append to an array
             path.parent.mkdir(parents=True, exist_ok=True)
-            if path.with_suffix('.h5').exists():
-                path.with_suffix('.h5').unlink()
             self._get_entry(key).append(val)
 
     @property
