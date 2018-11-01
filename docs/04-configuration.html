@@ -85,7 +85,7 @@
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Configuration management</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#configurable-object-properties">Configurable object properties</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#creating-objects-from-specifications">Creating objects from specifications</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#defining-namespaces">Defining namespaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#defining-scopes">Defining scopes</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#defining-schemas">Defining schemas</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#generating-a-command-line-interface">Generating a command-line interface</a></li>
 </ul>
@@ -170,7 +170,7 @@
 <h2>Configurable object properties<a class="headerlink" href="#configurable-object-properties" title="Permalink to this headline">¶</a></h2>
 <p>An object’s configuration can be accessed via <code class="docutils literal notranslate"><span class="pre">obj.conf</span></code>. <code class="docutils literal notranslate"><span class="pre">obj.spec</span></code> provides its specification: its configuration augmented with a field indicating its type.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">kermit</span><span class="o">.</span><span class="n">conf</span> <span class="c1"># =&gt; Namespace(color=&#39;green&#39;, has_it_easy=False)</span>
-<span class="n">kermit</span><span class="o">.</span><span class="n">spec</span> <span class="c1"># =&gt; Namespace(color=&#39;green&#39;, has_it_easy=False, type=&#39;__main__/Muppet&#39;)</span>
+<span class="n">kermit</span><span class="o">.</span><span class="n">spec</span> <span class="c1"># =&gt; Namespace(color=&#39;green&#39;, has_it_easy=False, type=&#39;__main__|Muppet&#39;)</span>
 </pre></div>
 </div>
 </div>
@@ -186,12 +186,13 @@
 </pre></div>
 </div>
 </div>
-<div class="section" id="defining-namespaces">
-<h2>Defining namespaces<a class="headerlink" href="#defining-namespaces" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="defining-scopes">
+<h2>Defining scopes<a class="headerlink" href="#defining-scopes" title="Permalink to this headline">¶</a></h2>
 <p>By default, the <code class="xref py py-obj docutils literal notranslate"><span class="pre">type</span></code> field in an object’s specification is derived from it’s type’s name and module path, which may be volatile over the course of a project’s development. This limits the usefulness of stored specifications.</p>
-<p>Entering a <code class="docutils literal notranslate"><span class="pre">Namespace</span></code> can override this default behavior with more stable (and often more readable) bindings:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">cg</span><span class="o">.</span><span class="n">Namespace</span><span class="p">({</span><span class="s1">&#39;Muppet&#39;</span><span class="p">:</span> <span class="n">a</span><span class="o">.</span><span class="n">b</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">Something</span><span class="p">}):</span>
-  <span class="n">a</span><span class="o">.</span><span class="n">b</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">Something</span><span class="p">()</span><span class="o">.</span><span class="n">spec</span> <span class="c1"># =&gt; Namespace(type=&#39;Muppet&#39;)</span>
+<p>Entering a <code class="docutils literal notranslate"><span class="pre">Scope</span></code> can override this default behavior with more stable (and often more readable) bindings:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">cg</span><span class="o">.</span><span class="n">Scope</span><span class="p">({</span><span class="s1">&#39;Muppet&#39;</span><span class="p">:</span> <span class="n">a</span><span class="o">.</span><span class="n">b</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">Something</span><span class="p">}):</span>
+  <span class="n">muppet</span> <span class="o">=</span> <span class="n">cg</span><span class="o">.</span><span class="n">create</span><span class="p">({</span><span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;Muppet&#39;</span><span class="p">})</span> <span class="c1"># =&gt; &lt;a.b.c.Something instance&gt;</span>
+  <span class="n">muppet</span><span class="o">.</span><span class="n">spec</span> <span class="c1"># =&gt; Namespace(type=&#39;Muppet&#39;)</span>
 </pre></div>
 </div>
 <div class="admonition-todo admonition" id="index-0">
@@ -208,6 +209,7 @@
 <li>A <code class="xref py py-obj docutils literal notranslate"><span class="pre">type</span></code> value specify the property’s expected type.</li>
 <li>A single-element <code class="xref py py-obj docutils literal notranslate"><span class="pre">list</span></code> value specifies the property’s default value.</li>
 <li>A <code class="xref py py-obj docutils literal notranslate"><span class="pre">str</span></code> value specifies the property’s docstring.</li>
+<li>A <code class="xref py py-obj docutils literal notranslate"><span class="pre">dict</span></code> value specifies constraints in raw <a class="reference external" href="https://json-schema.org/">JSON-Schema</a>.</li>
 <li>A <code class="xref py py-obj docutils literal notranslate"><span class="pre">tuple</span></code> value may specify any combination of the above.</li>
 </ul>
 <p>Example:</p>
@@ -215,26 +217,36 @@
   <span class="k">class</span> <span class="nc">Conf</span><span class="p">:</span>
     <span class="n">name</span> <span class="o">=</span> <span class="nb">str</span><span class="p">,</span> <span class="s1">&#39;a long-winded pointer&#39;</span>
     <span class="n">age</span> <span class="o">=</span> <span class="nb">int</span><span class="p">,</span> <span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="s1">&#39;solar rotation count&#39;</span>
+    <span class="n">favorite_color</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;enum&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;blue&#39;</span><span class="p">,</span> <span class="s1">&#39;green&#39;</span><span class="p">,</span> <span class="s1">&#39;other&#39;</span><span class="p">]}</span>
     <span class="n">shoe_size</span> <span class="o">=</span> <span class="s1">&#39;European standard as of 2018-08-17&#39;</span>
 </pre></div>
 </div>
-<p>Defining configuration schemas is completely optional, but it enables configuration validation and provides nice documentation, both in the code, and in CommandGraph-generated web and command-line interfaces.</p>
-<div class="admonition-todo admonition" id="index-1">
-<p class="first admonition-title">Todo</p>
-<p class="last">Make config schemas available as JSON-like objects.</p>
-</div>
-<div class="admonition-todo admonition" id="index-2">
-<p class="first admonition-title">Todo</p>
-<p class="last">Expose schemas in the web interface.</p>
-</div>
+<p>Defining configuration schemas is completely optional, but it enables configuration validation and provides helpful documentation, both in the code, and in CommandGraph-generated web and command-line interfaces.</p>
 </div>
 <div class="section" id="generating-a-command-line-interface">
 <h2>Generating a command-line interface<a class="headerlink" href="#generating-a-command-line-interface" title="Permalink to this headline">¶</a></h2>
-<p><code class="docutils literal notranslate"><span class="pre">cli</span></code> generates a command-line interface exposing every function in the current namespace stack.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Generates the branching interface</span>
-<span class="c1">#   `&lt;this-file&gt; {a|b} [&lt;conf&gt;]`.</span>
-<span class="k">with</span> <span class="n">cg</span><span class="o">.</span><span class="n">Namespace</span><span class="p">({</span><span class="s1">&#39;a&#39;</span><span class="p">:</span> <span class="n">DoA</span><span class="p">,</span> <span class="s1">&#39;b&#39;</span><span class="p">:</span> <span class="n">DoB</span><span class="p">}):</span>
+<p><code class="docutils literal notranslate"><span class="pre">cli</span></code> generates a command-line interface exposing every command in the current scope stack.</p>
+<p><em>run-cmd:</em></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="ch">#!/usr/bin/env python3</span>
+<span class="c1"># Generates the interface</span>
+<span class="c1">#   `&lt;this-file&gt; [&lt;cmd-spec&gt;]`.</span>
+<span class="k">with</span> <span class="n">cg</span><span class="o">.</span><span class="n">Scope</span><span class="p">({</span><span class="s1">&#39;a&#39;</span><span class="p">:</span> <span class="n">DoA</span><span class="p">,</span> <span class="s1">&#39;b&#39;</span><span class="p">:</span> <span class="n">DoB</span><span class="p">}):</span>
   <span class="n">cg</span><span class="o">.</span><span class="n">cli</span><span class="p">()</span>
+</pre></div>
+</div>
+<p><em>Command line:</em></p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>&gt; ./run-cmd <span class="o">{</span>type: a, mannerInWhichToA: relentlessly<span class="o">}</span>
+</pre></div>
+</div>
+<p>If there is exactly one <code class="docutils literal notranslate"><span class="pre">Command</span></code> in the scope stack, the “type” field in the command specification can be omitted.</p>
+<p><em>run-a:</em></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="ch">#!/usr/bin/env python3</span>
+<span class="k">with</span> <span class="n">cg</span><span class="o">.</span><span class="n">Scope</span><span class="p">({</span><span class="s1">&#39;a&#39;</span><span class="p">:</span> <span class="n">DoA</span><span class="p">}):</span>
+  <span class="n">cg</span><span class="o">.</span><span class="n">cli</span><span class="p">()</span>
+</pre></div>
+</div>
+<p><em>Command line:</em></p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>&gt; ./run-a <span class="o">{</span>other: a, options: here<span class="o">}</span>
 </pre></div>
 </div>
 </div>
@@ -260,7 +272,7 @@
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2018, Mason McGill.
+        &copy; Copyright 2018, Mason McGill
 
     </p>
   </div>
@@ -279,21 +291,14 @@
 
   
 
-    <script type="text/javascript">
-        var DOCUMENTATION_OPTIONS = {
-            URL_ROOT:'./',
-            VERSION:'',
-            LANGUAGE:'en',
-            COLLAPSE_INDEX:false,
-            FILE_SUFFIX:'.html',
-            HAS_SOURCE:  true,
-            SOURCELINK_SUFFIX: '.txt'
-        };
-    </script>
-      <script type="text/javascript" src="_static/jquery.js"></script>
-      <script type="text/javascript" src="_static/underscore.js"></script>
-      <script type="text/javascript" src="_static/doctools.js"></script>
-      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script type="text/javascript" src="_static/jquery.js"></script>
+        <script type="text/javascript" src="_static/underscore.js"></script>
+        <script type="text/javascript" src="_static/doctools.js"></script>
+        <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
 
   
 

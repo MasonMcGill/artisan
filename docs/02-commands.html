@@ -166,7 +166,7 @@
   <span class="n">output_path</span> <span class="o">=</span> <span class="s1">&#39;greetings/{name}&#39;</span> <span class="c1"># Config fields are substituted automatically</span>
                                    <span class="c1"># (though using this shorthand is optional).</span>
   <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-    <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="p">[</span><span class="s1">&#39;message.h5&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>  <span class="c1"># Records provide a concurrency-safe,</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="p">[</span><span class="s1">&#39;message&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>     <span class="c1"># Records provide a concurrency-safe,</span>
       <span class="n">f</span><span class="s1">&#39;Hello, {self.conf.name}!&#39;</span><span class="p">)</span> <span class="c1"># array-friendly view into the filesystem.</span>
 
 <span class="n">SayHello</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;Sven&#39;</span><span class="p">)()</span> <span class="c1"># This writes &quot;Hello, Sven!&quot; to /greetins/Sven/message.h5,</span>
@@ -177,7 +177,7 @@
 </div>
 <div class="section" id="accessing-command-metadata">
 <h2>Accessing command metadata<a class="headerlink" href="#accessing-command-metadata" title="Permalink to this headline">¶</a></h2>
-<p><code class="docutils literal notranslate"><span class="pre">cmd.spec</span></code> returns a command’s specification—its configuration, augmented with a field encoding its type—as a JSON-like object (an arbitrarily nested combination of <code class="xref py py-obj docutils literal notranslate"><span class="pre">bool</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">str</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">NoneType</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">list</span></code>, and <code class="xref py py-obj docutils literal notranslate"><span class="pre">SimpleNamespace</span></code> instances).</p>
+<p><code class="docutils literal notranslate"><span class="pre">cmd.spec</span></code> returns a command’s specification—its configuration, augmented with a field encoding its type—as a JSON-like object (an arbitrarily nested combination of <code class="xref py py-obj docutils literal notranslate"><span class="pre">bool</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">str</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">NoneType</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">list</span></code>, and <code class="xref py py-obj docutils literal notranslate"><span class="pre">Namespace</span></code> instances).</p>
 <p><code class="docutils literal notranslate"><span class="pre">cmd.status</span></code> returns the command’s execution status: <em>“running”</em>, <em>“done”</em>, <em>“stopped”</em>, or <em>“unbegun”</em>.</p>
 </div>
 <div class="section" id="executing-commands">
@@ -189,7 +189,7 @@
 
   <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
     <span class="n">cats</span> <span class="o">=</span> <span class="n">cg</span><span class="o">.</span><span class="n">require</span><span class="p">(</span><span class="n">GetCats</span><span class="p">(</span><span class="n">source</span><span class="o">=</span><span class="s1">&#39;the-internet&#39;</span><span class="p">))</span> <span class="c1"># `require` returns the dependent</span>
-    <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="p">[</span><span class="s1">&#39;result.png&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">warp_thoroughly</span><span class="p">(</span><span class="n">cats</span><span class="p">)</span> <span class="c1"># command&#39;s output record.</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="p">[</span><span class="s1">&#39;result&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">warp_thoroughly</span><span class="p">(</span><span class="n">cats</span><span class="p">)</span>     <span class="c1"># command&#39;s output record.</span>
 </pre></div>
 </div>
 </div>
@@ -215,7 +215,7 @@
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2018, Mason McGill.
+        &copy; Copyright 2018, Mason McGill
 
     </p>
   </div>
@@ -234,21 +234,14 @@
 
   
 
-    <script type="text/javascript">
-        var DOCUMENTATION_OPTIONS = {
-            URL_ROOT:'./',
-            VERSION:'',
-            LANGUAGE:'en',
-            COLLAPSE_INDEX:false,
-            FILE_SUFFIX:'.html',
-            HAS_SOURCE:  true,
-            SOURCELINK_SUFFIX: '.txt'
-        };
-    </script>
-      <script type="text/javascript" src="_static/jquery.js"></script>
-      <script type="text/javascript" src="_static/underscore.js"></script>
-      <script type="text/javascript" src="_static/doctools.js"></script>
-      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script type="text/javascript" src="_static/jquery.js"></script>
+        <script type="text/javascript" src="_static/underscore.js"></script>
+        <script type="text/javascript" src="_static/doctools.js"></script>
+        <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
 
   
 

@@ -167,7 +167,7 @@
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">record</span> <span class="o">=</span> <span class="n">cg</span><span class="o">.</span><span class="n">Record</span><span class="p">(</span><span class="s1">&#39;some/directory/path/&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>Since a record is just a <em>view</em> into a directory, constructing it does not perform any filesystem operations. Files and directories are created lazily, even if the records’ path does not exist.</p>
+<p>Since a record is just a <em>view</em> into a directory, constructing it does not perform any filesystem operations. Files and directories are created as needed.</p>
 </div>
 <div class="section" id="reading-entries">
 <h2>Reading entries<a class="headerlink" href="#reading-entries" title="Permalink to this headline">¶</a></h2>
@@ -183,7 +183,7 @@
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">subrecord</span> <span class="o">=</span> <span class="n">record</span><span class="p">[</span><span class="s1">&#39;directory/path&#39;</span><span class="p">]</span>
 </pre></div>
 </div>
-<p>Records also have <code class="xref py py-obj docutils literal notranslate"><span class="pre">dict</span></code>-style iteration methods (<code class="docutils literal notranslate"><span class="pre">keys</span></code>, <code class="docutils literal notranslate"><span class="pre">values</span></code>, and <code class="docutils literal notranslate"><span class="pre">items</span></code>). These methods iterate over all entries in the directory corresponding to the record, with the exception of those with names beginning with “_”.</p>
+<p>Records also have <code class="xref py py-obj docutils literal notranslate"><span class="pre">dict</span></code>-style iteration methods (<code class="docutils literal notranslate"><span class="pre">keys</span></code>, <code class="docutils literal notranslate"><span class="pre">values</span></code>, and <code class="docutils literal notranslate"><span class="pre">items</span></code>). These methods iterate over all entries in the directory corresponding to the record, with the exception of those with names that start with “_”.</p>
 </div>
 <div class="section" id="writing-entries">
 <h2>Writing entries<a class="headerlink" href="#writing-entries" title="Permalink to this headline">¶</a></h2>
@@ -229,7 +229,6 @@
 <span class="c1">#  - /&lt;record-path&gt;/_entry-names</span>
 <span class="c1">#  - /&lt;record-path&gt;/_cmd-info</span>
 <span class="c1">#  - /&lt;record-path&gt;/&lt;entry-name&gt;</span>
-<span class="c1">#  - /&lt;record-path&gt;/&lt;entry-name&gt;?mode=file</span>
 <span class="n">cg</span><span class="o">.</span><span class="n">serve</span><span class="p">(</span><span class="s1">&#39;my-data/&#39;</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="mi">5555</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -257,7 +256,7 @@
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2018, Mason McGill.
+        &copy; Copyright 2018, Mason McGill
 
     </p>
   </div>
@@ -276,21 +275,14 @@
 
   
 
-    <script type="text/javascript">
-        var DOCUMENTATION_OPTIONS = {
-            URL_ROOT:'./',
-            VERSION:'',
-            LANGUAGE:'en',
-            COLLAPSE_INDEX:false,
-            FILE_SUFFIX:'.html',
-            HAS_SOURCE:  true,
-            SOURCELINK_SUFFIX: '.txt'
-        };
-    </script>
-      <script type="text/javascript" src="_static/jquery.js"></script>
-      <script type="text/javascript" src="_static/underscore.js"></script>
-      <script type="text/javascript" src="_static/doctools.js"></script>
-      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script type="text/javascript" src="_static/jquery.js"></script>
+        <script type="text/javascript" src="_static/underscore.js"></script>
+        <script type="text/javascript" src="_static/doctools.js"></script>
+        <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
 
   
 
