@@ -261,7 +261,7 @@ class Command(Configurable):
     def __init__(self, **conf):
         super().__init__(**conf)
         if isinstance(getattr(type(self), 'output_path', None), str):
-            self.output_path = Path(type(self).output_path.format(conf))
+            self.output_path = Path(type(self).output_path.format(**conf))
         self.output = Record(self.output_path)
 
     def __del__(self):
