@@ -3,14 +3,18 @@ A small, in-development experiment-logging library designed to take advantage of
 YAML, JSON-Schema, HDF5-SWMR, and web-based visualization software.
 '''
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
+from contextlib import contextmanager
+from datetime import datetime
+from glob import glob
 import importlib
-from inspect import cleandoc
+from inspect import getdoc
 import io
 import json
 from pathlib import Path
 import re
 import shutil
 from textwrap import indent
+import threading
 from time import sleep
 from typing import GenericMeta, List
 
@@ -24,8 +28,10 @@ from toolz import dissoc, keyfilter, merge, valfilter, valmap
 
 __all__ = [
     'Namespace', 'Configurable',
-    'Scope', 'resolve', 'identify', 'create', 'describe',
-    'Command', 'Record', 'cli', 'require', 'serve']
+    'using_conf', 'get_conf',
+    'resolve', 'identify', 'create', 'describe',
+    'Command', 'Record', 'require',
+     'cli', 'serve']
 
 ################################################################################
 # Attribute-access-supporting dictionaries
@@ -45,50 +51,46 @@ def _namespacify(obj):
         return obj
 
 ################################################################################
+# Thread-local configuration
+################################################################################
+
+class _ConfStack(threading.local):
+    def __init__(self):
+        self.value = [Namespace(record_root='.', scope={})]
+
+_conf_stack = _ConfStack()
+
+@contextmanager
+def using_conf(*, record_root='.', scope={}):
+    conf = Namespace(record_root=record_root, scope=scope)
+    _conf_stack.value.append(conf); yield
+    _conf_stack.value.remove(conf)
+
+def get_conf():
+    return _conf_stack.value[-1]
+
+################################################################################
 # Serialization/deserialization
 ################################################################################
 
-_scopes = []
-
-def _flat_scope():
-    return merge(_scopes)
-
-class Scope(dict):
-    '''
-    A `dict` context that makes its entries available to `resolve` when active.
-
-    If multiple scopes are active, the innermost scope (the one entered
-    most recently) takes precedence.
-    '''
-    def __enter__(self):
-        _scopes.append(self)
-
-    def __exit__(self, *_):
-        _scopes.remove(self)
-
 def resolve(sym):
-    'Search the scope stack and module path for an object.'
-    for scope in reversed(_scopes):
-        if sym in scope:
-            return scope[sym]
+    'Search the current scope for an object.'
+    if sym in get_conf().scope:
+        return get_conf().scope[sym]
     try:
-        mod_name, type_name = sym.split('|')
+        mod_name, type_name = sym.split('#')
         mod = importlib.import_module(mod_name)
         return getattr(mod, type_name)
     except:
-        raise KeyError(
-            f'"{sym}" is not present in the '
-            'CommandGraph scope stack.')
+        raise KeyError(f'"{sym}" is not present in the current scope')
 
 def identify(obj):
-    'Search the scope stack and module path for an object\'s name.'
-    for scope in reversed(_scopes):
-        for sym, val in scope.items():
-            if val is obj:
-                return sym
+    'Search the current scope for an object\'s name.'
+    for sym, val in get_conf().scope.items():
+        if val is obj: return sym
     mod_name = obj.__module__
     obj_name = obj.__qualname__
-    return f'{mod_name}|{obj_name}'
+    return f'{mod_name}#{obj_name}'
 
 def create(spec):
     '''
@@ -162,7 +164,7 @@ def _update_refs(schema):
     if isinstance(schema, dict) and '$ref' in schema:
         prefix = '#/definitions/'
         old_sym = schema['$ref'][len(prefix):]
-        new_sym = identify(resolve(old_sym))
+        new_sym = identify(resolve(old_sym)) # TODO: fix
         return {'$ref': prefix + new_sym}
     elif isinstance(schema, dict):
         return valmap(_update_refs, schema)
@@ -173,9 +175,9 @@ def _update_refs(schema):
 
 def _command_schema():
     return dict(
-        definitions=_update_refs(valmap(_spec_schema, _flat_scope())),
+        definitions=_update_refs(valmap(_spec_schema, get_conf().scope)),
         oneOf=[{'$ref': f'#/definitions/{sym}'}
-               for sym, val in _flat_scope().items()
+               for sym, val in get_conf().scope.items()
                if issubclass(val, Command)])
 
 ################################################################################
@@ -184,7 +186,7 @@ def _command_schema():
 
 class ConfigurableMeta(type):
     def __init__(self, *args, **kwargs):
-        id_ = self.__module__+'|'+self.__qualname__
+        id_ = self.__module__+'#'+self.__qualname__
         self.conf_schema = _conf_schema(self)
         self.spec_schema = {'$ref': f'#/definitions/{id_}'}
 
@@ -225,24 +227,8 @@ class Configurable(metaclass=ConfigurableMeta):
         pass
 
     def __init__(self, **conf):
-        assert ('type' not in conf), (
-            '"type" can\'t be used as a key in configurations')
+        assert 'type' not in conf, '"type" can\'t be used as a config key.'
         self.conf = _namespacify(conf)
-
-    @property
-    def spec(self):
-        '''
-        Return the object's specification.
-
-        A specification is a `dict` with
-
-          - a "type" field; the innermost `Scope` symbol corresponding to the
-            object's type, or "{module_name}|{type_name}", if none exist.
-          - other fields corresponding to the object's configuration properties.
-
-        (This is equivalent to ``cg.describe(self)``.)
-        '''
-        return describe(self)
 
 ################################################################################
 # Commands
@@ -258,64 +244,58 @@ class Command(Configurable):
 
     Override `run` to do something useful.
     '''
-    def __init__(self, **conf):
-        super().__init__(**conf)
-        if isinstance(getattr(type(self), 'output_path', None), str):
-            self.output_path = Path(type(self).output_path.format(**conf))
-        self.output = Record(self.output_path)
+    def run(self, output):
+        'Override this, writing the output of the command to `output`.'
 
-    def __del__(self):
-        dst = Path(self.output_path)
-        if self.status == 'running':
-            (dst/'_cmd-status.yaml').write_text('stopped')
+def _find_record(cmd):
+    conf_str = json.dumps(cmd.conf, sort_keys=True)
+    rec_pattern = f'{get_conf().record_root}/{identify(type(cmd))}_*'
+    for rec in map(Record, glob(rec_pattern)):
+        if json.dumps(rec.cmd_info.conf, sort_keys=True) == conf_str:
+            return rec
+    return None
 
-    def run(self):
-        'Override this, writing the output of the command to `cmd.output`.'
+def _run(cmd):
+    '''
+    Execute a command.
 
-    @property
-    def status(self):
-        '"running", "done", "stopped", or "unbegun".'
-        try:
-            dst = Path(self.output_path)
-            spec = yaml.safe_load((dst/'_cmd-spec.yaml').read_text())
-            status = yaml.safe_load((dst/'_cmd-status.yaml').read_text())
-            return status if spec == describe(self) else 'unbegun'
-        except FileNotFoundError:
-            return 'unbegun'
+    Performs the following operations:
 
-    def __call__(self):
-        '''
-        Execute the command.
+      - Creates an output record.
+      - Writes metadata to `{output_path}/_cmd-info.yaml`.
+      - Calls `cmd.run`.
+    '''
+    typ = identify(type(cmd))
+    now = datetime.now().strftime(r'%Y-%m-%d-%H%M%S')
+    dst = Path(f'{get_conf().record_root}/{typ}_{now}')
+    dst.mkdir(parents=True)
 
-        Performs the following operations:
+    desc = re.sub(r'(?<!\n)(\n)(?!\n)', ' ', getdoc(cmd) or '')
+    info = dict(type=identify(type(cmd)), desc=desc, conf=cmd.conf)
+    write_info = (dst / '_cmd-info.yaml').write_text
+    write_info(json.dumps({**info, 'status': 'running'}))
 
-          - Ensures that the output directory exist **and clears it**.
-          - Writes the configuration to `{cmd.output_path}/_cmd-spec.yaml`.
-          - Writes "running" to `{cmd.output_path}/_cmd-status.yaml`.
-          - Calls `cmd.run`.
-          - Writes "done" to `{cmd.output_path}/_cmd-status.yaml`.
-        '''
-        dst = Path(self.output_path)
-        shutil.rmtree(dst, ignore_errors=True)
-        dst.mkdir(parents=True, exist_ok=True)
-        spec_dict = dict(describe(self))
-
-        # spec_str = yaml.safe_dump(spec_dict, allow_unicode=True)
-        import json; spec_str = json.dumps(spec_dict)
-
-        (dst/'_cmd-spec.yaml').write_text(spec_str)
-        (dst/'_cmd-status.yaml').write_text('running')
-        self.run()
-        (dst/'_cmd-status.yaml').write_text('done')
+    try:
+        rec = Record(dst)
+        cmd.run(rec)
+        write_info(json.dumps({**info, 'status': 'done'}))
+        return rec
+    except Exception as e:
+        write_info(json.dumps({**info, 'status': 'stopped'}))
+        raise e
 
 def require(cmd):
-    '''
-    Ensure that a command has started and block until it is finished.
-    '''
-    if isinstance(cmd, str): cmd = create(cmd)
-    if cmd.status in {'unbegun', 'stopped'}: cmd()
-    while cmd.status == 'running': sleep(0.01)
-    return Record(cmd.output_path)
+    'Ensure that a command has started and block until it is finished.'
+    rec = _find_record(cmd)
+    if rec is None:
+        return _run(cmd)
+    while rec.cmd_info.status == 'running':
+        sleep(0.01)
+    if rec.cmd_info.status == 'stopped':
+        shutil.rmtree(rec.path)
+        return _run(cmd)
+    elif rec.cmd_info.status == 'done':
+        return rec
 
 ################################################################################
 # Command records
@@ -353,7 +333,7 @@ class Record:
     A record of the execution of a `Command`.
 
     A `Record` is an array-friendly view of a directory. It also supports
-    reading command metadata (stored in "_cmd-spec.yaml" and "_cmd-status.yaml").
+    reading command metadata (stored in "_cmd-info.yaml").
 
     TODO: Document this more.
     '''
@@ -456,22 +436,10 @@ class Record:
             self._get_entry(key).append(val)
 
     @property
-    def cmd_status(self):
-        try:
-            spec = yaml.safe_load((self.path/'_cmd-spec.yaml').read_text())
-            status = yaml.safe_load((self.path/'_cmd-status.yaml').read_text())
-            return status if spec == self.cmd_spec else 'unbegun'
-        except FileNotFoundError:
-            return 'unbegun'
-
-    @property
-    def cmd_spec(self):
-        try:
-            return yaml.safe_load(
-                (self.path/'_cmd-spec.yaml')
-                .read_text())
-        except FileNotFoundError:
-            return None
+    def cmd_info(self):
+        # TODO: Implement caching
+        return _namespacify(yaml.safe_load(
+            (self.path/'_cmd-info.yaml').read_text()))
 
     def keys(self):
         yield from self
@@ -485,27 +453,9 @@ class Record:
             self.keys(),
             self.values())
 
-    def flat_keys(self):
-        for p in self.path.glob('**'):
-            p_rel = p.relative_to(self.path)
-            if not any(part.startswith('_') for part in p_rel.parts):
-                if p_rel.suffix == '.h5': yield str(p_rel)[:-3]
-                else: yield str(p_rel)
-
-    def flat_values(self):
-        for k in self.flat_keys():
-            yield self[k]
-
-    def flat_items(self):
-        for k in self.flat_keys():
-            yield k, self[k]
-
 ################################################################################
 # Command-line interface
 ################################################################################
-
-def _doc(obj):
-    return cleandoc(obj.__doc__ or '')
 
 def _ind_a(text):
     return indent(text, '  ', lambda _: True)
@@ -517,12 +467,13 @@ def _cmd_desc(name, cmd):
     json_schema = cmd.conf_schema['properties']
     schema_str = yaml.safe_dump(json_schema, allow_unicode=True)
     conf_desc = 'conf-schema:\n' + _ind_b(schema_str)
-    return name + ':\n' + _ind_b(_doc(cmd) + '\n' + conf_desc)
+    cmd_desc = getdoc(cmd) or ''
+    return name + ':\n' + _ind_b(cmd_desc + '\n' + conf_desc)
 
 def _cmd_dict_desc():
     return 'commands:\n' + _ind_a('\n'.join(
         _cmd_desc(name, val)
-        for name, val in _flat_scope().items()
+        for name, val in get_conf().scope.items()
         if isinstance(val, Command)))
 
 def cli():
@@ -540,13 +491,13 @@ def cli():
         with open(cmd_spec) as f:
             cmd_spec = yaml.safe_load(f)
 
-    cmds = valfilter(lambda c: isinstance(c, Command), _flat_scope())
+    cmds = valfilter(lambda c: isinstance(c, Command), get_conf().scope)
     if len(cmds) == 1 and 'type' not in cmd_spec:
         cmd_spec['type'] = [*cmds][0]
 
     schema = _command_schema()
     jsonschema.validate(cmd_spec, schema)
-    create(cmd_spec)()
+    require(create(cmd_spec))
 
 ################################################################################
 # Web API
@@ -574,7 +525,17 @@ def _response(obj):
                  'Access-Control-Allow-Origin': '*'},
         body=io.BytesIO(cbor2.dumps(obj)))
 
-def serve(rec_path, port=3000):
+def _encode_entry(ent):
+    if ent.dtype.kind in ['U', 'S']:
+        return ent.astype('U').tolist()
+    else:
+        ent = ent.astype(_web_dtypes[ent.dtype.name])
+        return {'$type': 'array',
+                'data': ent.data.tobytes(),
+                'dtype': ent.dtype.name,
+                'shape': ent.shape}
+
+def serve(port=3000):
     '''
     Start a server providing access to the records in a directory.
     '''
@@ -588,41 +549,23 @@ def serve(rec_path, port=3000):
             'Access-Control-Allow-Headers': '*',
             'Access-Control-Allow-Origin': '*'})
 
-    @app.get('/_entry-names')
-    @app.get('/<rec_id:path>/_entry-names')
-    def _(rec_id=''):
-        if not (root.path/rec_id).is_dir():
-            raise bottle.HTTPError(404)
-        return _response(list(root[rec_id]))
+    @app.get('/_record-names')
+    def _():
+        return _response(list(root))
 
-    @app.get('/_cmd-info')
-    @app.get('/<rec_id:path>/_cmd-info')
-    def _(rec_id=''):
-        if not (root.path/rec_id).is_dir():
+    @app.get('/<rec_id>/_cmd-info')
+    def _(rec_id):
+        if (root.path/rec_id).is_dir():
+            return _response(root[rec_id].cmd_info)
+        else:
             raise bottle.HTTPError(404)
-        spec = root[rec_id].cmd_spec
-        status = root[rec_id].cmd_status
-        return _response(
-            None if spec is None else
-            {'type': spec['type'],
-             'desc': _doc(resolve(spec['type'])),
-             'conf': {k: v for k, v in spec.items() if k != 'type'},
-             'status': status})
 
     @app.get('/<ent_id:path>')
     def _(ent_id):
         if Path(ent_id).suffix != '':
             return bottle.static_file(ent_id, root=root.path)
         elif ent_id in root:
-            ent = root[ent_id]
-            if ent.dtype.kind in ['U', 'S']:
-                return _response(ent.astype('U').tolist())
-            else:
-                ent = ent.astype(_web_dtypes[ent.dtype.name])
-                return _response({'$type': 'array',
-                                  'data': ent.data.tobytes(),
-                                  'dtype': ent.dtype.name,
-                                  'shape': ent.shape})
+            return _response(_encode_entry(root[ent_id]))
         else:
             raise bottle.HTTPError(404)
 
