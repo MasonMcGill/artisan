@@ -539,7 +539,7 @@ def serve(port=3000):
     '''
     Start a server providing access to the records in a directory.
     '''
-    root = Record(rec_path)
+    root = Record(get_conf().record_root)
     app = bottle.default_app()
 
     @app.route('/<:re:.*>', method='OPTIONS')
@@ -549,9 +549,12 @@ def serve(port=3000):
             'Access-Control-Allow-Headers': '*',
             'Access-Control-Allow-Origin': '*'})
 
-    @app.get('/_record-names')
-    def _():
-        return _response(list(root))
+    @app.get('/_entry-names')
+    @app.get('/<rec_id:path>/_entry-names')
+    def _(rec_id=''):
+        if not (root.path/rec_id).is_dir():
+            raise bottle.HTTPError(404)
+        return _response(list(root[rec_id]))
 
     @app.get('/<rec_id>/_cmd-info')
     def _(rec_id):
