@@ -50,6 +50,14 @@ def _namespacify(obj):
     else:
         return obj
 
+def _dictify(obj):
+    if isinstance(obj, dict):
+        return valmap(_dictify, obj)
+    elif isinstance(obj, list):
+        return list(map(_dictify, obj))
+    else:
+        return obj
+
 ################################################################################
 # Thread-local configuration
 ################################################################################
@@ -271,17 +279,22 @@ def _run(cmd):
     dst.mkdir(parents=True)
 
     desc = re.sub(r'(?<!\n)(\n)(?!\n)', ' ', getdoc(cmd) or '')
-    info = dict(type=identify(type(cmd)), desc=desc, conf=cmd.conf)
-    write_info = (dst / '_cmd-info.yaml').write_text
-    write_info(json.dumps({**info, 'status': 'running'}))
+    static_info = dict(
+        type=identify(type(cmd)),
+        desc=desc,
+        conf=_dictify(cmd.conf))
+    write_info = lambda info: (
+        (dst / '_cmd-info.yaml').write_text(
+            yaml.round_trip_dump(info, allow_unicode=True)))
+    write_info({**static_info, 'status': 'running'})
 
     try:
         rec = Record(dst)
         cmd.run(rec)
-        write_info(json.dumps({**info, 'status': 'done'}))
+        write_info({**static_info, 'status': 'done'})
         return rec
     except Exception as e:
-        write_info(json.dumps({**info, 'status': 'stopped'}))
+        write_info({**static_info, 'status': 'stopped'})
         raise e
 
 def require(cmd):
