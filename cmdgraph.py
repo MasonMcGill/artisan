@@ -194,6 +194,7 @@ def _command_schema():
 
 class ConfigurableMeta(type):
     def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         id_ = self.__module__+'#'+self.__qualname__
         self.conf_schema = _conf_schema(self)
         self.spec_schema = {'$ref': f'#/definitions/{id_}'}
