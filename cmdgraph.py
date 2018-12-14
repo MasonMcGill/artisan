@@ -16,7 +16,7 @@ import shutil
 from textwrap import indent
 import threading
 from time import sleep
-from typing import GenericMeta, List
+from typing import List
 
 import bottle
 import cbor2
@@ -137,7 +137,7 @@ def _schema_from_type(t):
         return dict(type='number')
     elif t == str:
         return dict(type='string')
-    elif type(t) == GenericMeta and t.__base__ == List:
+    elif type(t) == type(List) and t.__base__ == List:
         return dict(type='array', items=_schema_from_type(t.__args__[0]))
     else:
         raise ValueError(f'Type "{t}" can\'t be mapped to a schema.')
