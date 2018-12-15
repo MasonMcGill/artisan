@@ -294,7 +294,7 @@ def _run(cmd):
         cmd.run(rec)
         write_info({**static_info, 'status': 'done'})
         return rec
-    except Exception as e:
+    except BaseException as e:
         write_info({**static_info, 'status': 'stopped'})
         raise e
 
