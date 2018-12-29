@@ -31,16 +31,17 @@ __all__ = [
     'using_conf', 'get_conf',
     'resolve', 'identify', 'create', 'describe',
     'Command', 'Record', 'require',
-     'cli', 'serve']
+     'cli', 'serve'
+ ]
 
-################################################################################
+#------------------------------------------------------------------------------
 # Attribute-access-supporting dictionaries
-################################################################################
 
 class Namespace(dict):
     'An `dict` that supports accessing items as attributes'
     __getattr__ = dict.__getitem__
     __setattr__ = dict.__setitem__
+
 
 def _namespacify(obj):
     if isinstance(obj, dict):
@@ -50,6 +51,7 @@ def _namespacify(obj):
     else:
         return obj
 
+
 def _dictify(obj):
     if isinstance(obj, dict):
         return valmap(_dictify, obj)
@@ -58,15 +60,16 @@ def _dictify(obj):
     else:
         return obj
 
-################################################################################
+#------------------------------------------------------------------------------
 # Thread-local configuration
-################################################################################
 
 class _ConfStack(threading.local):
     def __init__(self):
         self.value = [Namespace(record_root='.', scope={})]
 
+
 _conf_stack = _ConfStack()
+
 
 @contextmanager
 def using_conf(*, record_root='.', scope={}):
@@ -74,12 +77,12 @@ def using_conf(*, record_root='.', scope={}):
     _conf_stack.value.append(conf); yield
     _conf_stack.value.remove(conf)
 
+
 def get_conf():
     return _conf_stack.value[-1]
 
-################################################################################
+#------------------------------------------------------------------------------
 # Serialization/deserialization
-################################################################################
 
 def resolve(sym):
     'Search the current scope for an object.'
@@ -92,6 +95,7 @@ def resolve(sym):
     except:
         raise KeyError(f'"{sym}" is not present in the current scope')
 
+
 def identify(obj):
     'Search the current scope for an object\'s name.'
     for sym, val in get_conf().scope.items():
@@ -99,6 +103,7 @@ def identify(obj):
     mod_name = obj.__module__
     obj_name = obj.__qualname__
     return f'{mod_name}#{obj_name}'
+
 
 def create(spec):
     '''
@@ -112,6 +117,7 @@ def create(spec):
     '''
     return resolve(spec['type'])(**dissoc(dict(spec), 'type'))
 
+
 def describe(obj):
     '''
     Generate the specification for a configurable object.
@@ -124,9 +130,8 @@ def describe(obj):
     '''
     return Namespace(type=identify(type(obj)), **getattr(obj, 'conf', {}))
 
-################################################################################
+#------------------------------------------------------------------------------
 # JSON-Schema generation
-################################################################################
 
 def _schema_from_type(t):
     if t == bool:
@@ -141,6 +146,7 @@ def _schema_from_type(t):
         return dict(type='array', items=_schema_from_type(t.__args__[0]))
     else:
         raise ValueError(f'Type "{t}" can\'t be mapped to a schema.')
+
 
 def _schema_from_prop_spec(prop_spec):
     if not isinstance(prop_spec, tuple):
@@ -157,6 +163,7 @@ def _schema_from_prop_spec(prop_spec):
             schema.update(e)
     return schema
 
+
 def _conf_schema(type_):
     prop_specs = {
         k: v for k, v in vars(type_.Conf).items()
@@ -165,16 +172,18 @@ def _conf_schema(type_):
     required = [*valfilter(lambda v: 'default' not in v, prop_schemas)]
     return dict(type='object', properties=prop_schemas, required=required)
 
+
 def _spec_schema(type_):
     schema = _conf_schema(type_)
     schema['properties']['type'] = {'const': identify(type_)}
     return schema
 
+
 def _update_refs(schema):
     if isinstance(schema, dict) and '$ref' in schema:
         prefix = '#/definitions/'
         old_sym = schema['$ref'][len(prefix):]
-        new_sym = identify(resolve(old_sym)) # TODO: fix
+        new_sym = identify(resolve(old_sym))
         return {'$ref': prefix + new_sym}
     elif isinstance(schema, dict):
         return valmap(_update_refs, schema)
@@ -183,16 +192,19 @@ def _update_refs(schema):
     else:
         return schema
 
+
 def _command_schema():
     return dict(
         definitions=_update_refs(valmap(_spec_schema, get_conf().scope)),
-        oneOf=[{'$ref': f'#/definitions/{sym}'}
-               for sym, val in get_conf().scope.items()
-               if issubclass(val, Command)])
+        oneOf=[
+            {'$ref': f'#/definitions/{sym}'}
+            for sym, val in get_conf().scope.items()
+            if issubclass(val, Command)
+        ]
+    )
 
-################################################################################
+#------------------------------------------------------------------------------
 # JSON-Schema validation/default substitution
-################################################################################
 
 def _with_defaults(obj, schema):
     if '$ref' in schema:
@@ -203,8 +215,10 @@ def _with_defaults(obj, schema):
         for subschema in schema['oneOf']:
             subschema_with_defs = dict(
                 definitions=_update_refs(valmap(
-                    _spec_schema, get_conf().scope)),
-                **subschema)
+                    _spec_schema, get_conf().scope
+                )),
+                **subschema
+            )
             if jsonschema.Draft7Validator(subschema_with_defs).is_valid(obj):
                 return _with_defaults(obj, subschema)
 
@@ -224,9 +238,8 @@ def _with_defaults(obj, schema):
     else:
         return obj
 
-################################################################################
+#------------------------------------------------------------------------------
 # Configurable objects
-################################################################################
 
 class ConfigurableMeta(type):
     def __init__(self, *args, **kwargs):
@@ -234,6 +247,7 @@ class ConfigurableMeta(type):
         id_ = self.__module__+'#'+self.__qualname__
         self.conf_schema = _conf_schema(self)
         self.spec_schema = {'$ref': f'#/definitions/{id_}'}
+
 
 class Configurable(metaclass=ConfigurableMeta):
     '''
@@ -275,9 +289,8 @@ class Configurable(metaclass=ConfigurableMeta):
         assert 'type' not in conf, '"type" can\'t be used as a config key.'
         self.conf = _namespacify(conf)
 
-################################################################################
+#------------------------------------------------------------------------------
 # Commands
-################################################################################
 
 class Command(Configurable):
     '''
@@ -292,6 +305,7 @@ class Command(Configurable):
     def run(self, output):
         'Override this, writing the output of the command to `output`.'
 
+
 def _find_record(cmd):
     conf_str = json.dumps(cmd.conf, sort_keys=True)
     rec_pattern = f'{get_conf().record_root}/{identify(type(cmd))}_*'
@@ -299,6 +313,7 @@ def _find_record(cmd):
         if json.dumps(rec.cmd_info.conf, sort_keys=True) == conf_str:
             return rec
     return None
+
 
 def _run(cmd):
     '''
@@ -319,10 +334,13 @@ def _run(cmd):
     static_info = dict(
         type=identify(type(cmd)),
         desc=desc,
-        conf=_dictify(cmd.conf))
+        conf=_dictify(cmd.conf)
+    )
     write_info = lambda info: (
         (dst / '_cmd-info.yaml').write_text(
-            yaml.round_trip_dump(info, allow_unicode=True)))
+            yaml.round_trip_dump(info, allow_unicode=True)
+        )
+    )
     write_info({**static_info, 'status': 'running'})
 
     try:
@@ -333,6 +351,7 @@ def _run(cmd):
     except BaseException as e:
         write_info({**static_info, 'status': 'stopped'})
         raise e
+
 
 def require(cmd):
     'Ensure that a command has started and block until it is finished.'
@@ -347,9 +366,8 @@ def require(cmd):
     elif rec.cmd_info.status == 'done':
         return rec
 
-################################################################################
+#------------------------------------------------------------------------------
 # Command records
-################################################################################
 
 class _HDF5Entry:
     def __init__(self, path):
@@ -370,13 +388,18 @@ class _HDF5Entry:
         if self.dset is None:
             f = h5.File(self.path, libver='latest')
             self.dset = f.require_dataset(
-                name='data', shape=None, maxshape=(None, *val.shape),
-                dtype=val.dtype, data=np.empty((0, *val.shape), val.dtype),
-                chunks=(int(np.ceil(2**12 / val.size)), *val.shape))
+                name='data',
+                shape=None,
+                maxshape=(None, *val.shape),
+                dtype=val.dtype,
+                data=np.empty((0, *val.shape), val.dtype),
+                chunks=(int(np.ceil(2**12 / val.size)), *val.shape)
+            )
             f.swmr_mode = True
         self.dset.resize(self.dset.len() + 1, 0)
         self.dset[-1] = val
         self.dset.flush()
+
 
 class Record:
     '''
@@ -405,8 +428,10 @@ class Record:
         self._cache.pop(key, None)
 
     def __len__(self):
-        return len([p for p in self.path.iterdir()
-                    if not p.name.startswith('_')])
+        return len([
+            p for p in self.path.iterdir()
+            if not p.name.startswith('_')
+        ])
 
     def __contains__(self, key):
         path = self.path/key
@@ -489,7 +514,8 @@ class Record:
     def cmd_info(self):
         # TODO: Implement caching
         return _namespacify(yaml.safe_load(
-            (self.path/'_cmd-info.yaml').read_text()))
+            (self.path/'_cmd-info.yaml').read_text()
+        ))
 
     def keys(self):
         yield from self
@@ -499,19 +525,18 @@ class Record:
             yield self[k]
 
     def items(self):
-        yield from zip(
-            self.keys(),
-            self.values())
+        yield from zip(self.keys(), self.values())
 
-################################################################################
+#------------------------------------------------------------------------------
 # Command-line interface
-################################################################################
 
 def _ind_a(text):
     return indent(text, '  ', lambda _: True)
 
+
 def _ind_b(text):
     return indent(text, '│ ', lambda _: True)
+
 
 def _cmd_desc(name, cmd):
     json_schema = cmd.conf_schema['properties']
@@ -520,11 +545,14 @@ def _cmd_desc(name, cmd):
     cmd_desc = getdoc(cmd) or ''
     return name + ':\n' + _ind_b(cmd_desc + '\n' + conf_desc)
 
+
 def _cmd_dict_desc():
     return 'commands:\n' + _ind_a('\n'.join(
         _cmd_desc(name, val)
         for name, val in get_conf().scope.items()
-        if isinstance(val, Command)))
+        if isinstance(val, Command)
+    ))
+
 
 def cli():
     'Run a command-line interface derived from the current scope stack.'
@@ -549,9 +577,8 @@ def cli():
     jsonschema.validate(cmd_spec, schema)
     require(create(_with_defaults(cmd_spec, schema)))
 
-################################################################################
+#------------------------------------------------------------------------------
 # Web API
-################################################################################
 
 _web_dtypes = dict(
     bool='uint8',
@@ -567,13 +594,16 @@ _web_dtypes = dict(
     float32='float32',
     float64='float64',
     float96='float64',
-    float128='float64')
+    float128='float64'
+)
+
 
 def _response(obj):
     return bottle.HTTPResponse(
         headers={'Content-Type': 'application/msgpack',
                  'Access-Control-Allow-Origin': '*'},
         body=io.BytesIO(cbor2.dumps(obj)))
+
 
 def _encode_entry(ent):
     if ent.dtype.kind in ['U', 'S']:
@@ -584,6 +614,7 @@ def _encode_entry(ent):
                 'data': ent.data.tobytes(),
                 'dtype': ent.dtype.name,
                 'shape': ent.shape}
+
 
 def serve(port=3000):
     '''
