@@ -5,7 +5,6 @@ YAML, JSON-Schema, HDF5-SWMR, and web-based visualization software.
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 from contextlib import contextmanager
 from datetime import datetime
-from glob import glob
 import importlib
 from inspect import getdoc
 import io
@@ -308,8 +307,8 @@ class Command(Configurable):
 
 def _find_record(cmd):
     conf_str = json.dumps(cmd.conf, sort_keys=True)
-    rec_pattern = f'{get_conf().record_root}/{identify(type(cmd))}_*'
-    for rec in map(Record, glob(rec_pattern)):
+    rec_paths = Path(get_conf().record_root).glob(identify(type(cmd))+'_*')
+    for rec in map(Record, rec_paths):
         if json.dumps(rec.cmd_info.conf, sort_keys=True) == conf_str:
             return rec
     return None
