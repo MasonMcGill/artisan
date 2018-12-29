@@ -83,6 +83,10 @@ def get_conf():
 #------------------------------------------------------------------------------
 # Serialization/deserialization
 
+def _id(obj):
+    return obj.__module__+'$'+obj.__qualname__
+
+
 def resolve(sym):
     'Search the current scope for an object.'
     if sym in get_conf().scope:
@@ -99,9 +103,7 @@ def identify(obj):
     'Search the current scope for an object\'s name.'
     for sym, val in get_conf().scope.items():
         if val is obj: return sym
-    mod_name = obj.__module__
-    obj_name = obj.__qualname__
-    return f'{mod_name}${obj_name}'
+    return _id(obj)
 
 
 def create(spec):
@@ -143,6 +145,8 @@ def _schema_from_type(t):
         return dict(type='string')
     elif type(t) == type(List) and t.__base__ == List:
         return dict(type='array', items=_schema_from_type(t.__args__[0]))
+    elif issubclass(t, Configurable):
+        return {'$ref': '#/definitions/'+identify(t)}
     else:
         raise ValueError(f'Type "{t}" can\'t be mapped to a schema.')
 
@@ -163,49 +167,71 @@ def _schema_from_prop_spec(prop_spec):
     return schema
 
 
-def _conf_schema(type_):
-    prop_specs = {
-        k: v for k, v in vars(type_.Conf).items()
-        if not k.startswith('__')}
-    prop_schemas = valmap(_schema_from_prop_spec, prop_specs)
-    required = [*valfilter(lambda v: 'default' not in v, prop_schemas)]
-    return dict(type='object', properties=prop_schemas, required=required)
-
-
 def _spec_schema(type_):
-    schema = _conf_schema(type_)
-    schema['properties']['type'] = {'const': identify(type_)}
-    return schema
-
-
-def _update_refs(schema):
-    if isinstance(schema, dict) and '$ref' in schema:
-        prefix = '#/definitions/'
-        old_sym = schema['$ref'][len(prefix):]
-        new_sym = identify(resolve(old_sym))
-        return {'$ref': prefix + new_sym}
-    elif isinstance(schema, dict):
-        return valmap(_update_refs, schema)
-    elif isinstance(schema, list):
-        return list(map(_update_refs, schema))
+    # Concrete types
+    if len(type_.__subclasses__()) == 0:
+        prop_schemas = {
+            k: _schema_from_prop_spec(v)
+            for k, v in vars(type_.Conf).items()
+            if not k.startswith('__')
+        }
+        return dict(
+            type='object',
+            properties=prop_schemas,
+            required=[
+                prop_name
+                for prop_name, schema in prop_schemas.items()
+                if 'default' not in schema
+            ]
+        )
+    # Abstract types
     else:
-        return schema
+        return {'oneOf': [
+            {'allOf': [
+                {'required': ['type'],
+                 'properties': {'type': {'const': identify(t)}}},
+                {'$ref': '#/definitions/'+identify(t)}
+            ]}
+            for t in type_.__subclasses__()
+            if len(t.__subclasses__()) == 0
+        ]}
+
+
+def _collect_definitions(defs, schema):
+    if isinstance(schema, dict) and '$ref' in schema:
+        sym = schema['$ref'][len('#/definitions/'):]
+        if sym not in defs:
+            defs[sym] = _spec_schema(resolve(sym))
+            _collect_definitions(defs, defs[sym])
+    elif isinstance(schema, dict):
+        for subschema in schema.values():
+            _collect_definitions(defs, subschema)
+    elif isinstance(schema, list):
+        for subschema in schema:
+            _collect_definitions(defs, subschema)
 
 
 def _command_schema():
-    return dict(
-        definitions=_update_refs(valmap(_spec_schema, get_conf().scope)),
-        oneOf=[
-            {'$ref': f'#/definitions/{sym}'}
-            for sym, val in get_conf().scope.items()
-            if issubclass(val, Command)
-        ]
-    )
+    defs = {}
+    options = [
+        # {'$ref': f'#/definitions/{sym}'}
+        {'allOf': [
+            {'required': ['type'],
+             'properties': {'type': {'const': sym}}},
+            {'$ref': '#/definitions/'+sym}
+        ]}
+
+        for sym, val in get_conf().scope.items()
+        if issubclass(val, Command) and len(val.__subclasses__()) == 0
+    ]
+    _collect_definitions(defs, options)
+    return dict(definitions=defs, oneOf=options)
 
 #------------------------------------------------------------------------------
 # JSON-Schema validation/default substitution
 
 def _with_defaults(obj, schema):
+    # TODO: Avoid re-validation and schema reconstruction.
     if '$ref' in schema:
         sym = schema['$ref'][len('#/definitions/'):]
         return _with_defaults(obj, _spec_schema(resolve(sym)))
@@ -213,13 +239,20 @@ def _with_defaults(obj, schema):
     elif 'oneOf' in schema:
         for subschema in schema['oneOf']:
             subschema_with_defs = dict(
-                definitions=_update_refs(valmap(
-                    _spec_schema, get_conf().scope
-                )),
+                definitions=_command_schema()['definitions'],
                 **subschema
             )
             if jsonschema.Draft7Validator(subschema_with_defs).is_valid(obj):
                 return _with_defaults(obj, subschema)
+
+    elif 'allOf' in schema:
+        if len(schema['allOf']) > 0:
+            return _with_defaults(
+                _with_defaults(obj, schema['allOf'][0]),
+                {'allOf': schema['allOf'][1:]}
+            )
+        else:
+            return obj
 
     elif isinstance(obj, dict):
         result = {}
@@ -240,15 +273,7 @@ def _with_defaults(obj, schema):
 #------------------------------------------------------------------------------
 # Configurable objects
 
-class ConfigurableMeta(type):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        id_ = self.__module__+'$'+self.__qualname__
-        self.conf_schema = _conf_schema(self)
-        self.spec_schema = {'$ref': f'#/definitions/{id_}'}
-
-
-class Configurable(metaclass=ConfigurableMeta):
+class Configurable:
     '''
     An object that can be constructed from JSON-object-like structures.
 
