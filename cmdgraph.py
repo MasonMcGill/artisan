@@ -24,7 +24,7 @@ import h5py as h5
 import jsonschema
 import numpy as np
 from ruamel import yaml
-from toolz import dissoc, keyfilter, merge, valfilter, valmap
+from toolz import dissoc, valfilter, valmap
 
 __all__ = [
     'Namespace', 'Configurable',
@@ -158,10 +158,12 @@ def _schema_from_prop_spec(prop_spec):
     return schema
 
 def _conf_schema(type_):
-    prop_specs = keyfilter(re.compile('!(^__)').match, vars(type_.Conf))
+    prop_specs = {
+        k: v for k, v in vars(type_.Conf).items()
+        if not k.startswith('__')}
     prop_schemas = valmap(_schema_from_prop_spec, prop_specs)
     required = [*valfilter(lambda v: 'default' not in v, prop_schemas)]
-    return dict(type='object', properties=prop_schemas)
+    return dict(type='object', properties=prop_schemas, required=required)
 
 def _spec_schema(type_):
     schema = _conf_schema(type_)
@@ -187,6 +189,40 @@ def _command_schema():
         oneOf=[{'$ref': f'#/definitions/{sym}'}
                for sym, val in get_conf().scope.items()
                if issubclass(val, Command)])
+
+################################################################################
+# JSON-Schema validation/default substitution
+################################################################################
+
+def _with_defaults(obj, schema):
+    if '$ref' in schema:
+        sym = schema['$ref'][len('#/definitions/'):]
+        return _with_defaults(obj, _spec_schema(resolve(sym)))
+
+    elif 'oneOf' in schema:
+        for subschema in schema['oneOf']:
+            subschema_with_defs = dict(
+                definitions=_update_refs(valmap(
+                    _spec_schema, get_conf().scope)),
+                **subschema)
+            if jsonschema.Draft7Validator(subschema_with_defs).is_valid(obj):
+                return _with_defaults(obj, subschema)
+
+    elif isinstance(obj, dict):
+        result = {}
+        for prop_name, prop_schema in schema.get('properties', {}).items():
+            if 'default' in prop_schema:
+                result[prop_name] = prop_schema['default']
+        for prop_name, prop_value in obj.items():
+            prop_schema = schema.get('properties', {}).get(prop_name, {})
+            result[prop_name] = _with_defaults(prop_value, prop_schema)
+        return result
+
+    elif isinstance(obj, list):
+        return [_with_defaults(elem, schema.get('items', {})) for elem in obj]
+
+    else:
+        return obj
 
 ################################################################################
 # Configurable objects
@@ -511,7 +547,7 @@ def cli():
 
     schema = _command_schema()
     jsonschema.validate(cmd_spec, schema)
-    require(create(cmd_spec))
+    require(create(_with_defaults(cmd_spec, schema)))
 
 ################################################################################
 # Web API
