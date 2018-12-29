@@ -89,7 +89,7 @@ def resolve(sym):
     if sym in get_conf().scope:
         return get_conf().scope[sym]
     try:
-        mod_name, type_name = sym.split('#')
+        mod_name, type_name = sym.split('$')
         mod = importlib.import_module(mod_name)
         return getattr(mod, type_name)
     except:
@@ -102,7 +102,7 @@ def identify(obj):
         if val is obj: return sym
     mod_name = obj.__module__
     obj_name = obj.__qualname__
-    return f'{mod_name}#{obj_name}'
+    return f'{mod_name}${obj_name}'
 
 
 def create(spec):
@@ -112,7 +112,7 @@ def create(spec):
     A specification is a `dict` with
 
       - a "type" field; the innermost `Scope` symbol corresponding to the
-        object's type, or "{module_name}|{type_name}", if none exist.
+        object's type, or "{module_name}${type_name}", if none exist.
       - other fields corresponding to the object's configuration properties.
     '''
     return resolve(spec['type'])(**dissoc(dict(spec), 'type'))
@@ -125,7 +125,7 @@ def describe(obj):
     A specification is a `dict` with
 
       - a "type" field; the innermost `Scope` symbol corresponding to the
-        object's type, or "{module_name}|{type_name}", if none exist.
+        object's type, or "{module_name}${type_name}", if none exist.
       - other fields corresponding to the object's configuration properties.
     '''
     return Namespace(type=identify(type(obj)), **getattr(obj, 'conf', {}))
@@ -244,7 +244,7 @@ def _with_defaults(obj, schema):
 class ConfigurableMeta(type):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        id_ = self.__module__+'#'+self.__qualname__
+        id_ = self.__module__+'$'+self.__qualname__
         self.conf_schema = _conf_schema(self)
         self.spec_schema = {'$ref': f'#/definitions/{id_}'}
 
