@@ -214,13 +214,11 @@ def _collect_definitions(defs, schema):
 def _command_schema():
     defs = {}
     options = [
-        # {'$ref': f'#/definitions/{sym}'}
         {'allOf': [
             {'required': ['type'],
              'properties': {'type': {'const': sym}}},
             {'$ref': '#/definitions/'+sym}
         ]}
-
         for sym, val in get_conf().scope.items()
         if issubclass(val, Command) and len(val.__subclasses__()) == 0
     ]
@@ -309,9 +307,11 @@ class Configurable:
         '''
         pass
 
+    def __new__(cls, **conf):
+        return super().__new__(conf.get('type', cls))
+
     def __init__(self, **conf):
-        assert 'type' not in conf, '"type" can\'t be used as a config key.'
-        self.conf = _namespacify(conf)
+        self.conf = _namespacify(dissoc(conf, 'type'))
 
 #------------------------------------------------------------------------------
 # Commands
