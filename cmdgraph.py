@@ -311,7 +311,11 @@ class Configurable:
         pass
 
     def __new__(cls, **conf):
-        return super().__new__(conf.get('type', cls))
+        return super().__new__(
+            resolve(conf['type'])
+            if 'type' in conf
+            else cls
+        )
 
     def __init__(self, **conf):
         schema = _with_definitions(_spec_schema(type(self)))
