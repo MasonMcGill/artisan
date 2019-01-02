@@ -392,6 +392,8 @@ def _run(cmd):
 
 def require(cmd):
     'Ensure that a command has started and block until it is finished.'
+    if not isinstance(cmd, Command):
+        cmd = create(cmd)
     rec = _find_record(cmd)
     if rec is None:
         return _run(cmd)
