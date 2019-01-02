@@ -211,6 +211,12 @@ def _collect_definitions(defs, schema):
             _collect_definitions(defs, subschema)
 
 
+def _with_definitions(schema):
+    defs = {}
+    _collect_definitions(defs, schema)
+    return dict(definitions=defs, **schema)
+
+
 def _command_schema():
     defs = {}
     options = [
@@ -232,15 +238,12 @@ def _with_defaults(obj, schema):
     # TODO: Avoid re-validation and schema reconstruction.
     if '$ref' in schema:
         sym = schema['$ref'][len('#/definitions/'):]
-        return _with_defaults(obj, _spec_schema(resolve(sym)))
+        return _with_defaults(obj, _with_definitions(_spec_schema(resolve(sym))))
 
     elif 'oneOf' in schema:
         for subschema in schema['oneOf']:
-            subschema_with_defs = dict(
-                definitions=_command_schema()['definitions'],
-                **subschema
-            )
-            if jsonschema.Draft7Validator(subschema_with_defs).is_valid(obj):
+            validator = jsonschema.Draft7Validator(_with_definitions(subschema))
+            if validator.is_valid(obj):
                 return _with_defaults(obj, subschema)
 
     elif 'allOf' in schema:
@@ -311,7 +314,17 @@ class Configurable:
         return super().__new__(conf.get('type', cls))
 
     def __init__(self, **conf):
-        self.conf = _namespacify(dissoc(conf, 'type'))
+        schema = _with_definitions(_spec_schema(type(self)))
+        self.conf = _namespacify(dissoc(_with_defaults(conf, schema), 'type'))
+
+    @classmethod
+    def make_conf(cls, **conf):
+        schema = _with_definitions(_spec_schema(cls))
+        return _namespacify(_with_defaults(conf, schema))
+
+    @classmethod
+    def make_spec(cls, **conf):
+        return Namespace(type=identify(cls), **cls.make_conf(**conf))
 
 #------------------------------------------------------------------------------
 # Commands
