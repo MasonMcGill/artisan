@@ -310,14 +310,11 @@ class Configurable:
         '''
         pass
 
-    def __new__(cls, **conf):
-        return super().__new__(
-            resolve(conf['type'])
-            if 'type' in conf
-            else cls
-        )
+    def __new__(cls, *args, **conf):
+        subclass = resolve(conf['type']) if 'type' in conf else cls
+        return super().__new__(subclass)
 
-    def __init__(self, **conf):
+    def __init__(self, *args, **conf):
         schema = _with_definitions(_spec_schema(type(self)))
         self.conf = _namespacify(dissoc(_with_defaults(conf, schema), 'type'))
 
