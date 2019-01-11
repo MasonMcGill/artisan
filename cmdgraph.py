@@ -451,8 +451,8 @@ class Record:
     TODO: Document this more.
     '''
     def __init__(self, path):
-        self.path = Path(path)
-        self._cache = {}
+        self.__dict__['path'] = Path(path)
+        self.__dict__['_cache'] = {}
 
     def _get_entry(self, key):
         if key not in self._cache:
@@ -535,6 +535,9 @@ class Record:
         self._forget(key)
         if self.path.stat().st_nlink == 0:
             self.path.rmdir()
+
+    __getattr__ = __getitem__
+    __setattr__ = __setitem__
 
     def append(self, key, val):
         key = Path(key)
