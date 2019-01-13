@@ -491,14 +491,12 @@ class Record:
         if len(key.parts) > 1: # Forward to a subrecord
             subrec = self._get_record(key.parts[0])
             return subrec['/'.join(key.parts[1:])]
-        elif path.is_dir(): # Return a subrecord
-            return self._get_record(key)
         elif path.with_suffix('.h5').is_file(): # Return an array
             return self._get_entry(key).get()
         elif path.is_file(): # Return a file path
             return path
-        else:
-            raise FileNotFoundError()
+        else: # Return a subrecord
+            return self._get_record(key)
 
     def __setitem__(self, key, val):
         key = Path(key)
