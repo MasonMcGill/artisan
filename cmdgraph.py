@@ -295,8 +295,12 @@ class Command(Configurable):
 
 
 def _find_record(cmd):
+    if getattr(cmd, 'volatile', False):
+        return None
+
     conf_str = json.dumps(cmd.conf, sort_keys=True)
     rec_paths = Path(get_conf().record_root).glob(identify(type(cmd))+'_*')
+
     for rec in map(Record, rec_paths):
         if json.dumps(rec.cmd_info.conf, sort_keys=True) == conf_str:
             return rec
