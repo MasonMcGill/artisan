@@ -232,46 +232,6 @@ def _command_schema():
     return dict(definitions=defs, oneOf=options)
 
 #------------------------------------------------------------------------------
-# JSON-Schema validation/default substitution
-
-def _with_defaults(obj, schema):
-    # TODO: Avoid re-validation and schema reconstruction.
-    if '$ref' in schema:
-        sym = schema['$ref'][len('#/definitions/'):]
-        return _with_defaults(obj, _with_definitions(_spec_schema(resolve(sym))))
-
-    elif 'oneOf' in schema:
-        for subschema in schema['oneOf']:
-            validator = jsonschema.Draft7Validator(_with_definitions(subschema))
-            if validator.is_valid(obj):
-                return _with_defaults(obj, subschema)
-
-    elif 'allOf' in schema:
-        if len(schema['allOf']) > 0:
-            return _with_defaults(
-                _with_defaults(obj, schema['allOf'][0]),
-                {'allOf': schema['allOf'][1:]}
-            )
-        else:
-            return obj
-
-    elif isinstance(obj, dict):
-        result = {}
-        for prop_name, prop_schema in schema.get('properties', {}).items():
-            if 'default' in prop_schema:
-                result[prop_name] = prop_schema['default']
-        for prop_name, prop_value in obj.items():
-            prop_schema = schema.get('properties', {}).get(prop_name, {})
-            result[prop_name] = _with_defaults(prop_value, prop_schema)
-        return result
-
-    elif isinstance(obj, list):
-        return [_with_defaults(elem, schema.get('items', {})) for elem in obj]
-
-    else:
-        return obj
-
-#------------------------------------------------------------------------------
 # Configurable objects
 
 class Configurable:
@@ -315,17 +275,7 @@ class Configurable:
         return super().__new__(subclass)
 
     def __init__(self, *args, **conf):
-        schema = _with_definitions(_spec_schema(type(self)))
-        self.conf = _namespacify(dissoc(_with_defaults(conf, schema), 'type'))
-
-    @classmethod
-    def make_conf(cls, **conf):
-        schema = _with_definitions(_spec_schema(cls))
-        return _namespacify(_with_defaults(conf, schema))
-
-    @classmethod
-    def make_spec(cls, **conf):
-        return Namespace(type=identify(cls), **cls.make_conf(**conf))
+        self.conf = _namespacify(dissoc(conf, 'type'))
 
 #------------------------------------------------------------------------------
 # Commands
@@ -614,9 +564,8 @@ def cli():
     if len(cmds) == 1 and 'type' not in cmd_spec:
         cmd_spec['type'] = [*cmds][0]
 
-    schema = _command_schema()
-    jsonschema.validate(cmd_spec, schema)
-    require(create(_with_defaults(cmd_spec, schema)))
+    jsonschema.validate(cmd_spec, _command_schema())
+    require(create(cmd_spec))
 
 #------------------------------------------------------------------------------
 # Web API
