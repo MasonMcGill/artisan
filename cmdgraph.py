@@ -27,7 +27,7 @@ from ruamel import yaml
 from toolz import dissoc, valfilter, valmap
 
 __all__ = [
-    'Namespace', 'Configurable',
+    'Namespace', 'Configuration', 'Configurable',
     'using_conf', 'get_conf',
     'resolve', 'identify', 'create', 'describe',
     'Command', 'Record', 'require',
@@ -43,6 +43,41 @@ class Namespace(dict):
     __setattr__ = dict.__setitem__
 
 
+class Configuration(dict):
+    '''
+    An `dict` that supports accessing items as attributes and tracks item
+    access
+
+    To be used in an API update allowing configurations to be passed
+    without being converted into keyword arguments
+
+    TODO:
+    - Reimplement the full `dict` interface (at least the reading interface).
+    - Change the signature of `Configurable.{__new__,__init__}`.
+    - Change `_run` and `require` to only care about accessed fields.
+    '''
+    def __init__(self, *args, **kwargs):
+        dict.__init__(self, *args, **kwargs)
+        self.__dict__['accessed_fields'] = []
+
+    def __getitem__(self, key):
+        if key not in self.accessed_fields:
+            self.accessed_fields.append(key)
+        return dict.__getitem__
+
+    __getattr__ = __getitem__
+    __setattr__ = dict.__setitem__
+
+
+def _dictify(obj):
+    if isinstance(obj, dict):
+        return valmap(_dictify, obj)
+    elif isinstance(obj, list):
+        return list(map(_dictify, obj))
+    else:
+        return obj
+
+
 def _namespacify(obj):
     if isinstance(obj, dict):
         return Namespace(valmap(_namespacify, obj))
@@ -52,11 +87,11 @@ def _namespacify(obj):
         return obj
 
 
-def _dictify(obj):
+def _confify(obj):
     if isinstance(obj, dict):
-        return valmap(_dictify, obj)
+        return Configuration(valmap(_confify, obj))
     elif isinstance(obj, list):
-        return list(map(_dictify, obj))
+        return list(map(_confify, obj))
     else:
         return obj
 
