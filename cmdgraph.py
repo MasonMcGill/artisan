@@ -8,6 +8,7 @@ from datetime import datetime
 import importlib
 from inspect import getdoc
 import io
+from itertools import count
 import json
 from pathlib import Path
 import re
@@ -317,10 +318,20 @@ def _run(cmd):
       - Writes metadata to `{output_path}/_cmd-info.yaml`.
       - Calls `cmd.run`.
     '''
-    typ = identify(type(cmd))
-    now = datetime.now().strftime(r'%Y-%m-%d-%H%M%S')
-    dst = Path(f'{get_conf().record_root}/{typ}_{now}')
-    dst.mkdir(parents=True)
+    if 'name' in cmd.conf:
+        type_ = identify(type(cmd))
+        dst = Path(f'{get_conf().record_root}/{type_}_{cmd.conf.name}')
+        shutil.rmtree(dst, ignore_errors=True)
+        dst.mkdir(parents=True)
+    else:
+        for i in count():
+            date = datetime.now().strftime(r'%Y-%m-%d')
+            dst = Path(f'{get_conf().record_root}/{type_}_{date}-{i:04x}')
+            try:
+                dst.mkdir(parents=True)
+                break
+            except FileExistsError:
+                pass
 
     desc = re.sub(r'(?<!\n)(\n)(?!\n)', ' ', getdoc(cmd) or '')
     static_info = dict(
