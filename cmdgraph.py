@@ -353,8 +353,8 @@ def _run(cmd):
       - Writes metadata to `{output_path}/_cmd-info.yaml`.
       - Calls `cmd.run`.
     '''
+    type_ = identify(type(cmd))
     if 'name' in cmd.conf:
-        type_ = identify(type(cmd))
         dst = Path(f'{get_conf().record_root}/{type_}_{cmd.conf.name}')
         shutil.rmtree(dst, ignore_errors=True)
         dst.mkdir(parents=True)
