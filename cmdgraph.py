@@ -638,22 +638,23 @@ _web_dtypes = dict(
 )
 
 
-def _response(obj):
+def _response(type_, content):
     return bottle.HTTPResponse(
         headers={'Content-Type': 'application/msgpack',
                  'Access-Control-Allow-Origin': '*'},
-        body=io.BytesIO(cbor2.dumps(obj)))
+        body=io.BytesIO(cbor2.dumps(dict(type=type_, content=content))))
 
 
 def _encode_entry(ent):
     if ent.dtype.kind in ['U', 'S']:
-        return ent.astype('U').tolist()
+        return _response('plain-object', ent.astype('U').tolist())
     else:
         ent = ent.astype(_web_dtypes[ent.dtype.name])
-        return {'$type': 'array',
-                'data': ent.data.tobytes(),
-                'dtype': ent.dtype.name,
-                'shape': ent.shape}
+        return _response('array', dict(
+            shape=ent.shape,
+            dtype=ent.dtype.name,
+            data=ent.data.tobytes()
+        ))
 
 
 def serve(port=3000):
@@ -668,19 +669,20 @@ def serve(port=3000):
         return bottle.HTTPResponse(headers={
             'Allow': 'OPTIONS, GET, HEAD',
             'Access-Control-Allow-Headers': '*',
-            'Access-Control-Allow-Origin': '*'})
+            'Access-Control-Allow-Origin': '*'
+        })
 
     @app.get('/_entry-names')
     @app.get('/<rec_id:path>/_entry-names')
     def _(rec_id=''):
         if not (root.path/rec_id).is_dir():
             raise bottle.HTTPError(404)
-        return _response(list(root[rec_id]))
+        return _response('plain-object', list(root[rec_id]))
 
-    @app.get('/<rec_id>/_cmd-info')
+    @app.get('/<rec_id:path>/_cmd-info')
     def _(rec_id):
         if (root.path/rec_id).is_dir():
-            return _response(root[rec_id].cmd_info)
+            return _response('plain-object', root[rec_id].cmd_info)
         else:
             raise bottle.HTTPError(404)
 
@@ -689,7 +691,11 @@ def serve(port=3000):
         if Path(ent_id).suffix != '':
             return bottle.static_file(ent_id, root=root.path)
         elif ent_id in root:
-            return _response(_encode_entry(root[ent_id]))
+            t_last = 1000 * float(bottle.request.query.get('t_last', 0))
+            if (root.path/f'{ent_id}.h5').stat().st_mtime <= t_last:
+                return _response('cached-value', None)
+            else:
+                return _encode_entry(root[ent_id])
         else:
             raise bottle.HTTPError(404)
 
