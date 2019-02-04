@@ -43,30 +43,28 @@ class Namespace(dict):
     __setattr__ = dict.__setitem__
 
 
-class Configuration(dict):
+class Configuration:
     '''
-    An `dict` that supports accessing items as attributes and tracks item
-    access
+    A read-only namespace that supports accessing items as attributes and
+    tracks item access
 
     To be used in an API update allowing configurations to be passed
     without being converted into keyword arguments
 
     TODO:
-    - Reimplement the full `dict` interface (at least the reading interface).
     - Change the signature of `Configurable.{__new__,__init__}`.
     - Change `_run` and `require` to only care about accessed fields.
     '''
     def __init__(self, *args, **kwargs):
-        dict.__init__(self, *args, **kwargs)
-        self.__dict__['accessed_fields'] = []
+        self._entries = dict(*args, **kwargs)
+        self._accessed_fields = set()
 
     def __getitem__(self, key):
-        if key not in self.accessed_fields:
-            self.accessed_fields.append(key)
-        return dict.__getitem__
+        self._accessed_fields.add(key)
+        return self._entries.__getitem__(key)
 
-    __getattr__ = __getitem__
-    __setattr__ = dict.__setitem__
+    def __getattr__(self, key):
+        return self.__getitem__(key)
 
 
 def _dictify(obj):
