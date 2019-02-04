@@ -311,6 +311,10 @@ class Configurable:
     def __init__(self, *args, **conf):
         self.conf = _namespacify(dissoc(conf, 'type'))
 
+    @classmethod
+    def conf_fields(cls):
+        return [k for k in vars(cls.Conf) if not k.startswith('__')]
+
 #------------------------------------------------------------------------------
 # Commands
 
