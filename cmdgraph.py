@@ -432,14 +432,17 @@ class _HDF5Entry:
             self.dset = f.require_dataset(
                 name='data',
                 shape=None,
-                maxshape=(None, *val.shape),
+                maxshape=(None, *val.shape[1:]),
                 dtype=val.dtype,
-                data=np.empty((0, *val.shape), val.dtype),
-                chunks=(int(np.ceil(2**12 / val.size)), *val.shape)
+                data=np.empty((0, *val.shape[1:]), val.dtype),
+                chunks=(
+                    int(np.ceil(2**12 / np.prod(val.shape[1:]))),
+                    *val.shape[1:]
+                )
             )
             f.swmr_mode = True
-        self.dset.resize(self.dset.len() + 1, 0)
-        self.dset[-1] = val
+        self.dset.resize(self.dset.len() + len(val), 0)
+        self.dset[-len(val):] = val
         self.dset.flush()
 
 
