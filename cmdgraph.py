@@ -652,10 +652,10 @@ def _response(type_, content):
 
 def _encode_entry(ent):
     if ent.dtype.kind in ['U', 'S']:
-        return _response('plain-object', ent.astype('U').tolist())
+        return _response('string-array', ent.astype('U').tolist())
     else:
         ent = ent.astype(_web_dtypes[ent.dtype.name])
-        return _response('array', dict(
+        return _response('numeric-array', dict(
             shape=ent.shape,
             dtype=ent.dtype.name,
             data=ent.data.tobytes()
