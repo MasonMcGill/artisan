@@ -696,7 +696,7 @@ def serve(port=3000):
         if Path(ent_id).suffix != '':
             return bottle.static_file(ent_id, root=root.path)
         elif ent_id in root:
-            t_last = 1000 * float(bottle.request.query.get('t_last', 0))
+            t_last = float(bottle.request.query.get('t_last', 0)) / 1000
             if (root.path/f'{ent_id}.h5').stat().st_mtime <= t_last:
                 return _response('cached-value', None)
             else:
