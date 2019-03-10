@@ -662,11 +662,11 @@ def _encode_entry(ent):
         ))
 
 
-def serve(port=3000):
+def serve(port=3000, record_root=None):
     '''
     Start a server providing access to the records in a directory.
     '''
-    root = Record(get_conf().record_root)
+    root = Record(record_root or get_conf().record_root)
     app = bottle.default_app()
 
     @app.route('/<:re:.*>', method='OPTIONS')
