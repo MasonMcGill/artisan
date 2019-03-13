@@ -1,3 +1,4 @@
 doc-src/.doctrees/
 docs/.doctrees/
 cmdgraph.egg-info/
+.mypy_cache/
