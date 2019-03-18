@@ -7,9 +7,9 @@ short_desc = (
 long_desc = Path('readme.md').read_text()
 
 setup(
-    py_modules=['cmdgraph'],
-    name='cmdgraph',
-    version='0.1.2',
+    py_modules=['crafty'],
+    name='crafty',
+    version='0.2.0',
     description=short_desc,
     long_description=long_desc,
     long_description_content_type='text/markdown',
@@ -18,4 +18,5 @@ setup(
     author_email='mmcgill@caltech.edu',
     license='MIT',
     platforms='any',
-    zip_safe=False)
+    zip_safe=False
+)
