@@ -33,7 +33,6 @@ def push_conf(conf: Opt[GlobalConf] = None, **updates: object) -> None:
         setattr(conf, key, val)
     _conf_stack.value.append(conf)
 
-
 def pop_conf() -> GlobalConf:
     return _conf_stack.value.pop()
 

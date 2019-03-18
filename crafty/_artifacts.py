@@ -113,6 +113,9 @@ class Artifact(Component, MutableMapping[str, object]):
             assert isinstance(subclass, type)
             cls = subclass
 
+        if spec is not None and 'type' not in spec:
+            spec['type'] = _identify(cls)
+
         #-----------------------------------
         # Construct and return the artifact.
         #-----------------------------------
@@ -313,7 +316,7 @@ def _build(artifact: Artifact, spec: Rec) -> None:
     _write_meta(artifact.path, dict(spec=spec, status='running'))
 
     try:
-        n_build_args = artifact.build.__code__.co_argcount == 1
+        n_build_args = artifact.build.__code__.co_argcount
         artifact.build(*([Namespace(spec)] if n_build_args > 1 else []))
         _write_meta(artifact.path, dict(spec=spec, status='done'))
     except BaseException as e:
@@ -355,3 +358,10 @@ def _resolve(sym: str) -> object:
         return cast(object, getattr(mod, type_name))
     except:
         raise KeyError(f'"{sym}" is not present in the current scope')
+
+
+def _identify(obj: object) -> str:
+    'Search the current scope for an object\'s name.'
+    for sym, val in get_conf().scope.items():
+        if val is obj: return sym
+    return f'{obj.__module__}${cast(Any, obj).__qualname__}'
