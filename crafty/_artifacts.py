@@ -1,17 +1,18 @@
 from datetime import datetime
 from importlib import import_module
-from itertools import count
+import itertools
 from pathlib import Path
 import shutil
 from time import sleep
 from typing import (
-    Any, Dict, Iterator, Mapping, MutableMapping,
+    Any, Iterator, Mapping, MutableMapping,
     Optional as Opt, Tuple, Union, cast
 )
 
 import h5py as h5
 import numpy as np
 from ruamel import yaml
+from toolz import count
 
 from ._global_conf import get_conf
 from ._namespaces import Namespace, namespacify
@@ -21,60 +22,26 @@ __all__ = ['Component', 'Artifact']
 #------------------------------------------------------------------------------
 # Type aliases
 
-Rec = Dict[str, object]
+Rec = Mapping[str, object]
 Tuple_ = Tuple[object, ...]
-
-#------------------------------------------------------------------------------
-# I/O
-
-class _HDF5Entry:
-    def __init__(self, path: Path) -> None:
-        self.path = path
-        self.dset: Opt[h5.Dataset] = None
-
-    def get(self) -> np.ndarray:
-        f = h5.File(self.path, 'r', libver='latest', swmr=True)
-        return f['data'][()]
-
-    def put(self, val: object) -> None:
-        val = np.asarray(val)
-        f = h5.File(self.path, libver='latest')
-        f.create_dataset('data', data=val)
-
-    def append(self, val: object) -> None:
-        val = np.asarray(val)
-        if self.dset is None:
-            f = h5.File(self.path, libver='latest')
-            self.dset = f.require_dataset(
-                name='data',
-                shape=None,
-                maxshape=(None, *val.shape[1:]),
-                dtype=val.dtype,
-                data=np.empty((0, *val.shape[1:]), val.dtype),
-                chunks=(
-                    int(np.ceil(2**12 / np.prod(val.shape[1:]))),
-                    *val.shape[1:]
-                )
-            )
-            f.swmr_mode = True
-        self.dset.resize(self.dset.len() + len(val), 0)
-        self.dset[-len(val):] = val
-        self.dset.flush()
 
 #------------------------------------------------------------------------------
 # Components
 
 class Component:
-    class Conf:
-        pass
+    '''
+    An object that can be constructed from a JSON-object-like structure.
 
-    def __new__(cls, conf: Any = None, **updates: object) -> Any:
-        type_name = cast(str, updates.get('type', None) or getattr(conf, 'type', None))
-        type_ = cast(type, cls if type_name is None else _resolve(type_name))
-        return super().__new__(type_)
-
-    def __init__(self, conf: Any = None, **updates: object):
-        self.conf = dict((conf or {}), **updates)
+    A JSON-object-like structure is a string-keyed mapping composed of
+    arbitrarily nested `bool`, `int`, `float`, `str`, `NoneType`, sequence, and
+    string-keyed mappings.
+    '''
+    def __new__(cls, spec: Rec, *args: object, **kwargs: object) -> 'Component':
+        type_name = spec.get('type', None)
+        assert isinstance(type_name, str)
+        type_ = cls if type_name is None else _resolve(type_name)
+        assert isinstance(type_, type) and issubclass(type_, cls)
+        return cast('Component', super().__new__(type_))
 
 #------------------------------------------------------------------------------
 # Artifacts
@@ -114,14 +81,14 @@ class Artifact(Component, MutableMapping[str, object]):
             cls = subclass
 
         if spec is not None and 'type' not in spec:
-            spec['type'] = _identify(cls)
+            spec = {**spec, 'type': _identify(cls)}
 
         #-----------------------------------
         # Construct and return the artifact.
         #-----------------------------------
 
         artifact = object.__new__(cls)
-        artifact.__dict__['path'] = path
+        object.__setattr__(artifact, 'path', path)
 
         if path is None:
             assert spec is not None
@@ -134,108 +101,96 @@ class Artifact(Component, MutableMapping[str, object]):
     def build(self, spec: Rec) -> None:
         pass
 
-    def __init__(self, *args: object, **kwargs: object) -> None:
-        self._cache: Dict[str, Union['Artifact', _HDF5Entry]]
-        self.__dict__['_cache'] = {}
-
-    def _get_entry(self, key: str) -> _HDF5Entry:
-        if key not in self._cache:
-            self._cache[key] = _HDF5Entry(self.path/f'{key}.h5')
-        return cast(_HDF5Entry, self._cache[key])
-
-    def _get_artifact(self, key: str) -> 'Artifact':
-        if key not in self._cache:
-            self._cache[key] = Artifact(self.path/key)
-        return cast(Artifact, self._cache[key])
-
-    def _forget(self, key: str) -> None:
-        self._cache.pop(key, None)
-
-    def __len__(self) -> int:
-        return len([
-            p for p in self.path.iterdir()
-            if not p.name.startswith('_')
-        ])
-
-    def __iter__(self) -> Iterator[str]:
-        for p in self.path.iterdir():
-            if not p.name.startswith('_'):
-                if p.suffix == '.h5': yield p.name[:-3]
-                else: yield p.name
-
-    def __getitem__(self, key: str) -> Union['Artifact', np.ndarray, Path]:
-        key = Path(key)
-        path = self.path/key
-        if len(key.parts) > 1: # Forward to a subrecord
-            subrec = self._get_artifact(key.parts[0])
-            return subrec['/'.join(key.parts[1:])]
-        elif path.with_suffix('.h5').is_file(): # Return an array
-            return self._get_entry(str(key)).get()
-        elif path.is_file(): # Return a file path
-            return path
-        else: # Return a subrecord
-            return self._get_artifact(str(key))
-
-    def __setitem__(self, key: str, val: object) -> None:
-        key = Path(key)
-        path = self.path/key
-        assert key.suffix == '', 'Can\'t write to encoded files'
-        if len(key.parts) > 1: # Forward to a subrecord
-            subrec = self._get_artifact(key.parts[0])
-            subrec['/'.join(key.parts[1:])] = val
-        elif isinstance(val, (dict, Artifact)): # Forward to all subrecords
-            for subkey, subval in val.items():
-                self[f'{key}/{subkey}'] = subval
-        else: # Write an array
-            path.parent.mkdir(parents=True, exist_ok=True)
-            if path.with_suffix('.h5').exists():
-                path.with_suffix('.h5').unlink()
-            self._get_entry(str(key)).put(val)
-
-    def __delitem__(self, key: str) -> None:
-        key = Path(key)
-        path = self.path/key
-        if len(key.parts) > 1: # Forward to a subrecord
-            subrec = self._get_artifact(key.parts[0])
-            del subrec['/'.join(key.parts[1:])]
-        elif path.is_dir(): # Delete a subrecord
-            rec = self._get_artifact(str(key))
-            for k in rec: del rec[k]
-            shutil.rmtree(path, True)
-        elif path.with_suffix('.h5').is_file(): # Delete an array
-            path.with_suffix('.h5').unlink()
-        elif path.is_file(): # Delete a non-array file
-            path.unlink()
-        else:
-            raise FileNotFoundError()
-        self._forget(str(key))
-        if self.path.stat().st_nlink == 0:
-            self.path.rmdir()
-
-    __getattr__ = __getitem__
-    __setattr__ = __setitem__
-
-    def append(self, key: str, val: object) -> None:
-        key = Path(key)
-        path = self.path/key
-        assert key.suffix == '', 'Can\'t write to encoded files'
-        if len(key.parts) > 1: # Forward to a subrecord
-            subrec = self._get_artifact(key.parts[0])
-            subrec.append('/'.join(key.parts[1:]), val)
-        elif isinstance(val, (dict, Artifact)): # Forward to all subrecords
-            for subkey, subval in val.items():
-                self.append(f'{key}/{subkey}', subval)
-        else: # Append to an array
-            path.parent.mkdir(parents=True, exist_ok=True)
-            self._get_entry(str(key)).append(val)
-
     @property
     def meta(self) -> Namespace:
         # TODO: Implement caching
-        return cast(Namespace, namespacify(_read_meta(self.path)))
+        return cast(Namespace, namespacify(_read_meta(self)))
+
+    #-- MutableMapping methods ----------------------------
+
+    def __len__(self) -> int:
+        return count(self.path.glob('[!_]*')) # type: ignore
+
+    def __iter__(self) -> Iterator[str]:
+        for p in self.path.glob('[!_]*'):
+            yield p.name[:-3] if p.suffix == '.h5' else p.name
+
+    def __getitem__(self, key: str) -> Union['Artifact', np.ndarray, Path]:
+        path = self.path / key
+
+        # Return an array.
+        if Path(f'{path}.h5').is_file():
+            return _read_h5(path.with_suffix('.h5'))
+
+        # Return the path to a file.
+        elif path.is_file():
+            return path
+
+         # Return a subrecord
+        else:
+            return Artifact(path)
+
+    def __setitem__(self, key: str, val: object) -> None:
+        path = self.path / key
+
+        # Write an array.
+        if isinstance(val, np.ndarray):
+            assert path.suffix == ''
+            _write_h5(path.with_suffix('.h5'), val)
+
+        # Copy an existing file.
+        elif isinstance(val, Path):
+            assert path.suffix != ''
+            _copy_file(path, val)
+
+        # Write a subartifact.
+        elif isinstance(val, Mapping):
+            assert path.suffix == ''
+            Artifact(path).update(val)
+
+        else:
+            raise TypeError()
+
+    def __delitem__(self, key: str) -> None:
+        shutil.rmtree(self.path / key, ignore_errors=True)
+
+    def append(self, key: str, val: object) -> None:
+        path = self.path / key
+
+        # Append an array.
+        if isinstance(val, np.ndarray):
+            assert path.suffix == ''
+            _append_to_h5(path, val)
+
+        # Copy an existing file.
+        elif isinstance(val, Path):
+            assert path.suffix != ''
+            _append_to_file(path, val)
+
+        # Write a subartifact.
+        elif isinstance(val, Mapping):
+            assert path.suffix == ''
+            for k, v in val.items():
+                Artifact(path).append(k, v)
+
+        else:
+            raise TypeError()
+
+    #-- Attribute-style element access --------------------
+
+    __getattr__ = __getitem__
+    __setattr__ = __setitem__
+    __delattr__ = __delitem__
+
+    # [A hack to get REPL autocompletion to work]
+    def __getattribute__(self, key: str) -> Any:
+        return (
+            {k: None for k in self} if key == '__dict__'
+            else object.__getattribute__(self, key)
+        )
 
 #------------------------------------------------------------------------------
-# Support functions
+# Artifact construction
 
 def _parse_artifact_args(args: Tuple_, kwargs: Rec) -> Tuple[Opt[Path], Opt[Rec]]:
     # (spec)
@@ -271,85 +226,67 @@ def _parse_artifact_args(args: Tuple_, kwargs: Rec) -> Tuple[Opt[Path], Opt[Rec]
     # <invalid signature>
     else:
         raise TypeError(
-            'Invalid argument types for the `Target` constructor.\n'
+            'Invalid argument types for the `Artifact` constructor.\n'
             'Valid signatures:\n'
             '\n'
-            '    - Target(spec: Mapping[str, object])\n'
-            '    - Target(**spec: object)\n'
-            '    - Target(path: Path|str)\n'
-            '    - Target(path: Path|str, spec: Mapping[str, object])\n'
-            '    - Target(path: Path|str, **spec: object)\n'
+            '    - Artifact(spec: Mapping[str, object])\n'
+            '    - Artifact(**spec_elem: object)\n'
+            '    - Artifact(path: Path|str)\n'
+            '    - Artifact(path: Path|str, spec: Mapping[str, object])\n'
+            '    - Artifact(path: Path|str, **spec_elem: object)\n'
         )
 
 
 def _find_or_build(artifact: Artifact, spec: Rec) -> None:
     for path in Path(get_conf().root_dir).iterdir():
-        if _was_built(path, spec):
-            artifact.path = path
-            return
-    artifact.path = _new_artifact_path(spec)
+        object.__setattr__(artifact, 'path', path)
+        try: return _ensure_built(artifact, spec)
+        except FileExistsError: pass
+    object.__setattr__(artifact, 'path', _new_artifact_path(spec))
     _build(artifact, spec)
 
 
 def _ensure_built(artifact: Artifact, spec: Rec) -> None:
+    # [Already started]
     if artifact.path.exists():
-        if not _was_built(artifact.path, spec):
-            raise FileExistsError(
-                f'The contents of "{artifact.path}" do not '
-                f'match the provided spec.'
-            )
-    else:
-        _build(artifact, spec)
-
-
-def _was_built(path: Path, spec: Rec) -> bool:
-    if _read_meta(path)['spec'] == spec:
-        while _read_meta(path)['status'] == 'running':
+        if _read_meta(artifact)['spec'] != spec:
+            raise FileExistsError(f'"{artifact.path}" (incompatible spec)')
+        while _read_meta(artifact)['status'] == 'running':
             sleep(0.001)
-        return _read_meta(path)['status'] == 'done'
-    else:
-        return False
+        if _read_meta(artifact)['status'] == 'stopped':
+            raise FileExistsError(f'"{artifact.path}" was stopped mid-build.')
+
+    # [Starting from scratch]
+    else: _build(artifact, spec)
 
 
 def _build(artifact: Artifact, spec: Rec) -> None:
     artifact.path.mkdir(parents=True)
-    _write_meta(artifact.path, dict(spec=spec, status='running'))
+    _write_meta(artifact, dict(spec=spec, status='running'))
 
     try:
         n_build_args = artifact.build.__code__.co_argcount
         artifact.build(*([Namespace(spec)] if n_build_args > 1 else []))
-        _write_meta(artifact.path, dict(spec=spec, status='done'))
+        _write_meta(artifact, dict(spec=spec, status='done'))
     except BaseException as e:
-        _write_meta(artifact.path, dict(spec=spec, status='stopped'))
+        _write_meta(artifact, dict(spec=spec, status='stopped'))
         raise e
 
 
 def _new_artifact_path(spec: Rec) -> Path:
-    root = get_conf().root_dir
+    root = Path(get_conf().root_dir)
     date = datetime.now().strftime(r'%Y-%m-%d')
-    for i in count():
-        try:
-            dst = Path(f'{root}/{spec["type"]}_{date}-{i:04x}')
-            dst.mkdir(parents=True)
+    for i in itertools.count():
+        dst = root / f'{spec["type"]}_{date}_{i:04x}'
+        if not dst.exists():
             return dst
-        except FileExistsError:
-            pass
     assert False # for MyPy
 
-
-def _read_meta(path: Path) -> Rec:
-    try:
-        return cast(Rec, yaml.safe_load((path/'_meta.yaml').read_text()))
-    except:
-        return dict(spec=None, status='done')
-
-
-def _write_meta(path: Path, meta: Rec) -> None:
-    (path/'_meta.yaml').write_text(yaml.round_trip_dump(meta))
-
+#------------------------------------------------------------------------------
+# Symbol <-> object mapping
 
 def _resolve(sym: str) -> object:
-    'Search the current scope for an object.'
+    ''' Search the current scope for an object. '''
     if sym in get_conf().scope:
         return get_conf().scope[sym]
     try:
@@ -361,7 +298,63 @@ def _resolve(sym: str) -> object:
 
 
 def _identify(obj: object) -> str:
-    'Search the current scope for an object\'s name.'
+    ''' Search the current scope for an object\'s name. '''
     for sym, val in get_conf().scope.items():
         if val is obj: return sym
     return f'{obj.__module__}${cast(Any, obj).__qualname__}'
+
+#------------------------------------------------------------------------------
+# I/O
+
+def _read_h5(path: Path) -> np.ndarray:
+    # TODO: Make this lazy.
+    f = h5.File(path, 'r', libver='latest', swmr=True)
+    return f['data'][:]
+
+
+def _write_h5(path: Path, val: np.ndarray) -> None:
+    shutil.rmtree(path, ignore_errors=True)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    f = h5.File(path, libver='latest')
+    f.create_dataset('data', data=np.asarray(val))
+
+
+def _append_to_h5(path: Path, val: np.ndarray) -> None:
+    val = np.asarray(val)
+    f = h5.File(path, libver='latest')
+    dset = f.require_dataset(
+        name='data',
+        shape=None,
+        maxshape=(None, *val.shape[1:]),
+        dtype=val.dtype,
+        data=np.empty((0, *val.shape[1:]), val.dtype),
+        chunks=(
+            int(np.ceil(2**12 / np.prod(val.shape[1:]))),
+            *val.shape[1:]
+        )
+    )
+    f.swmr_mode = True
+    dset.resize(dset.len() + len(val), 0)
+    dset[-len(val):] = val
+    dset.flush()
+
+
+def _copy_file(dst: Path, src: Path) -> None:
+    shutil.rmtree(dst, ignore_errors=True)
+    shutil.copy(src, dst)
+
+
+def _append_to_file(dst: Path, src: Path) -> None:
+    with open(src, 'r') as f_src:
+        with open(dst, 'a+') as f_dst:
+            f_dst.write(f_src.read())
+
+
+def _read_meta(a: Artifact) -> Rec:
+    try: return cast(Rec, yaml.safe_load((a.path / '_meta.yaml').read_text()))
+    except: return dict(spec=None, status='done')
+
+
+def _write_meta(a: Artifact, meta: Rec) -> None:
+    (a.path / '_meta.yaml').write_text(yaml.round_trip_dump(meta))
+

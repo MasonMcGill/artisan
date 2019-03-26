@@ -9,6 +9,8 @@ __all__ = ['GlobalConf', 'push_conf', 'pop_conf', 'using_conf', 'get_conf']
 #------------------------------------------------------------------------------
 # Thread-local configuration
 
+# TODO: document, support paths
+
 @dataclass
 class GlobalConf:
     root_dir: str

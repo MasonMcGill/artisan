@@ -6,8 +6,10 @@ __all__ = ['Namespace', 'namespacify']
 #------------------------------------------------------------------------------
 # Attribute-access-supporting dictionaries
 
+# TODO: make a "marked read fields" version
+
 class Namespace(Dict[str, object]):
-    'An `dict` that supports accessing items as attributes'
+    'A `dict` that supports accessing items as attributes'
 
     def __getattr__(self, key: str) -> Any:
         return dict.__getitem__(self, key)
