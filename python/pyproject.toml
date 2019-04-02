@@ -1,3 +1,4 @@
+[tool.poetry]
 name = "artisan"
 version = "0.2.0"
 description = "A build system for explainable science"
