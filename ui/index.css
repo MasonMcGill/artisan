@@ -1,0 +1,79 @@
+
+/*******************************************************************************
+ * Fonts
+ ******************************************************************************/
+
+ @import url('https://fonts.googleapis.com/css?family=Inconsolata');
+
+/*******************************************************************************
+* CommandGraph client styles
+******************************************************************************/
+
+.cg-browser__root {
+  box-sizing: border-box;
+  width: 600px;
+  margin: 15px auto;
+  font-family: 'Inconsolata';
+}
+
+.cg-browser__data-view a {
+  color: hsl(216, 60%, 45%);
+  text-decoration: none;
+}
+.cg-browser__data-view a:hover {
+  color: hsl(216, 90%, 60%);
+}
+
+/****/
+
+.cg-browser__active-link {
+  margin: 5px 0px;
+  cursor: pointer;
+  color: hsl(216, 0%, 45%);
+  transition: color 0.25s;
+}
+.cg-browser__active-link:hover {
+  color: hsl(216, 90%, 60%);
+}
+
+.cg-browser__inactive-link {
+  margin: 5px 0px;
+  color: hsl(216, 0%, 45%);
+}
+
+.cg-browser__icon {
+  font-size: 0.65em;
+}
+
+/****/
+
+.cg-browser__title-bar {
+  margin: 10px auto;
+  font-weight: bold;
+}
+
+/****/
+
+.cg-browser__meta-view {
+  box-sizing: border-box;
+  padding: 0px 0px 5px 10px;
+  white-space: pre;
+  margin: 0px auto 10px 3px;
+  border-left: 2px dashed #ccc;
+}
+
+.cg-browser__data-view {
+  box-sizing: border-box;
+  margin: 10px auto;
+}
+
+/*******************************************************************************
+* Syntax highlighting (based on the prism.js default theme by Lea Verou)
+******************************************************************************/
+
+.cg-browser__meta-view .token.comment { color: slategray; }
+.cg-browser__meta-view .token.punctuation { color: #999; }
+.cg-browser__meta-view .token.boolean { color: #905; }
+.cg-browser__meta-view .token.number { color: #905; }
+.cg-browser__meta-view .token.string { color: #690; }
+.cg-browser__meta-view .token.atrule { color: #07a; }
