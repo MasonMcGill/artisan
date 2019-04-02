@@ -1,10 +1,11 @@
-import io
+from multiprocessing import cpu_count
 from pathlib import Path
 import re
 from typing import Dict, Optional as Opt
 
-import bottle
 import cbor2
+from falcon import API, HTTPStatus, Request, Response, HTTP_200, HTTP_404
+from gunicorn.app.base import BaseApplication as GunicornApp
 import h5py as h5
 from ruamel import yaml
 
@@ -20,42 +21,56 @@ def serve(port: int = 3000, root_dir: Opt[str] = None) -> None:
     Start a server providing access to the records in a directory.
     '''
     root_dir = Path(root_dir or get_conf().root_dir)
-    app = bottle.default_app()
 
-    @app.route('/<:re:.*>', method='OPTIONS')
-    def _(*_):
-        return bottle.HTTPResponse(headers={
-            'Allow': 'OPTIONS, GET, HEAD',
-            'Access-Control-Allow-Headers': '*',
-            'Access-Control-Allow-Origin': '*'
-        })
+    def write_response(req: Request, res: Response) -> None:
+        res.content_type = 'application/cbor'
+        res.set_header('Access-Control-Allow-Origin', '*')
 
-    @app.get('/_entry-names') # type: ignore
-    @app.get('/<entry_name:path>/_entry-names')
-    def _(entry_name=''):
-        path = root_dir / entry_name
-        if path.is_file(): raise bottle.HTTPError(404)
-        return _response('plain-object', sorted([
-            re.sub(r'\.h5$', '', p.name) + ('/' if p.is_dir() else '')
-            for p in path.glob('[!_]*')
-        ]))
+        if req.path.endswith('/_entry-names'):
+            path = root_dir / req.path[1:-len('/_entry-names')]
+            if path.is_file(): raise HTTPStatus(HTTP_404)
+            res.data = cbor2.dumps(dict(
+                type='plain-object',
+                content=sorted([
+                    re.sub(r'\.h5$', '', p.name) + ('/' if p.is_dir() else '')
+                    for p in path.glob('[!_]*')
+                ])
+            ))
 
-    @app.get('/_meta') # type: ignore
-    @app.get('/<entry_name:path>/_meta')
-    def _(entry_name=''):
-        return _response(**_read_meta(root_dir, entry_name))
+        elif req.path.endswith('/_meta'):
+            key = req.path[1:-len('/_meta')]
+            res.data = cbor2.dumps(_read_meta(root_dir, key))
 
-    @app.get('/<entry_name:path>') # type: ignore
-    def _(entry_name):
-        t_last = float(bottle.request.query.get('t_last', 0)) / 1000
-        entry = _read(root_dir, entry_name, t_last)
-        return (
-            bottle.static_file(entry['content'], root=root_dir)
-            if entry['type'] == 'file'
-            else _response(**entry)
-        )
+        else:
+            t_last = float(req.get_param('t_last') or 0) / 1000
+            entry = _read(root_dir, req.path[1:], t_last)
+            if entry['type'] == 'file':
+                res.data = (root_dir / entry['content']).read_bytes()
+            else:
+                res.data = cbor2.dumps(entry)
 
-    app.run(host='localhost', port=port)
+        res.status = HTTP_200
+
+    app = API(middleware=[_HandleCORS()])
+    app.add_sink(write_response)
+
+    class Server(GunicornApp): # type: ignore
+        def load(self) -> API:
+            return app
+        def load_config(self) -> None:
+            self.cfg.set('bind', f'localhost:{port}')
+            self.cfg.set('workers', 2 * cpu_count())
+    Server().run()
+
+
+class _HandleCORS(object):
+    def process_request(self, req: Request, res: Response) -> None:
+        res.set_header('Access-Control-Allow-Origin', '*')
+        res.set_header('Access-Control-Allow-Methods', '*')
+        res.set_header('Access-Control-Allow-Headers', '*')
+        res.set_header('Access-Control-Max-Age', 600)
+        if req.method == 'OPTIONS':
+            raise HTTPStatus(HTTP_200)
 
 #------------------------------------------------------------------------------
 # I/O
@@ -128,19 +143,7 @@ def _read_artifact(root: Path, key: str, t_last: float) -> Dict[str, object]:
 def _read_meta(root: Path, key: str) -> Dict[str, object]:
     path = root / key / '_meta.yaml'
     if path.parent.is_file():
-        raise bottle.HTTPError(404)
+        raise HTTPStatus(HTTP_404)
     try: meta = yaml.safe_load(path.read_text())
     except: meta = dict(spec=None, status='done')
     return dict(type='plain-object', content=meta)
-
-#------------------------------------------------------------------------------
-# HTTP response encoding
-
-def _response(type: str, content: object) -> bottle.HTTPResponse:
-    res = bottle.HTTPResponse(
-        headers={'Content-Type': 'application/cbor',
-                 'Access-Control-Allow-Origin': '*'},
-        body=io.BytesIO(cbor2.dumps(dict(type=type, content=content)))
-    )
-    return res
-

@@ -98,7 +98,7 @@ class Artifact(Component, MutableMapping[str, object]):
 
         return artifact
 
-    def build(self, spec: Rec) -> None:
+    def build(self, spec: Any) -> None:
         pass
 
     @property

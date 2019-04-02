@@ -6,8 +6,8 @@ authors = ["Mason McGill <mmcgill@caltech.edu>"]
 readme = "readme.md"
 
 [tool.poetry.dependencies]
-bottle = "*"
 cbor2 = "*"
+falcon = "*"
 h5py = "*"
 jsonschema = "*"
 numpy = "*"
