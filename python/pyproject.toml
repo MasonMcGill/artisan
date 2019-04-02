@@ -1,0 +1,18 @@
+name = "artisan"
+version = "0.2.0"
+description = "A build system for explainable science"
+license = "MIT"
+authors = ["Mason McGill <mmcgill@caltech.edu>"]
+readme = "readme.md"
+
+[tool.poetry.dependencies]
+bottle = "*"
+cbor2 = "*"
+h5py = "*"
+jsonschema = "*"
+numpy = "*"
+"ruamel.yaml" = "*"
+toolz = "*"
+
+[tool.poetry.dev-dependencies]
+pytest = "*"
