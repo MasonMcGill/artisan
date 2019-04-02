@@ -59,7 +59,7 @@ def serve(port: int = 3000, root_dir: Opt[str] = None) -> None:
             return app
         def load_config(self) -> None:
             self.cfg.set('bind', f'localhost:{port}')
-            self.cfg.set('workers', 2 * cpu_count())
+            self.cfg.set('workers', cpu_count())
     Server().run()
 
 
