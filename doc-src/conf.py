@@ -1,13 +1,13 @@
 # -- Path setup --------------------------------------------------------------
 
-import os, sys
-sys.path.append(f'{os.path.dirname(__file__)}/..')
+import sys
+sys.path.append('python')
 
 # -- Project information -----------------------------------------------------
 
-project = 'cmdgraph'
+project = 'artisan'
 language = 'en'
-copyright = '2018, Mason McGill'
+copyright = '2019, Mason McGill'
 author = 'Mason McGill'
 
 # -- Source definition -------------------------------------------------------
@@ -29,7 +29,8 @@ extensions = [
     'sphinx.ext.autosummary',
     'sphinx.ext.napoleon',
     'sphinx.ext.todo',
-    'sphinx.ext.viewcode']
+    'sphinx.ext.viewcode'
+]
 
 autodoc_member_order = 'bysource'
 autoclass_content = 'both'
@@ -39,5 +40,4 @@ todo_include_todos = True
 # -- Options for HTML output -------------------------------------------------
 
 html_theme = 'sphinx_rtd_theme'
-html_theme_options = {
-    'navigation_depth': 2}
+html_theme_options = {'navigation_depth': 2}

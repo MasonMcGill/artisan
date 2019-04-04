@@ -1,5 +1,6 @@
 doc-src/.doctrees/
 docs/.doctrees/
+docs/
 cmdgraph.egg-info/
 .mypy_cache/
 .vscode/
