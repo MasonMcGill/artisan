@@ -9,6 +9,8 @@
 * CommandGraph client styles
 ******************************************************************************/
 
+/* Root component */
+
 .cg-browser__root {
   box-sizing: border-box;
   width: 600px;
@@ -16,43 +18,36 @@
   font-family: 'Inconsolata';
 }
 
-.cg-browser__data-view a {
-  color: hsl(216, 60%, 45%);
-  text-decoration: none;
-}
-.cg-browser__data-view a:hover {
-  color: hsl(216, 90%, 60%);
-}
-
-/****/
-
-.cg-browser__active-link {
-  margin: 5px 0px;
-  cursor: pointer;
-  color: hsl(216, 0%, 45%);
-  transition: color 0.25s;
-}
-.cg-browser__active-link:hover {
-  color: hsl(216, 90%, 60%);
-}
-
-.cg-browser__inactive-link {
-  margin: 5px 0px;
-  color: hsl(216, 0%, 45%);
-}
-
-.cg-browser__icon {
-  font-size: 0.65em;
-}
-
-/****/
+/* Title bar */
 
 .cg-browser__title-bar {
   margin: 10px auto;
   font-weight: bold;
 }
 
-/****/
+.cg-browser__home-icon {
+  vertical-align: text-top;
+}
+
+.cg-browser__breadcrumb {
+  color: #000;
+  text-decoration: none;
+}
+.cg-browser__breadcrumb:hover {
+  color: hsl(216, 40%, 55%);
+}
+
+.cg-browser__host-selector {
+  float: right;
+  cursor: pointer;
+  font-weight: normal;
+  color: hsl(216, 0%, 45%);
+}
+.cg-browser__host-selector:hover {
+  color: hsl(216, 40%, 55%);
+}
+
+/* Metadata view */
 
 .cg-browser__meta-view {
   box-sizing: border-box;
@@ -62,9 +57,39 @@
   border-left: 2px dashed #ccc;
 }
 
-.cg-browser__data-view {
-  box-sizing: border-box;
-  margin: 10px auto;
+/* Entry list */
+
+.cg-browser__entry {
+  margin: 5px 0px;
+  color: hsl(216, 0%, 45%);
+}
+
+.cg-browser__entry a {
+  color: inherit;
+  text-decoration: none;
+}
+.cg-browser__entry a:hover {
+  color: hsl(216, 40%, 55%);
+}
+
+.cg-browser__icon {
+  font-size: 0.67em;
+  vertical-align: middle;
+}
+
+/* User-defined data view */
+
+.cg-browser__data-view a {
+  color: hsl(216, 60%, 45%);
+  text-decoration: none;
+}
+.cg-browser__data-view a:hover {
+  color: hsl(216, 90%, 60%);
+}
+
+.cg-browser__data-view select {
+  font-family: inherit;
+  font-size: 0.9em;
 }
 
 /*******************************************************************************

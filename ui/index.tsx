@@ -1,80 +1,94 @@
-import cbor from 'cbor-js'
+import * as cbor from 'cbor-js'
 import dtype from 'dtype'
 import * as yaml from 'js-yaml'
-import { flatten, fromPairs, get, mapValues } from 'lodash'
+import { flatten, get, mapValues, omit } from 'lodash'
 import * as nj from 'numjs'
 import * as prism from 'prismjs'
+import * as qs from 'query-string'
 import * as React from 'react'
 import { Suspense, useEffect, useState } from 'react'
-import { FaDatabase, FaFile, FaFolder } from 'react-icons/fa'
+import { FaDatabase, FaFile, FaFolder, FaHome } from 'react-icons/fa'
+import { BrowserRouter, Route, Link } from 'react-router-dom'
 
 import 'prismjs/components/prism-yaml'
 
-//- View parameters and data fetching -----------------------------------------
+//- Internal type definitions -------------------------------------------------
 
-function _unpack(res, prevResult) {
-  switch (res.type) {
-    case 'plain-object':
-      return res.content
-    case 'cached-value':
-      return prevResult
-    case 'string-array':
-      return nj.array(res.content)
-    case 'numeric-array':
-      const offset = res.content.data.byteOffset
-      const length = res.content.data.byteLength
-      const buffer = res.content.data.buffer.slice(offset, offset + length)
-      const array = new (dtype(res.content.dtype))(buffer)
-      // @ts-ignore
-      return new nj.NdArray(array, res.content.shape)
-  }
+type Request = {
+  status: 'unsent' | 'pending' | 'fulfilled' | 'failed',
+  launchTime?: number,
+  promise?: Promise<void>,
+  result?: any
 }
 
 
+type Response = {
+  type: 'plain-object' | 'cached-value' | 'string-array' |
+        'numeric-array' | 'artifact',
+  content: any
+}
+
+
+type AppParams = {
+  host: string,
+  path: string
+}
+
+//- View parameters and data fetching -----------------------------------------
+
 class Cache {
-  _requests: object;
+  private requests: { [k: string]: Request } = {}
 
-  constructor() {
-    this._requests = {}
-  }
-
-  ensureRequested(url, time) {
-    this._getRequest(url, time)
-  }
-
-  fetch(url, time) {
-    const req = this._getRequest(url, time)
-    if (req.result === undefined)
-      throw req.promise
-    return req.result
-  }
-
-  _getRequest(url, time) {
+  /**
+   * Return a request corresponding to `url`, launching a refetch if the
+   * resource at `url` was last fetched before `refetchCutoff`.
+   */
+  public getRequest(url: string, refetchCutoff: number): Request {
     // Find/create a request.
-    if (!this._requests.hasOwnProperty(url))
-      this._requests[url] = { status: 'unsent' }
-    const req = this._requests[url]
+    if (this.requests[url] === undefined)
+      this.requests[url] = { status: 'unsent' }
+    const req = this.requests[url]
 
     // Launch a fetch, if necessary.
     if (req.status === 'unsent' ||
-        req.status === 'fulfilled' && req.launchTime < time) {
+        req.status !== 'pending' && req.launchTime < refetchCutoff) {
       req.promise = (
-        window.fetch(`${url}?t_last=${req.launchTime || 0}`)
+        fetch(`${url}?t_last=${req.launchTime || 0}`)
         .then(res => res.arrayBuffer())
         .then(buf => {
-          req.result = _unpack(cbor.decode(buf), req.result)
+          req.result = Cache.unpack(cbor.decode(buf), req.result)
           req.status = 'fulfilled'
         })
-        .catch(() => {
-          req.status = 'unsent'
+        .catch(e => {
+          req.status = 'failed'
+          req.promise = new Promise(() => {})
+          req.result = undefined
         })
       )
       req.status = 'pending'
-      req.launchTime = time
+      req.launchTime = Date.now()
     }
 
     // Return the request.
     return req
+  }
+
+  private static unpack(res: Response, prevResult: any): any {
+    switch (res.type) {
+      case 'plain-object':
+        return res.content
+      case 'cached-value':
+        return prevResult
+      case 'string-array':
+        return nj.array(res.content)
+      case 'numeric-array':
+        const offset = res.content.data.byteOffset
+        const length = res.content.data.byteLength
+        const buffer = res.content.data.buffer.slice(offset, offset + length)
+        const array = new (dtype(res.content.dtype))(buffer)
+        // @ts-ignore
+        return new nj.NdArray(array, res.content.shape)
+    }
   }
 }
 
@@ -84,42 +98,54 @@ class Cache {
  * encapsulating the application's view parameters and capabilities.
  */
 class App {
-  host: string
-  record: string
-  params: object
-  navigate: Function
-  cache: Cache
-  time: number
+  public params: AppParams
+  public navigate: Function
+  private cache: Cache
+  private time: number
 
-  constructor({ host, record, params, navigate, cache, time }) {
-    this.host = host
-    this.record = record
+  constructor(params: AppParams, navigate: Function, cache: Cache, time: number) {
     this.params = params
     this.navigate = navigate
     this.cache = cache
     this.time = time
+    if (!params.path.endsWith('/')) {
+      params.path = params.path + '/'
+    }
   }
 
-  navUpdating(entries) {
-    this.params = { ...this.params, ...entries }
-    this.navigate(this.record, this.params)
+  public navUpdating(params: object = {}): void {
+    this.navigate({ ...this.params, ...params })
   }
 
-  fetch(paths) {
-    const url = p => (
-      this.host + (p[0] === '/' ? '' : this.record) + p
-    )
+  public fetch(paths: any): any {
     if (typeof paths === 'string') {
-      return this.cache.fetch(url(paths), this.time)
+      const req = this.getRequest(paths)
+      if (req.result === undefined)
+        throw req.promise
+      return req.result
     }
     else if (Array.isArray(paths)) {
-      for (const p of paths) this.cache.ensureRequested(url(p), this.time)
-      return paths.map(p => this.cache.fetch(url(p), this.time))
+      const reqs = paths.map(p => this.getRequest(p))
+      if (reqs.some(r => r.result === undefined))
+        throw Promise.all(reqs.map(r => r.promise))
+      return reqs.map(r => r.result)
     }
     else if (typeof paths === 'object') {
-      mapValues(paths, p => this.cache.ensureRequested(url(p), this.time))
-      return mapValues(paths, p => this.cache.fetch(url(p), this.time))
+      const reqs = mapValues(paths, p => this.getRequest(p))
+      if (Object.values(reqs).some(r => r.result === undefined))
+        throw Promise.all(Object.values(reqs).map(r => r.promise))
+      return mapValues(reqs, r => r.result)
     }
+  }
+
+  private getRequest(path: string): Request {
+    return this.cache.getRequest(
+      ( this.params.host
+        + (path[0] === '/' ? '' : this.params.path)
+        + path
+      ),
+      this.time
+    )
   }
 }
 
@@ -133,63 +159,73 @@ export function RootView(
     }
   ))
 {
-  // to-do: Allow props to change
-
   const [cache, _] = useState(() => new Cache())
-  const [app, setApp] = useState(() => appFromURL(Date.now()))
+  const [time, setTime] = useState(() => Date.now())
 
-  function appFromURL(time) {
-    return new App({
-      host: host,
-      record: window.location.pathname,
-      params: fromPairs([
-        ...new URL(window.location.toString())
-        .searchParams.entries()
-      ]),
-      navigate: (record, params) => {
-        const query = '?' + new URLSearchParams(params)
-        const url = window.location.origin + record + query
-        if (window.location.toString() !== url) {
-          window.history.pushState({}, '', url)
-          setApp(appFromURL(app.time))
-        }
-      },
-      cache: cache,
-      time: time
-    })
-  }
-
+  // Set up automatic refreshing.
   useEffect(() => {
-    const listener = () => setApp(appFromURL(app.time))
-    window.addEventListener('popstate', listener)
-    return () => window.removeEventListener('popstate', listener)
-  }, [])
-
-  useEffect(() => {
-    const timer = setInterval(
-      () => setApp(appFromURL(Date.now())),
-      refreshInterval
-    )
-    return () => clearInterval(timer)
-  }, [refreshInterval])
+    const refresh = setTimeout(() => setTime(Date.now()), refreshInterval)
+    return () => clearTimeout(refresh)
+  })
 
   return (
-    <Suspense fallback={<div/>}>
-      <div className='cg-browser__root'>
-        <TitleBar app={app}/>
-        <MetaView app={app}/>
-        <EntryList app={app}/>
-        <CustomViews app={app} views={views}/>
-      </div>
-    </Suspense>
+    <BrowserRouter>
+      <Route path='/*' render={({ location, history }) => {
+        function navigate(params) {
+          history.push(
+            params.path || '/' + '?' +
+            qs.stringify(
+              params.host == host
+              ? omit(params, ['path', 'host'])
+              : omit(params, ['path'])
+            )
+          )
+        }
+        const params = {
+          host, path: location.pathname,
+          ...qs.parse(location.search)
+        }
+        const app = new App(params, navigate, cache, time)
+        return (
+            <div className='cg-browser__root'>
+              <TitleBar app={app}/>
+              <Suspense fallback={<div/>}>
+                <MetaView app={app}/>
+                <EntryList app={app}/>
+                <CustomViews app={app} views={views}/>
+              </Suspense>
+            </div>
+        )
+      }}/>
+    </BrowserRouter>
   )
 }
 
 
 function TitleBar({ app }) {
+  function selectHost() {
+    const host = prompt('Hostname:', app.params.host)
+    if (host) app.navigate({ host })
+  }
+
+  const pathParts = app.params.path.split('/').slice(1, -1)
+
   return (
     <div className='cg-browser__title-bar'>
-      {app.host}{app.record}
+      <div className='cg-browser__host-selector' onClick={selectHost}>
+          [select host]
+      </div>
+      <Link className='cg-browser__breadcrumb' to='/'>
+        {app.params.host}/
+      </Link>
+      {pathParts.map((p, i) => (
+        <Link
+          className='cg-browser__breadcrumb'
+          to={'/' + pathParts.slice(0, i + 1).join('/') + '/'}
+          children={p + '/'}
+          key={i}
+        />
+      ))}
     </div>
   )
 }
@@ -210,46 +246,29 @@ function MetaView({ app }) {
 
 
 function EntryList({ app }) {
-  const entries = app.fetch('_entry-names')
-  const artifacts = entries.filter(e => e.endsWith('/'))
-  const arrays = entries.filter(e => !e.endsWith('/') && !e.includes('.'))
-  const files = entries.filter(e => !e.endsWith('/') && e.includes('.'))
+  const names = app.fetch('_entry-names')
+  const artifactNames = names.filter(n => n.endsWith('/'))
+  const arrayNames = names.filter(n => !n.endsWith('/') && !n.includes('.'))
+  const fileNames = names.filter(n => !n.endsWith('/') && n.includes('.'))
   return (
     <div className='cg-browser__entry-list'>
-      {artifacts.sort().map(e => <ArtifactLink app={app} key={e} path={e}/>)}
-      {arrays.sort().map(e => <ArrayLink app={app} key={e} path={e}/>)}
-      {files.sort().map(e => <FileLink app={app} key={e} path={e}/>)}
-    </div>
-  )
-}
-
-
-function ArtifactLink({ app, path }) {
-  const onClick = () => app.navigate(`${app.record}${path}`)
-  return (
-    <div className='cg-browser__active-link' onClick={onClick}>
-      <span className='cg-browser__icon'><FaFolder/></span>
-      {' ' + path}
-    </div>
-  )
-}
-
-
-function ArrayLink({ app, path }) {
-  return (
-    <div className='cg-browser__inactive-link'>
-      <span className='cg-browser__icon'><FaDatabase/></span>
-      {' ' + path}
-    </div>
-  )
-}
-
-
-function FileLink({ app, path }) {
-  return (
-    <div className='cg-browser__inactive-link'>
-      <span className='cg-browser__icon'><FaFile/></span>
-      {' ' + path}
+      {...artifactNames.sort().map(n => (
+        <div className='cg-browser__entry' key={n}>
+          <Link to={app.params.path + n}>
+            <FaFolder className='cg-browser__icon'/>{' ' + n}
+          </Link>
+        </div>
+      ))}
+      {...arrayNames.sort().map(n => (
+        <div className='cg-browser__entry' key={n}>
+          <FaDatabase className='cg-browser__icon'/>{' ' + n}
+        </div>
+      ))}
+      {...fileNames.sort().map(n => (
+        <div className='cg-browser__entry' key={n}>
+          <FaFile className='cg-browser__icon'/>{' ' + n}
+        </div>
+      ))}
     </div>
   )
 }
@@ -258,5 +277,13 @@ function FileLink({ app, path }) {
 function CustomViews({ app, views }) {
   const type = get(app.fetch('_meta').spec, 'type', null)
   const matchingViews = flatten([get(views, type, [])])
-  return <>{...matchingViews.map(V => <V app={app} />)}</>
+  return (
+    <div className='cg-browser__data-view'>
+      {matchingViews.map((View, i) => (
+        <Suspense key={i} fallback={<div/>}>
+          <View app={app} />
+        </Suspense>
+      ))}
+    </div>
+  )
 }
