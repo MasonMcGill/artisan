@@ -173,7 +173,7 @@ export function RootView(
       <Route path='/*' render={({ location, history }) => {
         function navigate(params) {
           history.push(
-            params.path || '/' + '?' +
+            (params.path || '/') + '?' +
             qs.stringify(
               params.host == host
               ? omit(params, ['path', 'host'])
