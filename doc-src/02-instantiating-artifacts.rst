@@ -1,4 +1,0 @@
-Instantiating artifacts
------------------------
-
-Test

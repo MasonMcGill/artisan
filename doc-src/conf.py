@@ -14,7 +14,7 @@ author = 'Mason McGill'
 
 source_suffix = ['.rst']
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
-master_doc = 'index'
+master_doc = '00-index'
 
 # -- Rendering configuration -------------------------------------------------
 

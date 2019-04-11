@@ -74,8 +74,7 @@ Contents
 
 .. toctree::
 
-  01-defining-artifact-types
-  02-instantiating-artifacts
-  03-using-artisan-ui
-  04-api-reference
-  05-related-projects
+  01-using-artisan
+  02-using-artisan-ui
+  03-api-reference
+  04-related-projects
