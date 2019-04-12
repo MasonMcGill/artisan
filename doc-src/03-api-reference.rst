@@ -14,6 +14,18 @@ Core types:
   Configurable
   Artifact
 
+Artifact field types:
+
+.. autosummary::
+
+  ArrayFile
+  EncodedFile
+
+.. ============= ==============================================
+.. `ArrayFile`   An alias for h5py.Dataset
+.. `EncodedFile` An alias for pathlib.Path
+.. ============= ==============================================
+
 Global configuration:
 
 .. autosummary::

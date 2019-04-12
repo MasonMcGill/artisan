@@ -4,7 +4,10 @@ import threading
 from typing import Dict, Iterator, Optional as Opt
 from dataclasses import dataclass
 
-__all__ = ['GlobalConf', 'push_conf', 'pop_conf', 'using_conf', 'get_conf']
+__all__ = [
+    'GlobalConf', 'push_conf', 'pop_conf', 'using_conf', 'get_conf',
+    'default_scope'
+]
 
 #------------------------------------------------------------------------------
 # Thread-local configuration
@@ -19,7 +22,7 @@ class GlobalConf:
 
 class _ConfStack(threading.local):
     def __init__(self) -> None:
-        self.value = [GlobalConf(root_dir='.', scope={})]
+        self.value = [GlobalConf(root_dir='.', scope=default_scope)]
 
 
 _conf_stack = _ConfStack()
@@ -44,3 +47,8 @@ def using_conf(conf: Opt[GlobalConf] = None,
                **updates: object) -> Iterator[None]:
     push_conf(conf, **updates); yield
     pop_conf()
+
+#------------------------------------------------------------------------------
+# Default scope
+
+default_scope: Dict[str, object] = {}

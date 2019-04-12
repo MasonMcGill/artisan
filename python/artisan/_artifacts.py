@@ -1,5 +1,4 @@
 from datetime import datetime
-from importlib import import_module
 import itertools
 from pathlib import Path
 import shutil
@@ -16,8 +15,9 @@ from toolz import count
 
 from ._global_conf import get_conf
 from ._namespaces import Namespace, namespacify
+from ._configurable import Configurable
 
-__all__ = ['Component', 'Artifact']
+__all__ = ['Configurable', 'Artifact', 'ArrayFile', 'EncodedFile']
 
 #------------------------------------------------------------------------------
 # Type aliases
@@ -25,28 +25,13 @@ __all__ = ['Component', 'Artifact']
 Rec = Mapping[str, object]
 Tuple_ = Tuple[object, ...]
 
-#------------------------------------------------------------------------------
-# Components
-
-class Component:
-    '''
-    An object that can be constructed from a JSON-object-like structure.
-
-    A JSON-object-like structure is a string-keyed mapping composed of
-    arbitrarily nested `bool`, `int`, `float`, `str`, `NoneType`, sequence, and
-    string-keyed mappings.
-    '''
-    def __new__(cls, spec: Rec, *args: object, **kwargs: object) -> 'Component':
-        type_name = spec.get('type', None)
-        assert isinstance(type_name, str)
-        type_ = cls if type_name is None else _resolve(type_name)
-        assert isinstance(type_, type) and issubclass(type_, cls)
-        return cast('Component', super().__new__(type_))
+ArrayFile = Path
+EncodedFile = h5.Dataset
 
 #------------------------------------------------------------------------------
 # Artifacts
 
-class Artifact(Component, MutableMapping[str, object]):
+class Artifact(Configurable, MutableMapping[str, object]):
     path: Path
 
     def __new__(cls, *args: object, **kwargs: object) -> Any:
@@ -70,24 +55,11 @@ class Artifact(Component, MutableMapping[str, object]):
                 path = Path(get_conf().root_dir) / str(path)[2:]
             path = path.expanduser().resolve()
 
-        #----------------------------
-        # Refine `cls`, if necessary.
-        #----------------------------
-
-        if spec is not None and 'type' in spec:
-            assert isinstance(spec['type'], str)
-            subclass = _resolve(spec['type'])
-            assert isinstance(subclass, type)
-            cls = subclass
-
-        if spec is not None and 'type' not in spec:
-            spec = {**spec, 'type': _identify(cls)}
-
         #-----------------------------------
         # Construct and return the artifact.
         #-----------------------------------
 
-        artifact = object.__new__(cls)
+        artifact = cast(Artifact, Configurable.__new__(cls, spec or {}))
         object.__setattr__(artifact, 'path', path)
 
         if path is None:
@@ -116,7 +88,7 @@ class Artifact(Component, MutableMapping[str, object]):
             yield p.name[:-3] if p.suffix == '.h5' else p.name
 
     def __getitem__(self, key: str) -> Union['Artifact', np.ndarray, Path]:
-        path = self.path / key
+        path = self.path / key.replace('__', '.')
 
         # Return an array.
         if Path(f'{path}.h5').is_file():
@@ -131,7 +103,7 @@ class Artifact(Component, MutableMapping[str, object]):
             return Artifact(path)
 
     def __setitem__(self, key: str, val: object) -> None:
-        path = self.path / key
+        path = self.path / key.replace('__', '.')
 
         # Write an array.
         if isinstance(val, np.ndarray):
@@ -152,7 +124,8 @@ class Artifact(Component, MutableMapping[str, object]):
             raise TypeError()
 
     def __delitem__(self, key: str) -> None:
-        shutil.rmtree(self.path / key, ignore_errors=True)
+        path = self.path / key.replace('__', '.')
+        shutil.rmtree(path, ignore_errors=True)
 
     def append(self, key: str, val: object) -> None:
         path = self.path / key
@@ -281,27 +254,6 @@ def _new_artifact_path(spec: Rec) -> Path:
         if not dst.exists():
             return dst
     assert False # for MyPy
-
-#------------------------------------------------------------------------------
-# Symbol <-> object mapping
-
-def _resolve(sym: str) -> object:
-    ''' Search the current scope for an object. '''
-    if sym in get_conf().scope:
-        return get_conf().scope[sym]
-    try:
-        mod_name, type_name = sym.split('$')
-        mod = import_module(mod_name)
-        return cast(object, getattr(mod, type_name))
-    except:
-        raise KeyError(f'"{sym}" is not present in the current scope')
-
-
-def _identify(obj: object) -> str:
-    ''' Search the current scope for an object\'s name. '''
-    for sym, val in get_conf().scope.items():
-        if val is obj: return sym
-    return f'{obj.__module__}${cast(Any, obj).__qualname__}'
 
 #------------------------------------------------------------------------------
 # I/O
