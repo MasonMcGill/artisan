@@ -1,65 +1,51 @@
 API reference
 =============
 
-*WIP*
+.. currentmodule:: artisan
 
-.. .. currentmodule:: cmdgraph
 
-.. Configuration management:
+Summary
+-------
 
-.. .. autosummary::
+Core types:
 
-..   Configurable
-..   Namespace
-..   Scope
-..   create
-..   describe
-..   identify
-..   resolve
+.. autosummary::
 
-.. Commands and records:
+  Configurable
+  Artifact
 
-.. .. autosummary::
+Global configuration:
 
-..   Command
-..   Record
-..   require
+.. autosummary::
 
-.. User interfaces:
+  push
+  pop
+  using
+  get
 
-.. .. autosummary::
+.. note:: This API may change slightly, or be moved to a submodule/singleton object in future versions.
 
-..   cli
-..   serve
+REST API generation:
 
-.. ----
+.. autosummary::
 
-.. .. autoclass:: Configurable
-..   :members:
-..   :undoc-members:
+  serve
 
-.. .. autoclass:: Namespace
 
-.. .. autoclass:: Scope
+Details
+-------
 
-.. .. autofunction:: create
+.. autoclass:: Configurable
+  :members:
+  :undoc-members:
 
-.. .. autofunction:: describe
+.. autoclass:: Artifact
+  :members:
+  :undoc-members:
 
-.. .. autofunction:: identify
+.. autofunction:: push
+.. autofunction:: pop
+.. autofunction:: using
+.. autofunction:: get
 
-.. .. autofunction:: resolve
-
-.. .. autoclass:: Record
-..   :members:
-..   :undoc-members:
-
-.. .. autoclass:: Command
-..   :members:
-..   :undoc-members:
-
-.. .. autofunction:: require
-
-.. .. autofunction:: cli
-
-.. .. autofunction:: serve
+.. autofunction:: serve
