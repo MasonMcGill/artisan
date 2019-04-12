@@ -16,6 +16,7 @@ __all__ = [
 
 @dataclass
 class GlobalConf:
+    'A thread-local configuration for Artisan'
     root_dir: str
     scope: Dict[str, object]
 
@@ -29,22 +30,31 @@ _conf_stack = _ConfStack()
 
 
 def get_conf() -> GlobalConf:
+    'Returns the active global configuration'
     return _conf_stack.value[-1]
 
 
 def push_conf(conf: Opt[GlobalConf] = None, **updates: object) -> None:
+    'Pushes a `GlobalConf` onto the stack, making it the active `GlobalConf`'
     conf = get_conf() if conf is None else copy(conf)
     for key, val in updates.items():
         setattr(conf, key, val)
     _conf_stack.value.append(conf)
 
 def pop_conf() -> GlobalConf:
+    'Pops the top `GlobalConf` off of the conf stack'
+    if len(_conf_stack) == 1:
+        raise IndexError(
+            'The default `GlobalConf` can\'t be removed.\n\n'
+            'i.e. You can\'t pop. The fun must stop here.'
+        )
     return _conf_stack.value.pop()
 
 
 @contextmanager
 def using_conf(conf: Opt[GlobalConf] = None,
                **updates: object) -> Iterator[None]:
+    'Returns a context manager that executes its body with the `conf` active'
     push_conf(conf, **updates); yield
     pop_conf()
 

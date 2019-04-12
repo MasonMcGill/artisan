@@ -32,17 +32,34 @@ EncodedFile = h5.Dataset
 # Artifacts
 
 class Artifact(Configurable, MutableMapping[str, object]):
+    '''
+    An array- and metadata-friendly view into a directory
+
+    Arguments:
+        path (Path|str): The path at which the artifact is, or should be,
+            stored
+        spec (Mapping[str, object]): The subtype-specific configuration,
+            optionally including a "type" field indicating what type of
+            artifact to construct
+
+    Constructors:
+        Artifact(spec: Mapping[str, object])
+        Artifact(**spec_elem: object)
+        Artifact(path: Path|str)
+        Artifact(path: Path|str, spec: Mapping[str, object])
+        Artifact(path: Path|str, **spec_elem: object)
+
+    Type lookup is performed in the current scope, which can be modified via
+    the global configuration API.
+
+    Reading/writing/extending/deleting `ArrayFile`, `EncodedFile`, and
+    `Artifact` fields is supported.
+
+    See the full documentation for more details.
+    '''
     path: Path
 
     def __new__(cls, *args: object, **kwargs: object) -> Any:
-        '''
-        Valid signatures:
-            __new__(cls, spec)
-            __new__(cls, **spec)
-            __new__(cls, path)
-            __new__(cls, path, spec)
-            __new__(cls, path, **spec)
-        '''
         #---------------------------
         # Parse/normalize arguments.
         #---------------------------
@@ -127,24 +144,24 @@ class Artifact(Configurable, MutableMapping[str, object]):
         path = self.path / key.replace('__', '.')
         shutil.rmtree(path, ignore_errors=True)
 
-    def append(self, key: str, val: object) -> None:
+    def extend(self, key: str, val: object) -> None:
         path = self.path / key
 
         # Append an array.
         if isinstance(val, np.ndarray):
             assert path.suffix == ''
-            _append_to_h5(path, val)
+            _exend_h5(path, val)
 
         # Copy an existing file.
         elif isinstance(val, Path):
             assert path.suffix != ''
-            _append_to_file(path, val)
+            _extend_file(path, val)
 
         # Write a subartifact.
         elif isinstance(val, Mapping):
             assert path.suffix == ''
             for k, v in val.items():
-                Artifact(path).append(k, v)
+                Artifact(path).extend(k, v)
 
         else:
             raise TypeError()
@@ -271,7 +288,7 @@ def _write_h5(path: Path, val: np.ndarray) -> None:
     f.create_dataset('data', data=np.asarray(val))
 
 
-def _append_to_h5(path: Path, val: np.ndarray) -> None:
+def _exend_h5(path: Path, val: np.ndarray) -> None:
     val = np.asarray(val)
     f = h5.File(path, libver='latest')
     dset = f.require_dataset(
@@ -296,7 +313,7 @@ def _copy_file(dst: Path, src: Path) -> None:
     shutil.copy(src, dst)
 
 
-def _append_to_file(dst: Path, src: Path) -> None:
+def _extend_file(dst: Path, src: Path) -> None:
     with open(src, 'r') as f_src:
         with open(dst, 'a+') as f_dst:
             f_dst.write(f_src.read())
