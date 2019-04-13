@@ -1,13 +1,15 @@
 Using Artisan
 =============
 
-Broadly speaking, Artisan can be used to define artifact types, create instances of them, and make those instances available via a REST API.
+Broadly speaking, Artisan can be used to define artifact types, create instances
+of them, and make those instances available via a REST API.
 
 
 Defining artifact types
 -----------------------
 
-The following code block illustrates the components of an artifact type definition.
+The following code block illustrates the components of an artifact type
+definition.
 
 .. code-block:: python3
 
@@ -129,14 +131,17 @@ The following code block illustrates the components of an artifact type definiti
 Instantiating artifacts
 -----------------------
 
-Artifacts can be constructed from specifications with fields corresponding to their expected configuration fields.
+Artifacts can be constructed from specifications with fields corresponding to
+their expected configuration fields.
 
 .. code-block:: python
 
   Greeting(name='Sven', punctuation='!')
   Greeting({'name': 'Sven', 'punctuation': '!'}) # Equivalent
 
-This returns a matching artifact, if it already exists, and otherwise creates one. Specifications can also include a "type" field, indicating what type of artifact to construct (see *Nested configurations* for more details).
+This returns a matching artifact, if it already exists, and otherwise creates
+one. Specifications can also include a "type" field, indicating what type of
+artifact to construct (see *Nested configurations* for more details).
 
 .. code-block:: python
 
@@ -148,30 +153,44 @@ Existing artifacts can also be loaded by their paths.
 
   Greeting('Greeting_0000')
 
-Specifying a path *and* a specification returns a matching artifact, if it exists at that path, and otherwise creates one, at that path.
+Specifying a path *and* a specification returns a matching artifact, if it
+exists at that path, and otherwise creates one, at that path.
 
 .. code-block:: python
 
   Greeting('greetings/hello4sven', name='Sven', punctuation='!')
 
-An error is raised if incompatible files/directories already exist at the specified path.
+An error is raised if incompatible files/directories already exist at the
+specified path.
 
 
 In-memory components
 --------------------
 
-Non-serialized configurable objects can be created by subclassing ``artisan.Configurable``. Configurable objects support `Conf` class definitions and flexible docstring authoring (artifacts inherit these properties from ``Configurable``), but their items/attributes aren't backed by the filesystem.
+Non-serialized configurable objects can be created by subclassing
+``artisan.Configurable``. Configurable objects support `Conf` class definitions
+and flexible docstring authoring (artifacts inherit these properties from
+``Configurable``), but their items/attributes aren't backed by the filesystem.
 
 
 Global configuration
 --------------------
 
-The following global (or more precisely, thread-local) configuration options exist:
+The following global (or more precisely, thread-local) configuration options
+exist:
 
-- `root_dir` (*str|Path*): The directory in which artifacts are created by default. When artifact instantiation searches for a matching directory, it performs a shallow search in `root_dir`. By default, the current working directory.
-- `scope` (*{str: type}*): The mapping ``Configurable`` instantiation uses to resolve types, when a specification includes a "type" field. By default, the set of all defined ``Configurable`` subtypes, whose names don't start with an underscore, keyed by their names (if this produces a name clash that leads to an ambiguous lookup, an error is raised).
+- `root_dir` (*str|Path*): The directory in which artifacts are created by
+  default. When artifact instantiation searches for a matching directory, it
+  performs a shallow search in `root_dir`. By default, the current working
+  directory.
+- `scope` (*{str: type}*): The mapping ``Configurable`` instantiation uses to
+  resolve types, when a specification includes a "type" field. By default, the
+  set of all defined ``Configurable`` subtypes, whose names don't start with an
+  underscore, keyed by their names (if this produces a name clash that leads to
+  an ambiguous lookup, an error is raised).
 
-Global configuration options can be manipulated with the `push`, `pop`, and `using` functions.
+Global configuration options can be manipulated with the `push`, `pop`, and
+`using` functions.
 
 .. code-block:: python
 
@@ -187,17 +206,24 @@ Global configuration options can be manipulated with the `push`, `pop`, and `usi
 Configuration schema details
 ----------------------------
 
-Configuration-class entries define `JSON-Schema <https://json-schema.org/>`_ object property schemas.
+Configuration-class entries define `JSON-Schema <https://json-schema.org/>`_
+object property schemas.
 
 - Identifier definitions are translated to property names.
-- Type annotations are translated to "type", and sometimes "items", constraints. Supported types include ``bool``, ``int``, ``float``, ``str``, ``NoneType``, artifact or component specification types (*e.g.* ``Greeting.Spec``), and ``typing.List`` specializations of other supported types (*e.g.* ``List[int]``).
+- Type annotations are translated to "type", and sometimes "items", constraints.
+  Supported types include ``bool``, ``int``, ``float``, ``str``, ``NoneType``,
+  artifact or component specification types (*e.g.* ``Greeting.Spec``), and
+  ``typing.List`` specializations of other supported types
+  (*e.g.* ``List[int]``).
 - Assignments (*e.g.* ``x = 1``) add "default" fields.
 - ``str`` literals following definitions add "description" fields.
-- ``dict`` literals following definitions are merged into the schema. ``(str, dict)`` and ``(dict, str)`` literal pairs are also supported.
+- ``dict`` literals following definitions are merged into the schema.
+  ``(str, dict)`` and ``(dict, str)`` literal pairs are also supported.
 
 A configurating entry matching ``<SomeArtifactType>.Spec`` must
 
-- have a "type" field resloving, in the current `scope`, to a subclass of ``<SomeArtifactType>``, and
+- have a "type" field resloving, in the current `scope`, to a subclass of
+  ``<SomeArtifactType>``, and
 - have every field required by that subclass' configuration schema.
 
 
@@ -215,6 +241,9 @@ The REST API supports the following route forms:
 
 - **path/to/array**: A CBOR-encoded array
 - **path/to/file.ext**: A raw file
-- **path/to/artifact**: A CBOR-encoded object mapping entry names to contents (objects in the case of array/subartifact entries, and strings---paths relative to `root_dir`---for non-array files)
-- **path/to/artifact/_entry-names**: A CBOR-encoded object mapping entry names to small metadata objects
+- **path/to/artifact**: A CBOR-encoded object mapping entry names to contents
+  (objects in the case of array/subartifact entries, and strings---paths
+  relative to `root_dir`---for non-array files)
+- **path/to/artifact/_entry-names**: A CBOR-encoded object mapping entry names
+  to small metadata objects
 - **path/to/artifact/_meta**: The contents of *meta.yaml*, CBOR-encoded

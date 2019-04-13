@@ -1,9 +1,14 @@
 Using Artisan-UI
 ================
 
-Artisan-UI can be used to view artifacts exposed as a REST API via ``artisan.serve``. It supports custom views defined as a `React <https://reactjs.org/>`_ components.
+Artisan-UI can be used to view artifacts exposed as a REST API via
+``artisan.serve``. It supports custom views defined as a `React
+<https://reactjs.org/>`_ components.
 
-Artisan-UI can either be used as a standalone web application that can be started via a command-line interface, or as a React component that can be embedded into other applications. In either case, `NodeJS <https://nodejs.org>`_ must be installed to use Artisan-UI.
+Artisan-UI can either be used as a standalone web application that can be
+started via a command-line interface, or as a React component that can be
+embedded into other applications. In either case, `NodeJS <https://nodejs.org>`_
+must be installed to use Artisan-UI.
 
 
 Using the Artisan-UI CLI
@@ -51,7 +56,8 @@ App object properties
 
 - params
 
-    - "host" and "path" are reserved, but anything else can be used as view parameters
+    - "host" and "path" are reserved, but anything else can be used as view
+      parameters
 
 - navigate
 - navUpdating

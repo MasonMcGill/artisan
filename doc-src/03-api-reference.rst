@@ -35,7 +35,8 @@ Global configuration:
   using
   get
 
-.. note:: This API may change slightly, or be moved to a submodule/singleton object in future versions.
+.. note:: This API may change slightly, or be moved to a submodule/singleton
+          object in future versions.
 
 REST API generation:
 
