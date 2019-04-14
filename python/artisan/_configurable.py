@@ -1,12 +1,11 @@
 from typing import Dict, Mapping, Tuple, cast
 from importlib import import_module
 
-from ._global_conf import default_scope, get_conf
+from ._global_conf import conf_stack, default_scope
 
 __all__ = ['Configurable']
 
-#------------------------------------------------------------------------------
-# Configurable object metaclass
+#-- Configurable object metaclass ---------------------------------------------
 
 class ConfigurableMeta(type):
     def __init__(self,
@@ -22,8 +21,7 @@ class ConfigurableMeta(type):
             [entry, self]
         )
 
-#------------------------------------------------------------------------------
-# Configurable objects
+#-- Configurable objects ------------------------------------------------------
 
 Rec = Mapping[str, object]
 Tuple_ = Tuple[object, ...]
@@ -43,13 +41,12 @@ class Configurable(metaclass=ConfigurableMeta):
         assert isinstance(type_, type) and issubclass(type_, cls)
         return cast('Configurable', super().__new__(type_))
 
-#------------------------------------------------------------------------------
-# Symbol <-> object mapping
+#-- Symbol <-> object mapping -------------------------------------------------
 
 def _resolve(sym: str) -> object:
     ''' Search the current scope for an object. '''
-    if sym in get_conf().scope:
-        return get_conf().scope[sym]
+    if sym in conf_stack.get().scope:
+        return conf_stack.get().scope[sym]
     try:
         mod_name, type_name = sym.split('$')
         mod = import_module(mod_name)

@@ -1,13 +1,16 @@
-from ._namespaces import Namespace
-from ._artifacts import Configurable, Artifact
-from ._global_conf import GlobalConf, push_conf, pop_conf, using_conf, get_conf
-from ._http import  serve
+from ._artifacts import Artifact, ArrayFile, EncodedFile
+from ._configurable import Configurable
+from ._global_conf import Conf, conf_stack
+from ._http import serve
 
 __all__ = [
-    'Namespace', 'Configurable', 'Artifact',
-    'GlobalConf', 'push_conf', 'pop_conf', 'using_conf', 'get_conf',
+    'Configurable', 'Artifact',
+    'ArrayFile', 'EncodedFile',
+    'Conf', 'conf_stack',
     'serve'
 ]
 
 for sym in __all__:
-    globals()[sym].__module__ = __name__
+    obj = globals()[sym]
+    if hasattr(obj, '__module__'):
+        obj.__module__ = __name__

@@ -13,11 +13,11 @@ import numpy as np
 from ruamel import yaml
 from toolz import count
 
-from ._global_conf import get_conf
+from ._global_conf import conf_stack
 from ._namespaces import Namespace, namespacify
 from ._configurable import Configurable
 
-__all__ = ['Configurable', 'Artifact', 'ArrayFile', 'EncodedFile']
+__all__ = ['Artifact', 'ArrayFile', 'EncodedFile']
 
 #------------------------------------------------------------------------------
 # Type aliases
@@ -25,8 +25,8 @@ __all__ = ['Configurable', 'Artifact', 'ArrayFile', 'EncodedFile']
 Rec = Mapping[str, object]
 Tuple_ = Tuple[object, ...]
 
-ArrayFile = Path
-EncodedFile = h5.Dataset
+ArrayFile = h5.Dataset; 'An alias for `h5py.Dataset`'
+EncodedFile = Path; 'An alias for `pathlib.Path`'
 
 #------------------------------------------------------------------------------
 # Artifacts
@@ -69,7 +69,7 @@ class Artifact(Configurable, MutableMapping[str, object]):
         # Resolve `path`, dereferencing "~" and "@".
         if path is not None:
             if str(path).startswith('@/'):
-                path = Path(get_conf().root_dir) / str(path)[2:]
+                path = Path(conf_stack.get().root_dir) / str(path)[2:]
             path = path.expanduser().resolve()
 
         #-----------------------------------
@@ -228,7 +228,7 @@ def _parse_artifact_args(args: Tuple_, kwargs: Rec) -> Tuple[Opt[Path], Opt[Rec]
 
 
 def _find_or_build(artifact: Artifact, spec: Rec) -> None:
-    for path in Path(get_conf().root_dir).iterdir():
+    for path in Path(conf_stack.get().root_dir).iterdir():
         object.__setattr__(artifact, 'path', path)
         try: return _ensure_built(artifact, spec)
         except FileExistsError: pass
@@ -264,7 +264,7 @@ def _build(artifact: Artifact, spec: Rec) -> None:
 
 
 def _new_artifact_path(spec: Rec) -> Path:
-    root = Path(get_conf().root_dir)
+    root = Path(conf_stack.get().root_dir)
     date = datetime.now().strftime(r'%Y-%m-%d')
     for i in itertools.count():
         dst = root / f'{spec["type"]}_{date}_{i:04x}'

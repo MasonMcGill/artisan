@@ -1,6 +1,8 @@
 Using Artisan
 =============
 
+.. currentmodule:: artisan
+
 Broadly speaking, Artisan can be used to define artifact types, create instances
 of them, and make those instances available via a REST API.
 
@@ -168,9 +170,9 @@ In-memory components
 --------------------
 
 Non-serialized configurable objects can be created by subclassing
-``artisan.Configurable``. Configurable objects support `Conf` class definitions
+`artisan.Configurable`. Configurable objects support `Conf` class definitions
 and flexible docstring authoring (artifacts inherit these properties from
-``Configurable``), but their items/attributes aren't backed by the filesystem.
+`Configurable`), but their items/attributes aren't backed by the filesystem.
 
 
 Global configuration
@@ -183,9 +185,9 @@ exist:
   default. When artifact instantiation searches for a matching directory, it
   performs a shallow search in `root_dir`. By default, the current working
   directory.
-- `scope` (*{str: type}*): The mapping ``Configurable`` instantiation uses to
+- `scope` (*{str: type}*): The mapping `Configurable` instantiation uses to
   resolve types, when a specification includes a "type" field. By default, the
-  set of all defined ``Configurable`` subtypes, whose names don't start with an
+  set of all defined `Configurable` subtypes, whose names don't start with an
   underscore, keyed by their names (if this produces a name clash that leads to
   an ambiguous lookup, an error is raised).
 
@@ -211,19 +213,19 @@ object property schemas.
 
 - Identifier definitions are translated to property names.
 - Type annotations are translated to "type", and sometimes "items", constraints.
-  Supported types include ``bool``, ``int``, ``float``, ``str``, ``NoneType``,
-  artifact or component specification types (*e.g.* ``Greeting.Spec``), and
-  ``typing.List`` specializations of other supported types
-  (*e.g.* ``List[int]``).
-- Assignments (*e.g.* ``x = 1``) add "default" fields.
-- ``str`` literals following definitions add "description" fields.
-- ``dict`` literals following definitions are merged into the schema.
-  ``(str, dict)`` and ``(dict, str)`` literal pairs are also supported.
+  Supported types include `bool`, `int`, `float`, `str`, `NoneType`,
+  artifact or component specification types (*e.g.* `Greeting.Spec`), and
+  `typing.List` specializations of other supported types
+  (*e.g.* `List[int]`).
+- Assignments (*e.g.* `x = 1`) add "default" fields.
+- `str` literals following definitions add "description" fields.
+- `dict` literals following definitions are merged into the schema.
+  `(str, dict)` and `(dict, str)` literal pairs are also supported.
 
-A configurating entry matching ``<SomeArtifactType>.Spec`` must
+A configurating entry matching `<SomeArtifactType>.Spec` must
 
 - have a "type" field resloving, in the current `scope`, to a subclass of
-  ``<SomeArtifactType>``, and
+  `<SomeArtifactType>`, and
 - have every field required by that subclass' configuration schema.
 
 
