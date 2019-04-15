@@ -4,34 +4,31 @@ from pathlib import Path
 import shutil
 from time import sleep
 from typing import (
-    Any, Iterator, Mapping, MutableMapping,
+    Any, Iterator, Dict, Mapping, MutableMapping,
     Optional as Opt, Tuple, Union, cast
 )
 
 import h5py as h5
 import numpy as np
 from ruamel import yaml
-from toolz import count
 
 from ._global_conf import conf_stack
-from ._namespaces import Namespace, namespacify
 from ._configurable import Configurable
 
 __all__ = ['Artifact', 'ArrayFile', 'EncodedFile']
 
-#------------------------------------------------------------------------------
-# Type aliases
+#-- Type aliases --------------------------------------------------------------
 
 Rec = Mapping[str, object]
+MutRec = MutableMapping[str, object]
 Tuple_ = Tuple[object, ...]
 
 ArrayFile = h5.Dataset; 'An alias for `h5py.Dataset`'
 EncodedFile = Path; 'An alias for `pathlib.Path`'
 
-#------------------------------------------------------------------------------
-# Artifacts
+#-- Artifacts -----------------------------------------------------------------
 
-class Artifact(Configurable, MutableMapping[str, object]):
+class Artifact(Configurable):
     '''
     An array- and metadata-friendly view into a directory
 
@@ -87,18 +84,25 @@ class Artifact(Configurable, MutableMapping[str, object]):
 
         return artifact
 
-    def build(self, spec: Any) -> None:
+    def build(self, conf: Any) -> None:
+        '''
+        Write arrays, encoded files, and subartifacts
+
+        `build` is called during instantiation if a matching existing artifact
+        is not found. Override it to construct nontrivial cacheable artifacts.
+        '''
         pass
 
     @property
-    def meta(self) -> Namespace:
+    def meta(self) -> Rec:
+        'The metadata stored in `{self.path}/_meta.yaml`'
         # TODO: Implement caching
-        return cast(Namespace, namespacify(_read_meta(self)))
+        return cast(Rec, _namespacify(_read_meta(self)))
 
     #-- MutableMapping methods ----------------------------
 
     def __len__(self) -> int:
-        return count(self.path.glob('[!_]*')) # type: ignore
+        return len([*self.path.glob('[!_]*')])
 
     def __iter__(self) -> Iterator[str]:
         for p in self.path.glob('[!_]*'):
@@ -135,7 +139,10 @@ class Artifact(Configurable, MutableMapping[str, object]):
         # Write a subartifact.
         elif isinstance(val, Mapping):
             assert path.suffix == ''
-            Artifact(path).update(val)
+            MutRec.update(
+                cast(MutRec, Artifact(path)),
+                cast(Rec, val)
+            )
 
         else:
             raise TypeError()
@@ -179,8 +186,7 @@ class Artifact(Configurable, MutableMapping[str, object]):
             else object.__getattribute__(self, key)
         )
 
-#------------------------------------------------------------------------------
-# Artifact construction
+#-- Artifact construction -----------------------------------------------------
 
 def _parse_artifact_args(args: Tuple_, kwargs: Rec) -> Tuple[Opt[Path], Opt[Rec]]:
     # (spec)
@@ -256,7 +262,7 @@ def _build(artifact: Artifact, spec: Rec) -> None:
 
     try:
         n_build_args = artifact.build.__code__.co_argcount
-        artifact.build(*([Namespace(spec)] if n_build_args > 1 else []))
+        artifact.build(*([_Namespace(spec)] if n_build_args > 1 else []))
         _write_meta(artifact, dict(spec=spec, status='done'))
     except BaseException as e:
         _write_meta(artifact, dict(spec=spec, status='stopped'))
@@ -272,8 +278,7 @@ def _new_artifact_path(spec: Rec) -> Path:
             return dst
     assert False # for MyPy
 
-#------------------------------------------------------------------------------
-# I/O
+#-- I/O -----------------------------------------------------------------------
 
 def _read_h5(path: Path) -> np.ndarray:
     # TODO: Make this lazy.
@@ -327,3 +332,26 @@ def _read_meta(a: Artifact) -> Rec:
 def _write_meta(a: Artifact, meta: Rec) -> None:
     (a.path / '_meta.yaml').write_text(yaml.round_trip_dump(meta))
 
+#-- Namespaces ----------------------------------------------------------------
+
+class _Namespace(Dict[str, object]):
+    'A `dict` that supports accessing items as attributes'
+
+    def __getattr__(self, key: str) -> Any:
+        return dict.__getitem__(self, key)
+
+    def __setattr__(self, key: str, val: object) -> None:
+        dict.__setitem__(self, key, val)
+
+    def __getattribute__(self, key: str) -> Any:
+        if key == '__dict__': return self
+        else: return object.__getattribute__(self, key)
+
+
+def _namespacify(obj: object) -> object:
+    if isinstance(obj, dict):
+        return _Namespace({k: _namespacify(obj[k]) for k in obj})
+    elif isinstance(obj, list):
+        return [_namespacify(v) for v in obj]
+    else:
+        return obj

@@ -13,7 +13,6 @@ h5py = "*"
 jsonschema = "*"
 numpy = "*"
 "ruamel.yaml" = "*"
-toolz = "*"
 
 [tool.poetry.dev-dependencies]
 pytest = "*"

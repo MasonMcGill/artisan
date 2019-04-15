@@ -1,3 +1,5 @@
+''' A build system for explainable science '''
+
 from ._artifacts import Artifact, ArrayFile, EncodedFile
 from ._configurable import Configurable
 from ._global_conf import Conf, conf_stack

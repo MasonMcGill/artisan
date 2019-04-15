@@ -32,7 +32,7 @@ class Configurable(metaclass=ConfigurableMeta):
 
     A JSON-object-like structure is a string-keyed mapping composed of
     arbitrarily nested `bool`, `int`, `float`, `str`, `NoneType`, sequence, and
-    string-keyed mappings.
+    string-keyed mapping objects.
     '''
     def __new__(cls, spec: Rec, *args: object, **kwargs: object) -> 'Configurable':
         type_name = spec.get('type', None)
