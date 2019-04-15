@@ -7,41 +7,15 @@ API reference
 Summary
 -------
 
-Core types:
-
 .. autosummary::
+  :nosignatures:
 
   Configurable
   Artifact
-
-Artifact field types:
-
-.. autosummary::
-
   ArrayFile
   EncodedFile
-
-.. ============= ==============================================
-.. `ArrayFile`   An alias for h5py.Dataset
-.. `EncodedFile` An alias for pathlib.Path
-.. ============= ==============================================
-
-Global configuration:
-
-.. autosummary::
-
-  push
-  pop
-  using
-  get
-
-.. note:: This API may change slightly, or be moved to a submodule/singleton
-          object in future versions.
-
-REST API generation:
-
-.. autosummary::
-
+  Conf
+  conf_stack
   serve
 
 
@@ -50,15 +24,23 @@ Details
 
 .. autoclass:: Configurable
   :members:
-  :undoc-members:
 
 .. autoclass:: Artifact
-  :members:
-  :undoc-members:
 
-.. autofunction:: push
-.. autofunction:: pop
-.. autofunction:: using
-.. autofunction:: get
+  .. automethod:: __len__
+  .. automethod:: __iter__
+  .. automethod:: __getitem__(key: str) -> ArrayFile|EncodedFile|Artifact
+  .. automethod:: __setitem__
+  .. automethod:: __delitem__
+  .. automethod:: extend
+
+.. autoclass:: Conf
+
+.. autoclass:: ConfStack
+
+  .. automethod:: push(conf: Optional[Conf] = None, **updates) -> None
+  .. automethod:: pop() -> Conf
+  .. automethod:: using(conf: Optional[Conf] = None, **updates) -> Iterator[None]
+  .. automethod:: get() -> Conf
 
 .. autofunction:: serve

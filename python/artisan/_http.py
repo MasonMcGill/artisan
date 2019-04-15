@@ -18,7 +18,7 @@ __all__ = ['serve']
 
 def serve(port: int = 3000, root_dir: Opt[str] = None) -> None:
     '''
-    Start a server providing access to the records in a directory.
+    Starts a server providing access to the records in a directory
     '''
     root_dir = Path(root_dir or conf_stack.get().root_dir)
 

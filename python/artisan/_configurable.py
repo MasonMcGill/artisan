@@ -1,5 +1,6 @@
-from typing import Dict, Mapping, Tuple, cast
+from dataclasses import make_dataclass
 from importlib import import_module
+from typing import Dict, Mapping, Tuple, cast
 
 from ._global_conf import conf_stack, default_scope
 
@@ -12,7 +13,8 @@ class ConfigurableMeta(type):
                  name: str,
                  bases: Tuple[type, ...],
                  dict_: Dict[str, object]) -> None:
-        ''
+
+        dict_['Spec'] = make_dataclass('Spec', [('type', str)])
         super().__init__(name, bases, dict_)
         entry = default_scope.get(name, None)
         default_scope[name] = (
@@ -28,7 +30,7 @@ Tuple_ = Tuple[object, ...]
 
 class Configurable(metaclass=ConfigurableMeta):
     '''
-    An object that can be constructed from a JSON-object-like structure.
+    An object that can be constructed from a JSON-object-like structure
 
     A JSON-object-like structure is a string-keyed mapping composed of
     arbitrarily nested `bool`, `int`, `float`, `str`, `NoneType`, sequence, and

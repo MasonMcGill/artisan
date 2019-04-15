@@ -11,14 +11,14 @@ __all__ = ['Conf', 'conf_stack', 'default_scope']
 @dataclass
 class Conf:
     '''
-    Options for Artisan's behavior
+    A thread-scoped Artisan configuration
 
     Attributes:
         root_dir: The default directory for artifact creation, and the
             directory that will be searched for matches when an artifact is
             instantiated from a specification
         scope: The mapping used to resolve `type`s in specifications during
-            artifact instantiation
+            configurable object instantiation
     '''
     root_dir: str
     scope: Dict[str, object]
@@ -26,10 +26,12 @@ class Conf:
 
 class ConfStack:
     '''
-    A thread-local stack of Artisan configurations
+    A thread-scoped stack of Artisan configurations
 
     At any given time, the top `Conf` on the stack will be used to determine
     Artisan's behavior.
+
+    Only a single instance of this class, `artisan.conf_stack`, should exist.
     '''
     def __init__(self) -> None:
         self._tl = threading.local()

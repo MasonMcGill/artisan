@@ -56,11 +56,9 @@ definition.
       # `EncodedFile` is an alias for `pathlib.Path`, but they may be
       # subclasses in the future.
       #
-      #-- Fields -----------------------------
       message: ArrayFile; 'A friendly introduction'
       poems__txt: EncodedFile; 'Recommended poems'
       lucky_numbers: Artifact; 'Most fortunate integers, by day of the week'
-      #---------------------------------------
 
       ####
       # `build` is called when an artifact is instantiated and the
@@ -178,8 +176,7 @@ and flexible docstring authoring (artifacts inherit these properties from
 Global configuration
 --------------------
 
-The following global (or more precisely, thread-local) configuration options
-exist:
+The following thread-local configuration options exist:
 
 - `root_dir` (*str|Path*): The directory in which artifacts are created by
   default. When artifact instantiation searches for a matching directory, it
@@ -191,18 +188,19 @@ exist:
   underscore, keyed by their names (if this produces a name clash that leads to
   an ambiguous lookup, an error is raised).
 
-Global configuration options can be manipulated with the `push`, `pop`, and
-`using` functions.
+Global configuration options can be manipulated with `conf_stack` object
 
 .. code-block:: python
 
-  artisan.push(root_dir='data')
-  # <create artifacts in 'data/'>
-  artisan.pop()
+  from artisan import conf_stack as acs
+
+  acs.push(root_dir='data')
+  ... # <create artifacts in 'data/'>
+  acs.pop()
 
   # Or, equivalently
-  with artisan.using(root_dir='data'):
-      # <create artifacts in 'data/'>
+  with acs.using(root_dir='data'):
+      ... # <create artifacts in 'data/'>
 
 
 Configuration schema details

@@ -23,8 +23,9 @@ Rec = Mapping[str, object]
 MutRec = MutableMapping[str, object]
 Tuple_ = Tuple[object, ...]
 
-ArrayFile = h5.Dataset; 'An alias for `h5py.Dataset`'
-EncodedFile = Path; 'An alias for `pathlib.Path`'
+from pathlib import Path as EncodedFile
+from h5py import Dataset as ArrayFile
+ArtifactEntry = Union['Artifact', ArrayFile, EncodedFile]
 
 #-- Artifacts -----------------------------------------------------------------
 
@@ -40,27 +41,28 @@ class Artifact(Configurable):
             artifact to construct
 
     Constructors:
-        Artifact(spec: Mapping[str, object])
-        Artifact(**spec_elem: object)
-        Artifact(path: Path|str)
-        Artifact(path: Path|str, spec: Mapping[str, object])
-        Artifact(path: Path|str, **spec_elem: object)
+        - Artifact(spec: *Mapping[str, object]*)
+        - Artifact(**spec_elem: *object*)
+        - Artifact(path: *Path|str*)
+        - Artifact(path: *Path|str*, spec: *Mapping[str, object]*)
+        - Artifact(path: *Path|str*, **spec_elem: *object*)
+
+    Fields:
+        - **path** (*Path*): The path to the root of the file tree backing this \
+            artifact
+        - **meta** (*Mapping[str, object]*): The metadata stored in \
+            `{self.path}/_meta.yaml`
 
     Type lookup is performed in the current scope, which can be modified via
     the global configuration API.
 
     Reading/writing/extending/deleting `ArrayFile`, `EncodedFile`, and
     `Artifact` fields is supported.
-
-    See the full documentation for more details.
     '''
     path: Path
 
     def __new__(cls, *args: object, **kwargs: object) -> Any:
-        #---------------------------
-        # Parse/normalize arguments.
-        #---------------------------
-
+        # Parse arguments.
         path, spec = _parse_artifact_args(args, kwargs)
 
         # Resolve `path`, dereferencing "~" and "@".
@@ -69,19 +71,18 @@ class Artifact(Configurable):
                 path = Path(conf_stack.get().root_dir) / str(path)[2:]
             path = path.expanduser().resolve()
 
-        #-----------------------------------
-        # Construct and return the artifact.
-        #-----------------------------------
-
+        # Instantiate the artifact.
         artifact = cast(Artifact, Configurable.__new__(cls, spec or {}))
         object.__setattr__(artifact, 'path', path)
 
+        # Point its path to a matching prebuilt artifact, or build it.
         if path is None:
             assert spec is not None
             _find_or_build(artifact, spec)
         elif spec is not None:
             _ensure_built(artifact, spec)
 
+        # Return it.
         return artifact
 
     def build(self, conf: Any) -> None:
@@ -95,20 +96,47 @@ class Artifact(Configurable):
 
     @property
     def meta(self) -> Rec:
-        'The metadata stored in `{self.path}/_meta.yaml`'
+        '''
+        The metadata stored in `{self.path}/_meta.yaml`
+        '''
         # TODO: Implement caching
         return cast(Rec, _namespacify(_read_meta(self)))
 
     #-- MutableMapping methods ----------------------------
 
     def __len__(self) -> int:
-        return len([*self.path.glob('[!_]*')])
+        '''
+        Returns the number of public files in `self.path`
+
+        Non-public files (files whose names start with "_") are not counted.
+        '''
+        return sum(1 for _ in self.path.glob('[!_]*'))
 
     def __iter__(self) -> Iterator[str]:
+        '''
+        Yields field names corresponding to the public files in `self.path`
+
+        Entries Artisan understands (subdirectories and HDF5 files) are yielded
+        without extensions. Non-public files (files whose names start with "_")
+        are ignored.
+        '''
         for p in self.path.glob('[!_]*'):
             yield p.name[:-3] if p.suffix == '.h5' else p.name
 
-    def __getitem__(self, key: str) -> Union['Artifact', np.ndarray, Path]:
+    def __getitem__(self, key: str) -> ArtifactEntry:
+        '''
+        Returns an `ArrayFile`, `EncodedFile`, or `Artifact` corresponding to
+        `self.path/key`
+
+        HDF5 files are returned as `ArrayFile`s, other files are returned as
+        `EncodedFile`s, and directories and nonexistent entries are returned as
+        (possibly empty) `Artifact`s.
+
+        Attribute access syntax is also supported, and occurrences of "__" in
+        `key` are transformed into ".", to support accessing encoded files as
+        attributes (i.e. `artifact['name.ext']` is equivalent to
+        `artifact.name__ext`).
+        '''
         path = self.path / key.replace('__', '.')
 
         # Return an array.
@@ -124,6 +152,18 @@ class Artifact(Configurable):
             return Artifact(path)
 
     def __setitem__(self, key: str, val: object) -> None:
+        '''
+        Writes an `ArrayFile`, `EncodedFile`, or `Artifact` to `self.path/key`
+
+        `np.ndarray`-like objects are written as `ArrayFiles`, `Path`-like
+        objects are written as `EncodedFile`s, and string-keyed mappings are
+        written as subartifacts.
+
+        Attribute access syntax is also supported, and occurrences of "__" in
+        `key` are transformed into ".", to support accessing encoded files as
+        attributes (i.e. `artifact['name.ext'] = val` is equivalent to
+        `artifact.name__ext = val`).
+        '''
         path = self.path / key.replace('__', '.')
 
         # Write an array.
@@ -148,10 +188,28 @@ class Artifact(Configurable):
             raise TypeError()
 
     def __delitem__(self, key: str) -> None:
+        '''
+        Deletes the entry at `self.path/key`
+
+        Attribute access syntax is also supported, and occurrences of "__" in
+        `key` are transformed into ".", to support accessing encoded files as
+        attributes (i.e. `del artifact['name.ext']` is equivalent to
+        `del artifact.name__ext`).
+        '''
         path = self.path / key.replace('__', '.')
         shutil.rmtree(path, ignore_errors=True)
 
     def extend(self, key: str, val: object) -> None:
+        '''
+        Extends an `ArrayFile`, `EncodedFile`, or `Artifact` at `self.path/key`
+
+        Extending `ArrayFile`s performs concatenation along the first axis,
+        extending `EncodedFile`s performs byte-level concatenation, and
+        extending subartifacts extends their fields.
+
+        File corresponding to `self[key]` are created if they do not already
+        exist.
+        '''
         path = self.path / key
 
         # Append an array.
@@ -280,20 +338,20 @@ def _new_artifact_path(spec: Rec) -> Path:
 
 #-- I/O -----------------------------------------------------------------------
 
-def _read_h5(path: Path) -> np.ndarray:
-    # TODO: Make this lazy.
+def _read_h5(path: Path) -> ArrayFile:
     f = h5.File(path, 'r', libver='latest', swmr=True)
-    return f['data'][:]
+    return f['data']
 
 
-def _write_h5(path: Path, val: np.ndarray) -> None:
+def _write_h5(path: Path, val: object) -> None:
+    val = np.asarray(val)
     shutil.rmtree(path, ignore_errors=True)
     path.parent.mkdir(parents=True, exist_ok=True)
     f = h5.File(path, libver='latest')
     f.create_dataset('data', data=np.asarray(val))
 
 
-def _exend_h5(path: Path, val: np.ndarray) -> None:
+def _exend_h5(path: Path, val: object) -> None:
     val = np.asarray(val)
     f = h5.File(path, libver='latest')
     dset = f.require_dataset(
