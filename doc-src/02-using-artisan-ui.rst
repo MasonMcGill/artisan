@@ -1,52 +1,59 @@
-Using Artisan-UI
-================
+Using ArtisanUI
+===============
 
-Artisan-UI can be used to view artifacts exposed as a REST API via
+ArtisanUI can be used to view artifacts exposed as a REST API via
 ``artisan.serve``. It supports custom views defined as a `React
 <https://reactjs.org/>`_ components.
 
-Artisan-UI can either be used as a standalone web application that can be
-started via a command-line interface, or as a React component that can be
-embedded into other applications. In either case, `NodeJS <https://nodejs.org>`_
-must be installed to use Artisan-UI.
+Quick start
+-----------
+
+Install `NodeJS <https://nodejs.org>`_, then run `npx artisan-ui` to start a
+visualization server and open *localhost:1234* in a web browser to use it.
 
 
-Using the Artisan-UI CLI
-------------------------
+Defining custom views
+---------------------
 
-*WIP*
+Create a `package.json` file with the following contents:
 
-- Setup
+.. code-block:: json
 
-    - Example `package.json` file
-    - Installing dependencies with npm
-    - Running with npx
+  {
+    "dependencies": {
+      "react": "latest"
+    },
+    "private": true
+  }
 
-- Make a ".js" file
+Add any other `npm <https://npmjs.com>`_ packages you'd like to use to the
+"dependencies" object, then install the project's dependencies by running
+`npm install`.
+
+Next, create `index.jsx`:
+
+.. code-block:: jsx
+
+  export default {
+    views: [
+      ["*", () => <h1>Test</h1>]
+    ]
+  }
+
+
+Then, run
+
+.. code-block:: sh
+
+  > npx artisan-ui index.jsx
+
+
+Defining custom views
+---------------------
+
 - "export selector = '.TypeName'"
 - "export default Component(s)"
 - Rationale: ".mdx" may be supported when tooling is mature
-
-.. .. code-block:: json
-
-..   {
-..     "dependencies": {
-..       "artisan-ui": "~0.1.0",
-..       "react": "~16.8.0",
-..       "react-dom": "~16.8.0"
-..     },
-..     "scripts": {
-..       "serve-ui": "artisan-ui '*.js'"
-..     }
-..   }
-
-
-Using the Artisan-UI API
-------------------------
-
-*WIP*
-
-- Constructing a RootView
 
 
 App object properties

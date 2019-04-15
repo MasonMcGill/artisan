@@ -70,7 +70,7 @@ Features
   be created
 - REST API generation, with support for bandwidth-efficient `CBOR
   <https://cbor.io/>`_ encoding
-- Visualization via `artisan-ui`, which supports rendering custom `React
+- Visualization via ArtisanUI, which supports rendering custom `React
   <https://reactjs.org/>`_ components (including components from `React-Vis
   <https://uber.github.io/react-vis/>`_, `React-Plotly
   <https://github.com/plotly/react-plotly.js/>`_, `Chart-Parts
