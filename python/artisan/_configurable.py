@@ -2,7 +2,7 @@ from dataclasses import make_dataclass
 from importlib import import_module
 from typing import Dict, Mapping, Tuple, cast
 
-from ._global_conf import conf_stack, default_scope
+from ._global_conf import get_conf, default_scope
 
 __all__ = ['Configurable']
 
@@ -47,8 +47,8 @@ class Configurable(metaclass=ConfigurableMeta):
 
 def _resolve(sym: str) -> object:
     ''' Search the current scope for an object. '''
-    if sym in conf_stack.get().scope:
-        return conf_stack.get().scope[sym]
+    if sym in get_conf().scope:
+        return get_conf().scope[sym]
     try:
         mod_name, type_name = sym.split('$')
         mod = import_module(mod_name)

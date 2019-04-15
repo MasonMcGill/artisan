@@ -1,14 +1,15 @@
-''' A build system for explainable science '''
-
+'''
+A build system for explainable science
+'''
 from ._artifacts import Artifact, ArrayFile, EncodedFile
 from ._configurable import Configurable
-from ._global_conf import Conf, ConfStack, conf_stack
+from ._global_conf import Conf, push_conf, pop_conf, using_conf, get_conf
 from ._http import serve
 
 __all__ = [
     'Configurable', 'Artifact',
     'ArrayFile', 'EncodedFile',
-    'Conf', 'ConfStack', 'conf_stack',
+    'Conf', 'push_conf', 'pop_conf', 'using_conf', 'get_conf',
     'serve'
 ]
 

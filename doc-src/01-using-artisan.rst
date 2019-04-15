@@ -188,18 +188,17 @@ The following thread-local configuration options exist:
   underscore, keyed by their names (if this produces a name clash that leads to
   an ambiguous lookup, an error is raised).
 
-Global configuration options can be manipulated with `conf_stack` object
+Thread-local configuration options can be manipulated via the `push_conf`,
+`pop_conf`, and `using_conf` functions.
 
 .. code-block:: python
 
-  from artisan import conf_stack as acs
-
-  acs.push(root_dir='data')
+  artisan.push_conf(root_dir='data')
   ... # <create artifacts in 'data/'>
-  acs.pop()
+  artisan.pop_conf()
 
   # Or, equivalently
-  with acs.using(root_dir='data'):
+  with artisan.using_conf(root_dir='data'):
       ... # <create artifacts in 'data/'>
 
 

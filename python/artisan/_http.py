@@ -9,7 +9,7 @@ from gunicorn.app.base import BaseApplication as GunicornApp
 import h5py as h5
 from ruamel import yaml
 
-from ._global_conf import conf_stack
+from ._global_conf import get_conf
 
 __all__ = ['serve']
 
@@ -20,7 +20,7 @@ def serve(port: int = 3000, root_dir: Opt[str] = None) -> None:
     '''
     Starts a server providing access to the records in a directory
     '''
-    root_dir = Path(root_dir or conf_stack.get().root_dir)
+    root_dir = Path(root_dir or get_conf().root_dir)
 
     def write_response(req: Request, res: Response) -> None:
         res.content_type = 'application/cbor'

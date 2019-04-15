@@ -12,7 +12,7 @@ import h5py as h5
 import numpy as np
 from ruamel import yaml
 
-from ._global_conf import conf_stack
+from ._global_conf import get_conf
 from ._configurable import Configurable
 
 __all__ = ['Artifact', 'ArrayFile', 'EncodedFile']
@@ -68,7 +68,7 @@ class Artifact(Configurable):
         # Resolve `path`, dereferencing "~" and "@".
         if path is not None:
             if str(path).startswith('@/'):
-                path = Path(conf_stack.get().root_dir) / str(path)[2:]
+                path = Path(get_conf().root_dir) / str(path)[2:]
             path = path.expanduser().resolve()
 
         # Instantiate the artifact.
@@ -292,7 +292,7 @@ def _parse_artifact_args(args: Tuple_, kwargs: Rec) -> Tuple[Opt[Path], Opt[Rec]
 
 
 def _find_or_build(artifact: Artifact, spec: Rec) -> None:
-    for path in Path(conf_stack.get().root_dir).iterdir():
+    for path in Path(get_conf().root_dir).iterdir():
         object.__setattr__(artifact, 'path', path)
         try: return _ensure_built(artifact, spec)
         except FileExistsError: pass
@@ -328,7 +328,7 @@ def _build(artifact: Artifact, spec: Rec) -> None:
 
 
 def _new_artifact_path(spec: Rec) -> Path:
-    root = Path(conf_stack.get().root_dir)
+    root = Path(get_conf().root_dir)
     date = datetime.now().strftime(r'%Y-%m-%d')
     for i in itertools.count():
         dst = root / f'{spec["type"]}_{date}_{i:04x}'

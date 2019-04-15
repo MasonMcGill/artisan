@@ -15,7 +15,10 @@ Summary
   ArrayFile
   EncodedFile
   Conf
-  conf_stack
+  push_conf
+  pop_conf
+  using_conf
+  get_conf
   serve
 
 
@@ -35,12 +38,9 @@ Details
   .. automethod:: extend
 
 .. autoclass:: Conf
-
-.. autoclass:: ConfStack
-
-  .. automethod:: push(conf: Optional[Conf] = None, **updates) -> None
-  .. automethod:: pop() -> Conf
-  .. automethod:: using(conf: Optional[Conf] = None, **updates) -> Iterator[None]
-  .. automethod:: get() -> Conf
+.. autofunction:: push_conf(conf: Optional[Conf] = None, **updates) -> None
+.. autofunction:: pop_conf() -> Conf
+.. autofunction:: using_conf(conf: Optional[Conf] = None, **updates) -> Iterator[None]
+.. autofunction:: get_conf() -> Conf
 
 .. autofunction:: serve
