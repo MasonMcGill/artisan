@@ -1,7 +1,7 @@
 from multiprocessing import cpu_count
 from pathlib import Path
 import re
-from typing import Dict, Optional as Opt
+from typing import Dict, Optional as Opt, cast
 
 import cbor2
 from falcon import API, HTTPStatus, Request, Response, HTTP_200, HTTP_404
@@ -20,7 +20,7 @@ def serve(port: int = 3000, root_dir: Opt[str] = None) -> None:
     '''
     Starts a server providing access to the records in a directory
     '''
-    root_dir = Path(root_dir or get_conf().root_dir)
+    root = Path(root_dir or get_conf().root_dir)
 
     def write_response(req: Request, res: Response) -> None:
         res.content_type = 'application/cbor'
@@ -39,13 +39,13 @@ def serve(port: int = 3000, root_dir: Opt[str] = None) -> None:
 
         elif req.path.endswith('/_meta'):
             key = req.path[1:-len('/_meta')]
-            res.data = cbor2.dumps(_read_meta(root_dir, key))
+            res.data = cbor2.dumps(_read_meta(root, key))
 
         else:
             t_last = float(req.get_param('t_last') or 0) / 1000
-            entry = _read(root_dir, req.path[1:], t_last)
+            entry = _read(root, req.path[1:], t_last)
             if entry['type'] == 'file':
-                res.data = (root_dir / entry['content']).read_bytes()
+                res.data = (root / cast(str, entry['content'])).read_bytes()
             else:
                 res.data = cbor2.dumps(entry)
 
