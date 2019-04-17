@@ -16,6 +16,3 @@ numpy = "*"
 
 [tool.poetry.dev-dependencies]
 pytest = "*"
-sphinx-build = "*"
-sphinx-autobuild = "*"
-pygments-jsx = "*"

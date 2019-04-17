@@ -1,3 +1,11 @@
+'''
+Documentation dependencies:
+- sphinx
+- sphinx_rtd_theme
+- sphinx-autobuild
+- jsx-lexer
+'''
+
 # -- Path setup --------------------------------------------------------------
 
 import sys
