@@ -1,4 +1,3 @@
-from datetime import datetime
 import itertools
 from pathlib import Path
 import shutil
@@ -70,6 +69,10 @@ class Artifact(Configurable):
             if str(path).startswith('@/'):
                 path = Path(get_conf().root_dir) / str(path)[2:]
             path = path.expanduser().resolve()
+
+        # Add type information to `spec`.
+        if spec is not None:
+            spec = {'type': _identify(cls), **spec}
 
         # Instantiate the artifact.
         artifact = cast(Artifact, Configurable.__new__(cls, spec or {}))
@@ -296,7 +299,7 @@ def _find_or_build(artifact: Artifact, spec: Rec) -> None:
         object.__setattr__(artifact, 'path', path)
         try: return _ensure_built(artifact, spec)
         except FileExistsError: pass
-    object.__setattr__(artifact, 'path', _new_artifact_path(spec))
+    object.__setattr__(artifact, 'path', _new_artifact_path(type(artifact)))
     _build(artifact, spec)
 
 
@@ -327,11 +330,12 @@ def _build(artifact: Artifact, spec: Rec) -> None:
         raise e
 
 
-def _new_artifact_path(spec: Rec) -> Path:
-    root = Path(get_conf().root_dir)
-    date = datetime.now().strftime(r'%Y-%m-%d')
+def _new_artifact_path(type_: type) -> Path:
+    conf = get_conf()
+    root = Path(conf.root_dir)
+    type_name = _identify(type_)
     for i in itertools.count():
-        dst = root / f'{spec["type"]}_{date}_{i:04x}'
+        dst = root / f'{type_name}_{i:04x}'
         if not dst.exists():
             return dst
     assert False # for MyPy
@@ -413,3 +417,8 @@ def _namespacify(obj: object) -> object:
         return [_namespacify(v) for v in obj]
     else:
         return obj
+
+#-- Scope search --------------------------------------------------------------
+
+def _identify(type_: type) -> str:
+    return next(sym for sym, t in get_conf().scope.items() if t == type_)

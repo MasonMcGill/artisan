@@ -38,7 +38,7 @@ class Configurable(metaclass=ConfigurableMeta):
     '''
     def __new__(cls, spec: Rec, *args: object, **kwargs: object) -> 'Configurable':
         type_name = spec.get('type', None)
-        assert isinstance(type_name, str)
+        assert type_name is None or isinstance(type_name, str)
         type_ = cls if type_name is None else _resolve(type_name)
         assert isinstance(type_, type) and issubclass(type_, cls)
         return cast('Configurable', super().__new__(type_))
