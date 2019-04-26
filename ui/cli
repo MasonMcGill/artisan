@@ -25,8 +25,12 @@ if (args.extPath !== null) {
     prelude: { scripts: [], styles: [], bindings: {} },
     timestamps: { prelude: 0, extension: 0 }
   }
-  watch(args, state).then(() => {
-    serve(args, state)
+  let serving = false
+  watch(args, state).on('event', e => {
+    if (e.code === 'END' && !serving) {
+      serving = true
+      serve(args, state)
+    }
   })
 }
 else {
@@ -44,7 +48,7 @@ function watch(args, state) {
   return rollup.watch({
     input: args.extPath,
     external: id => (
-      state.bindings.hasOwnProperty(id) ||
+      state.prelude.bindings.hasOwnProperty(id) ||
       coreBindings.hasOwnProperty(id)
     ),
     output: {
@@ -52,8 +56,9 @@ function watch(args, state) {
       format: 'iife',
       name: 'Extension',
       globals: id => (
-        state.bindings[id] || coreBindings[id]
-      )
+        state.prelude.bindings[id] || coreBindings[id]
+      ),
+      exports: 'named'
     },
     plugins: [
       sucrasePlugin({
@@ -73,7 +78,7 @@ function watch(args, state) {
 
 function stateUpdaterPlugin(state) {
   return {
-    bundleStart() {
+    buildStart() {
       const prelude = readPrelude(args.extPath)
       const now = Date.now()
       if (JSON.stringify(prelude) !== JSON.stringify(state.prelude)) {

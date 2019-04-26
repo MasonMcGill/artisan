@@ -35,11 +35,5 @@ export default {
       }
     }),
     ruJson()
-  ],
-  // onwarn: (warning, next) => {
-  //   const iconPath = 'node_modules/react-icons/lib/esm/iconBase.js'
-  //   if (!warning.loc.file.endsWith(iconPath)) {
-  //     next()
-  //   }
-  // }
+  ]
 }

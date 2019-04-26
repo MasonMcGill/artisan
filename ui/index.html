@@ -58,8 +58,11 @@ Expects to be called with an object with the following properties:
 
     <!-- Autoupdater (Δcore -> hard refresh; Δext -> hot reload) -->
     <script>
-        let timestamps = JSON.parse('{{timestamps}}')
-        setInterval(checkForUpdates, 100)
+        let timestamps = {
+            prelude: JSON.parse('{{timestamps.prelude}}'),
+            extension: JSON.parse('{{timestamps.extension}}')
+        }
+        const checker = setInterval(checkForUpdates, 100)
 
         function checkForUpdates() {
             fetch('/__extension/timestamps.json')
@@ -70,6 +73,9 @@ Expects to be called with an object with the following properties:
                 else if (t.extension > timestamps.extension)
                     updateExtension()
                 timestamps = t
+            })
+            .catch(() => {
+                clearInterval(checker)
             })
         }
 

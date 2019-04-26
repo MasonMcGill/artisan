@@ -3,6 +3,7 @@ import dtype from 'dtype'
 import yaml from 'js-yaml'
 import flatten from 'lodash/flatten'
 import get from 'lodash/get'
+import globToRegExp from 'glob-to-regexp'
 import mapValues from 'lodash/mapValues'
 import omit from 'lodash/omit'
 import nj from 'numjs'
@@ -166,7 +167,7 @@ function RootView(
   { host, refreshInterval, views }: (
     { host: string,
       refreshInterval: number | null,
-      views: {[key: string]: React.Component | Array<React.Component>}
+      views: Array<[string, React.Component | React.Component[]]>
     }
   ))
 {
@@ -207,7 +208,7 @@ function RootView(
             <Suspense fallback={<div/>}>
               <MetaView app={app}/>
               <EntryList app={app}/>
-              {/* <CustomViews app={app} views={views}/> */}
+              <CustomViews app={app} views={views}/>
             </Suspense>
           </div>
         )
@@ -290,17 +291,20 @@ function EntryList({ app }) {
 
 
 function CustomViews({ app, views }) {
-  const type = get(app.fetch('_meta').spec, 'type', null)
-  const matchingViews = flatten([get(views, type, [])])
-  return (
-    <div className='cg-browser__data-view'>
-      {matchingViews.map((View, i) => (
-        <Suspense key={i} fallback={<div/>}>
-          <View app={app} />
-        </Suspense>
-      ))}
-    </div>
-  )
+  for (const [pattern, viewSet] of views) {
+    if (globToRegExp(pattern).test(app.params.path)) {
+      return (
+        <div className='cg-browser__data-view'>
+          {flatten([viewSet]).map((View, i) => (
+            <Suspense key={i} fallback={<div/>}>
+              <View app={app}/>
+            </Suspense>
+          ))}
+        </div>
+      )
+    }
+  }
+  return null
 }
 
 //- Entry point ---------------------------------------------------------------
