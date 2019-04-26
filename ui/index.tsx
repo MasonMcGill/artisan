@@ -1,15 +1,19 @@
-import * as cbor from 'cbor-js'
+import cbor from 'cbor-js'
 import dtype from 'dtype'
-import * as yaml from 'js-yaml'
-import { flatten, get, mapValues, omit } from 'lodash'
-import * as nj from 'numjs'
-import * as prism from 'prismjs'
-import * as qs from 'query-string'
-import * as React from 'react'
-import { Suspense, useEffect, useState } from 'react'
-import { FaDatabase, FaFile, FaFolder, FaHome } from 'react-icons/fa'
+import yaml from 'js-yaml'
+import flatten from 'lodash/flatten'
+import get from 'lodash/get'
+import mapValues from 'lodash/mapValues'
+import omit from 'lodash/omit'
+import nj from 'numjs'
+import prism from 'prismjs'
+import qs from 'query-string'
+import React, { Suspense, useEffect, useState } from 'react'
+import ReactDOM from 'react-dom'
+import { FaDatabase, FaFile, FaFolder } from 'react-icons/fa'
 import { BrowserRouter, Route, Link } from 'react-router-dom'
 
+window.Prism = prism
 import 'prismjs/components/prism-yaml'
 
 //- Internal type definitions -------------------------------------------------
@@ -56,13 +60,12 @@ class Cache {
         fetch(`${url}?t_last=${req.launchTime || 0}`)
         .then(res => res.arrayBuffer())
         .then(buf => {
-          req.result = Cache.unpack(cbor.decode(buf), req.result)
           req.status = 'fulfilled'
+          req.result = Cache.unpack(cbor.decode(buf), req.result)
         })
         .catch(e => {
           req.status = 'failed'
-          req.promise = new Promise(() => {})
-          req.result = undefined
+          req.result = e
         })
       )
       req.status = 'pending'
@@ -120,18 +123,26 @@ class App {
   public fetch(paths: any): any {
     if (typeof paths === 'string') {
       const req = this.getRequest(paths)
+      if (req.status === 'failed')
+        throw req.result
       if (req.result === undefined)
         throw req.promise
       return req.result
     }
     else if (Array.isArray(paths)) {
       const reqs = paths.map(p => this.getRequest(p))
+      for (const i in reqs)
+        if (reqs[i].status === 'failed')
+          throw reqs[i].result
       if (reqs.some(r => r.result === undefined))
         throw Promise.all(reqs.map(r => r.promise))
       return reqs.map(r => r.result)
     }
     else if (typeof paths === 'object') {
       const reqs = mapValues(paths, p => this.getRequest(p))
+      for (const i in reqs)
+        if (reqs[i].status === 'failed')
+          throw reqs[i].result
       if (Object.values(reqs).some(r => r.result === undefined))
         throw Promise.all(Object.values(reqs).map(r => r.promise))
       return mapValues(reqs, r => r.result)
@@ -151,14 +162,18 @@ class App {
 
 //- User interface ------------------------------------------------------------
 
-export function RootView(
+function RootView(
   { host, refreshInterval, views }: (
     { host: string,
-      refreshInterval: number,
+      refreshInterval: number | null,
       views: {[key: string]: React.Component | Array<React.Component>}
     }
   ))
 {
+  host = host || 'http://localhost:3000'
+  refreshInterval = refreshInterval || 5000
+  views = views || []
+
   const [cache, _] = useState(() => new Cache())
   const [time, setTime] = useState(() => Date.now())
 
@@ -187,14 +202,14 @@ export function RootView(
         }
         const app = new App(params, navigate, cache, time)
         return (
-            <div className='cg-browser__root'>
-              <TitleBar app={app}/>
-              <Suspense fallback={<div/>}>
-                <MetaView app={app}/>
-                <EntryList app={app}/>
-                <CustomViews app={app} views={views}/>
-              </Suspense>
-            </div>
+          <div className='cg-browser__root'>
+            <TitleBar app={app}/>
+            <Suspense fallback={<div/>}>
+              <MetaView app={app}/>
+              <EntryList app={app}/>
+              {/* <CustomViews app={app} views={views}/> */}
+            </Suspense>
+          </div>
         )
       }}/>
     </BrowserRouter>
@@ -286,4 +301,11 @@ function CustomViews({ app, views }) {
       ))}
     </div>
   )
+}
+
+//- Entry point ---------------------------------------------------------------
+
+export function render(options) {
+  const root = document.getElementById('__artisan-ui-root')
+  ReactDOM.render(<RootView {...options}/>, root)
 }

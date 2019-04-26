@@ -27,7 +27,7 @@ def serve(port: int = 3000, root_dir: Opt[str] = None) -> None:
         res.set_header('Access-Control-Allow-Origin', '*')
 
         if req.path.endswith('/_entry-names'):
-            path = root_dir / req.path[1:-len('/_entry-names')]
+            path = root / req.path[1:-len('/_entry-names')]
             if path.is_file(): raise HTTPStatus(HTTP_404)
             res.data = cbor2.dumps(dict(
                 type='plain-object',

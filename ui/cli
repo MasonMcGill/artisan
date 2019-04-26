@@ -1,0 +1,169 @@
+#!/usr/bin/env node
+const fs = require('fs-extra')
+const path = require('path')
+
+const express = require('express')
+const handlebars = require('handlebars')
+const isUrl = require('is-url')
+const yaml = require('js-yaml')
+const rollup = require('rollup')
+const commonjsPlugin = require('rollup-plugin-commonjs')
+const resolvePlugin = require('rollup-plugin-node-resolve')
+const sucrasePlugin = require('rollup-plugin-sucrase')
+
+//- Parse command-line arguments. ---------------------------------------------
+
+const args = {
+  extPath: process.argv[2] ? path.resolve(process.argv[2]) : null,
+  port: 1234 // TODO: Add a flag to change this.
+}
+
+//- Start a development server, and a watcher, if necessary. ------------------
+
+if (args.extPath !== null) {
+  const state = {
+    prelude: { scripts: [], styles: [], bindings: {} },
+    timestamps: { prelude: 0, extension: 0 }
+  }
+  watch(args, state).then(() => {
+    serve(args, state)
+  })
+}
+else {
+  serve(args)
+}
+
+//- Define the Rollup watcher. ------------------------------------------------
+
+function watch(args, state) {
+  const coreBindings = {
+    'react': 'React',
+    'react-dom': 'ReactDOM',
+    'numjs': 'nj'
+  }
+  return rollup.watch({
+    input: args.extPath,
+    external: id => (
+      state.bindings.hasOwnProperty(id) ||
+      coreBindings.hasOwnProperty(id)
+    ),
+    output: {
+      file: '.artisan-ui/index.js',
+      format: 'iife',
+      name: 'Extension',
+      globals: id => (
+        state.bindings[id] || coreBindings[id]
+      )
+    },
+    plugins: [
+      sucrasePlugin({
+        transforms: ['jsx', 'typescript'],
+        exclude: ['node_modules/**']
+      }),
+      commonjsPlugin(),
+      resolvePlugin(),
+      stateUpdaterPlugin(state),
+      errorConverterPlugin()
+    ],
+    treeshake: false
+  })
+}
+
+//- Define a plugin that updates the watcher state. ---------------------------
+
+function stateUpdaterPlugin(state) {
+  return {
+    bundleStart() {
+      const prelude = readPrelude(args.extPath)
+      const now = Date.now()
+      if (JSON.stringify(prelude) !== JSON.stringify(state.prelude)) {
+        state.prelude = prelude
+        state.timestamps.prelude = now
+      }
+      state.timestamps.extension = now
+    }
+  }
+}
+
+
+function readPrelude(extPath) {
+  const prelude = { scripts: [], styles: [], bindings: {} }
+
+  if (extPath !== null) {
+    const extSrc = fs.readFileSync(extPath, 'utf8')
+    const firstTokenComment = extSrc.match(/^\s*\/\*((?:.|\n)*?)\*\//)
+
+    if (firstTokenComment !== null) {
+      try {
+        const header = yaml.load(firstTokenComment[1])
+        const resolve = x => isUrl(x) ? x : `/__extension/deps/${x}`
+        prelude.scripts = (header.scripts || []).map(resolve)
+        prelude.styles = (header.styles || []).map(resolve)
+        prelude.bindings = header.bindings || {}
+      }
+      catch (_) {}
+    }
+  }
+
+  return prelude
+}
+
+//- Define a plugin that converts build errors to valid extensions. -----------
+
+function errorConverterPlugin() {
+  return {
+    buildEnd(error) {
+      if (error) {
+        const ext = extensionFromError(error.message)
+        fs.outputFileSync('.artisan-ui/index.js', ext)
+        fs.removeSync('.artisan-ui/index.js.map')
+      }
+    }
+  }
+}
+
+
+function extensionFromError(msg) {
+  return (`
+    const $ = React.createElement
+    const msg = ${JSON.stringify(msg)}
+    export default {
+      views: [
+        ['*', () => $('pre', {}, $('code', {}, msg))]
+      ]
+    }
+  `)
+}
+
+//- Define the server. --------------------------------------------------------
+
+function serve(args, state) {
+  const app = express()
+  const indexHtml = handlebars.compile(
+    fs.readFileSync(`${__dirname}/index.html`, 'utf8')
+  )
+
+  // Core bundle and its dependencies
+  const depPath = path.resolve(require.resolve('react') + '/../..')
+  app.use('/__artisan-ui', express.static(__dirname))
+  app.use('/__artisan-ui/deps', express.static(depPath))
+
+  // User-defined extension
+  app.use('/__extension', express.static(path.resolve('.artisan-ui')))
+  app.use('/__extension/deps', express.static(path.resolve('.')))
+  app.get('/__extension/timestamps.json', (_, res) => (
+    res.json(state.timestamps))
+  )
+
+  // `index.html`
+  app.get('/*', (_, res) => {
+    res.send(indexHtml({
+      extension: args.extPath !== null,
+      timestamps: state ? state.timestamps : null,
+      scripts: state ? state.prelude.scripts : null,
+      styles: state ? state.prelude.styles : null
+    }))
+  })
+
+  app.listen(args.port)
+}
