@@ -1,7 +1,19 @@
 #!/usr/bin/env node
+const doc = (`
+Usage:
+  artisan-ui serve [<extPath>] [--port=<port>]
+  artisan-ui build [<extPath>] [--dst=<dst>]
+  artisan-ui -h | --help
+
+Options:
+  --port=<port>  The port on which to serve [default: 1234]
+  --dst=<dst>    The path to which the site should be written
+`)
+
 const fs = require('fs-extra')
 const path = require('path')
 
+const { docopt } = require('docopt')
 const express = require('express')
 const handlebars = require('handlebars')
 const isUrl = require('is-url')
@@ -13,9 +25,13 @@ const sucrasePlugin = require('rollup-plugin-sucrase')
 
 //- Parse command-line arguments. ---------------------------------------------
 
-const args = {
-  extPath: process.argv[2] ? path.resolve(process.argv[2]) : null,
-  port: 1234 // TODO: Add a flag to change this.
+const args = docopt(doc)
+args.extPath = args.extPath ? path.resolve(args.extPath) : null
+args.dst = parseInt(args.dst)
+
+if (args.build) {
+  console.error('Static site generation insn\'t yet implemented :/')
+  process.exit(1)
 }
 
 //- Start a development server, and a watcher, if necessary. ------------------
