@@ -9,8 +9,8 @@ ArtisanUI can be used to view artifacts exposed as a REST API via
 Getting started
 ---------------
 
-Install `NodeJS <https://nodejs.org>`_, then run `npx artisan-ui` to start a
-visualization server on `localhost:1234 <http://localhost:1234>`_.
+Install `NodeJS <https://nodejs.org>`_, then run `npx artisan-ui` to start
+a visualization server on `localhost:1234 <http://localhost:1234>`_.
 
 *-- Screenshot --*
 
@@ -22,13 +22,40 @@ Defining custom views
 ---------------------
 
 ArtisanUI can be extended by pointing it to a Javascript module that exports a
-configuration object. An example, with all of the supported fields:
+configuration object.
+
+If the file starts with a block comment, that comment will be treated as YAML
+frontmatter, allowing build-time options to specified, even though the code in
+the file is only ever executed within the ArtisanUI web app.
+
+An example, with all of the supported fields:
 
 .. code-block:: jsx
 
-  // index.jsx
+  /*
+    scripts:
+      # Each entry inserts a corresponding <script> tag into the app.
+      # Both URLs and file paths are supported. When resolving paths, the
+      # current working directory is treated as the filesystem root.
+      - https://cdn.jsdelivr.net/npm/lodash@4.17.11/lodash.min.js
+      - https://cdn.plot.ly/plotly-latest.min.js
+      - /my-local-library.min.js
 
-  import React from 'react'
+    styles:
+      # Like `scripts`, but each entry generates a corresponding <link> tag.
+      - https://cdnjs.cloudflare.com/ajax/libs/bulma/0.7.4/css/bulma.min.css
+      - /dependencies/my-fork-of-artisan-ui-styles.min.css
+
+    bindings:
+      # Allows global symbols (defined by the scripts in the `scripts` list)
+      # to be `import`ed. ArtisanUI's core dependencies, "react" and "numjs",
+      # are bound implicitly. When more library authors start providing
+      # ECMAScript module builds, this field (and possibly all build
+      # configuration) will no longer be necessary.
+      lodash: _
+      plotly: Plotly
+      my-local-library: SomeIdiosyncraticGlobal
+  */
 
   export default {
     /**
@@ -62,35 +89,17 @@ configuration object. An example, with all of the supported fields:
     ]
   }
 
-ArtisanUI uses `Parcel <https://parceljs.org/>`_ to bundle user-defined
-extensions (supporting `Typescript <https://www.typescriptlang.org/>`_,
-`ReasonML <https://reasonml.github.io/>`_, `SCSS <https://sass-lang.com/>`_, and
-many other tools out of the box). Parcel detects dependencies declared in a
-`package.json` file in the same directory as the extension module. Because
-ArtisanUI already includes React and NumJs, they should be declared as
-`peerDependencies`. *e.g.*
-
-.. code-block:: json
-
-  {
-    "dependencies": {
-      "lodash": "~4.17",
-      "react-vis": "latest"
-    },
-    "peerDependencies": {
-      "numjs": "*",
-      "react": "*"
-    },
-    "private": true
-  }
-
+ArtisanUI uses `Rollup <https://rollupjs.org/guide/en>`_ to bundle user-defined
+extensions and finds *node_modules* dependencies. Two popular Javascript syntax
+extensions, `Typescript <https://www.typescriptlang.org/>`_ and `JSX
+<https://reactjs.org/docs/introducing-jsx.html>`_, are also supported.
 
 To run the modified ArtisanUI, pass the path to the extension module as an
 argument:
 
 .. code-block:: sh
 
-  > npx artisan-ui index.jsx
+  > npx artisan-ui artisan-ui.config.js
 
 *-- Screenshot --*
 

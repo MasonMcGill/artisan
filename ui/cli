@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 const doc = (`
-Start a development server or build a static site.
+Start a visualization server or build a static site.
 
 Usage:
+  artisan-ui [<extPath>] [--port=<port>]
   artisan-ui serve [<extPath>] [--port=<port>]
   artisan-ui build [<extPath>] [--dst=<dst>]
   artisan-ui -h | --help
@@ -10,6 +11,8 @@ Usage:
 Options:
   --port=<port>  The port on which to serve [default: 1234]
   --dst=<dst>    The path to which the site should be written
+
+"artisan-ui ..." is shorthand for "artisan-ui serve ...".
 `)
 
 const fs = require('fs-extra')
