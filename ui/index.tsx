@@ -1,8 +1,28 @@
+ /**
+  * This module exports a single function, `render`, that renders the root view
+  * with the given options.
+  *
+  * Conceptually, this module is split roughly into "core logic" (`Cache`,
+  * `App`) and "UI" sections (`render` and the component definitions it relies
+  * on).
+  *
+  * # Definition overview:
+  *
+  * - Cache: A long-lived object that converts URLs to fetched data or fetch
+  *     errors, throwing a promise when no data is available to pause React's
+  *     rendering. Only one is constructed during the application lifetime.
+  *
+  * - App: An immutable snapshot of the application's current state and gives
+  *     views access to its capabilities (it's passed to them as a property
+  *     during rendering).
+  *
+  * - render: renders a `RootView` (via `ReactDOM`) into "#__artisan-ui-root".
+  */
+
 import cbor from 'cbor-js'
 import dtype from 'dtype'
 import yaml from 'js-yaml'
 import flatten from 'lodash/flatten'
-import get from 'lodash/get'
 import globToRegExp from 'glob-to-regexp'
 import mapValues from 'lodash/mapValues'
 import omit from 'lodash/omit'
@@ -17,7 +37,7 @@ import { BrowserRouter, Route, Link } from 'react-router-dom'
 window.Prism = prism
 import 'prismjs/components/prism-yaml'
 
-//- Internal type definitions -------------------------------------------------
+//- View parameters and data fetching -----------------------------------------
 
 type Request = {
   status: 'unsent' | 'pending' | 'fulfilled' | 'failed',
@@ -39,7 +59,6 @@ type AppParams = {
   path: string
 }
 
-//- View parameters and data fetching -----------------------------------------
 
 class Cache {
   private requests: { [k: string]: Request } = {}
@@ -163,14 +182,20 @@ class App {
 
 //- User interface ------------------------------------------------------------
 
-function RootView(
-  { host, refreshInterval, views }: (
-    { host: string,
-      refreshInterval: number | null,
-      views: Array<[string, React.Component | React.Component[]]>
-    }
-  ))
-{
+export type UIOptions = {
+  host: string,
+  refreshInterval: number | null,
+  views: Array<[string, React.Component | React.Component[]]>
+}
+
+
+export function render(options: UIOptions) {
+  const root = document.getElementById('__artisan-ui-root')
+  ReactDOM.render(<RootView {...options}/>, root)
+}
+
+
+function RootView({ host, refreshInterval, views }: UIOptions) {
   host = host || 'http://localhost:3000'
   refreshInterval = refreshInterval || 5000
   views = views || []
@@ -305,11 +330,4 @@ function CustomViews({ app, views }) {
     }
   }
   return null
-}
-
-//- Entry point ---------------------------------------------------------------
-
-export function render(options) {
-  const root = document.getElementById('__artisan-ui-root')
-  ReactDOM.render(<RootView {...options}/>, root)
 }

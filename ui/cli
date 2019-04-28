@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 const doc = (`
+Start a development server or build a static site.
+
 Usage:
   artisan-ui serve [<extPath>] [--port=<port>]
   artisan-ui build [<extPath>] [--dst=<dst>]
