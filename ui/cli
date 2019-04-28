@@ -31,8 +31,8 @@ const sucrasePlugin = require('rollup-plugin-sucrase')
 //- Parse command-line arguments. ---------------------------------------------
 
 const args = docopt(doc)
-args.extPath = args.extPath ? path.resolve(args.extPath) : null
-args.dst = parseInt(args.dst)
+args.extPath = args['<extPath>'] ? path.resolve(args['<extPath>']) : null
+args.port = parseInt(args['--port'])
 
 if (args.build) {
   console.error('Static site generation insn\'t yet implemented :/')
