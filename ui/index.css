@@ -11,7 +11,7 @@
 
 /* Root component */
 
-.cg-browser__root {
+.aui__root {
   box-sizing: border-box;
   width: 600px;
   margin: 15px auto;
@@ -20,36 +20,36 @@
 
 /* Title bar */
 
-.cg-browser__title-bar {
+.aui__title-bar {
   margin: 10px auto;
   font-weight: bold;
 }
 
-.cg-browser__home-icon {
+.aui__home-icon {
   vertical-align: text-top;
 }
 
-.cg-browser__breadcrumb {
+.aui__breadcrumb {
   color: #000;
   text-decoration: none;
 }
-.cg-browser__breadcrumb:hover {
+.aui__breadcrumb:hover {
   color: hsl(216, 40%, 55%);
 }
 
-.cg-browser__host-selector {
+.aui__host-selector {
   float: right;
   cursor: pointer;
   font-weight: normal;
   color: hsl(216, 0%, 45%);
 }
-.cg-browser__host-selector:hover {
+.aui__host-selector:hover {
   color: hsl(216, 40%, 55%);
 }
 
 /* Metadata view */
 
-.cg-browser__meta-view {
+.aui__meta-view {
   box-sizing: border-box;
   padding: 0px 0px 5px 10px;
   white-space: pre;
@@ -59,35 +59,35 @@
 
 /* Entry list */
 
-.cg-browser__entry {
+.aui__entry {
   margin: 5px 0px;
   color: hsl(216, 0%, 45%);
 }
 
-.cg-browser__entry a {
+.aui__entry a {
   color: inherit;
   text-decoration: none;
 }
-.cg-browser__entry a:hover {
+.aui__entry a:hover {
   color: hsl(216, 40%, 55%);
 }
 
-.cg-browser__icon {
+.aui__icon {
   font-size: 0.67em;
   vertical-align: middle;
 }
 
 /* User-defined data view */
 
-.cg-browser__data-view a {
+.aui__data-view a {
   color: hsl(216, 60%, 45%);
   text-decoration: none;
 }
-.cg-browser__data-view a:hover {
+.aui__data-view a:hover {
   color: hsl(216, 90%, 60%);
 }
 
-.cg-browser__data-view select {
+.aui__data-view select {
   font-family: inherit;
   font-size: 0.9em;
 }
@@ -96,9 +96,9 @@
 * Syntax highlighting (based on the prism.js default theme by Lea Verou)
 ******************************************************************************/
 
-.cg-browser__meta-view .token.comment { color: slategray; }
-.cg-browser__meta-view .token.punctuation { color: #999; }
-.cg-browser__meta-view .token.boolean { color: #905; }
-.cg-browser__meta-view .token.number { color: #905; }
-.cg-browser__meta-view .token.string { color: #690; }
-.cg-browser__meta-view .token.atrule { color: #07a; }
+.aui__meta-view .token.comment { color: slategray; }
+.aui__meta-view .token.punctuation { color: #999; }
+.aui__meta-view .token.boolean { color: #905; }
+.aui__meta-view .token.number { color: #905; }
+.aui__meta-view .token.string { color: #690; }
+.aui__meta-view .token.atrule { color: #07a; }

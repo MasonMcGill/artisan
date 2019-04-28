@@ -203,7 +203,7 @@ function RootView(
         }
         const app = new App(params, navigate, cache, time)
         return (
-          <div className='cg-browser__root'>
+          <div className='aui__root'>
             <TitleBar app={app}/>
             <Suspense fallback={<div/>}>
               <MetaView app={app}/>
@@ -227,16 +227,16 @@ function TitleBar({ app }) {
   const pathParts = app.params.path.split('/').slice(1, -1)
 
   return (
-    <div className='cg-browser__title-bar'>
-      <div className='cg-browser__host-selector' onClick={selectHost}>
+    <div className='aui__title-bar'>
+      <div className='aui__host-selector' onClick={selectHost}>
           [select host]
       </div>
-      <Link className='cg-browser__breadcrumb' to='/'>
+      <Link className='aui__breadcrumb' to='/'>
         {app.params.host}/
       </Link>
       {pathParts.map((p, i) => (
         <Link
-          className='cg-browser__breadcrumb'
+          className='aui__breadcrumb'
           to={'/' + pathParts.slice(0, i + 1).join('/') + '/'}
           children={p + '/'}
           key={i}
@@ -254,7 +254,7 @@ function MetaView({ app }) {
     { lineWidth: 72 }
   )
   return meta.spec === null ? null : (
-    <div className='cg-browser__meta-view' dangerouslySetInnerHTML={{
+    <div className='aui__meta-view' dangerouslySetInnerHTML={{
       __html: prism.highlight(text, prism.languages.yaml, 'yaml')
     }}/>
   )
@@ -267,22 +267,22 @@ function EntryList({ app }) {
   const arrayNames = names.filter(n => !n.endsWith('/') && !n.includes('.'))
   const fileNames = names.filter(n => !n.endsWith('/') && n.includes('.'))
   return (
-    <div className='cg-browser__entry-list'>
+    <div className='aui__entry-list'>
       {...artifactNames.sort().map(n => (
-        <div className='cg-browser__entry' key={n}>
+        <div className='aui__entry' key={n}>
           <Link to={app.params.path + n}>
-            <FaFolder className='cg-browser__icon'/>{' ' + n}
+            <FaFolder className='aui__icon'/>{' ' + n}
           </Link>
         </div>
       ))}
       {...arrayNames.sort().map(n => (
-        <div className='cg-browser__entry' key={n}>
-          <FaDatabase className='cg-browser__icon'/>{' ' + n}
+        <div className='aui__entry' key={n}>
+          <FaDatabase className='aui__icon'/>{' ' + n}
         </div>
       ))}
       {...fileNames.sort().map(n => (
-        <div className='cg-browser__entry' key={n}>
-          <FaFile className='cg-browser__icon'/>{' ' + n}
+        <div className='aui__entry' key={n}>
+          <FaFile className='aui__icon'/>{' ' + n}
         </div>
       ))}
     </div>
@@ -294,7 +294,7 @@ function CustomViews({ app, views }) {
   for (const [pattern, viewSet] of views) {
     if (globToRegExp(pattern).test(app.params.path)) {
       return (
-        <div className='cg-browser__data-view'>
+        <div className='aui__data-view'>
           {flatten([viewSet]).map((View, i) => (
             <Suspense key={i} fallback={<div/>}>
               <View app={app}/>
