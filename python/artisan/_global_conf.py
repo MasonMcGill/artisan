@@ -24,7 +24,7 @@ class Conf:
             configurable object instantiation
     '''
     root_dir: str
-    scope: Dict[str, object]
+    scope: Dict[str, type]
 
 
 class ConfStack(threading.local):
@@ -47,6 +47,8 @@ def push_conf(conf: Opt[Conf] = None, **updates: object) -> None:
     conf = get_conf() if conf is None else copy(conf)
     for key, val in updates.items():
         setattr(conf, key, val)
+    for val in conf.scope.values():
+        assert isinstance(val, type)
     conf_stack.value.append(conf)
 
 

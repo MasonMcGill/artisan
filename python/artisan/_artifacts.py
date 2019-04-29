@@ -12,7 +12,7 @@ import numpy as np
 from ruamel import yaml
 
 from ._global_conf import get_conf
-from ._configurable import Configurable
+from ._configurable import Configurable, write_meta
 
 __all__ = ['Artifact', 'ArrayFile', 'EncodedFile']
 
@@ -318,6 +318,9 @@ def _ensure_built(artifact: Artifact, spec: Rec) -> None:
 
 
 def _build(artifact: Artifact, spec: Rec) -> None:
+    if Path(get_conf().root_dir) in artifact.path.parents:
+        write_meta()
+
     artifact.path.mkdir(parents=True)
     _write_meta(artifact, dict(spec=spec, status='running'))
 
