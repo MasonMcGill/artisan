@@ -4,7 +4,7 @@
  * Fonts
  ******************************************************************************/
 
- @import url('https://fonts.googleapis.com/css?family=Inconsolata');
+ @import url('https://fonts.googleapis.com/css?family=Inconsolata|Yrsa');
 
 /*******************************************************************************
 * CommandGraph client styles
@@ -40,9 +40,11 @@
 
 .aui__host-selector {
   float: right;
+  font-family: 'Yrsa';
+  /* font-style: italic; */
   cursor: pointer;
   font-weight: normal;
-  color: hsl(216, 0%, 45%);
+  color: #a0a0a0;
 }
 .aui__host-selector:hover {
   color: hsl(216, 40%, 55%);
@@ -53,7 +55,7 @@
 .aui__meta-view {
   box-sizing: border-box;
   padding: 0px 0px 5px 10px;
-  white-space: pre;
+  /* white-space: pre; */
   margin: 0px auto 10px 3px;
   border-left: 2px dashed #ccc;
 }
@@ -78,7 +80,55 @@
   vertical-align: middle;
 }
 
+/* Description body */
+
+.aui__desc-body--collapsed {
+  display: block;
+  color: #a0a0a0;
+  font-family: 'Yrsa';
+  margin-top: 10px;
+  /* font-style: italic; */
+  /* text-align: center; */
+  cursor: pointer;
+}
+.aui__desc-body--collapsed:hover {
+  color: hsl(216, 40%, 55%);
+}
+
+.aui__desc-body {
+  margin-bottom: 0px;
+  /* margin-top: 15px; */
+  /* margin-left: 10px; */
+  /* margin-right: 20px; */
+  /* padding: 1px 10px 1px 10px; */
+  /* background: #fbfbfb; */
+  /* box-shadow: 0px 5px 15px #bbb; */
+  /* border-left: 2px #ccc dashed; */
+  /* border-top: 2px #ccc dashed; */
+  /* border-bottom: 2px #ccc dashed; */
+  color: #a0a0a0;
+  font-family: 'Yrsa';
+  font-style: italic;
+  cursor: pointer;
+}
+.aui__desc-body:hover {
+  color: hsl(216, 40%, 55%);
+  border-top-color: hsl(216, 40%, 55%);
+  border-bottom-color: hsl(216, 40%, 55%);
+}
+
+.aui__desc-body h1, h2, h3, h4, h5, h6 {
+  font-size: 1em;
+}
+.aui__desc-body ul, ol, p {
+  margin: 0px;
+}
+
 /* User-defined data view */
+
+.aui__data-view {
+  margin-top: 35px;
+}
 
 .aui__data-view a {
   color: hsl(216, 60%, 45%);

@@ -187,10 +187,11 @@ def _extended_docstrings(t: type) -> Tuple[str, Dict[str, str]]:
     for stmt in _statements_in_def(t):
         # Store the statment's value if it's a string literal.
         if isinstance(stmt, ast.Expr) and isinstance(stmt.value, ast.Str):
+            content = dedent(ast.literal_eval(stmt.value)).strip()
             if curr_field is None:
-                desc = desc + '\n\n' + ast.literal_eval(stmt.value)
+                desc = desc + '\n\n' + content
             else:
-                outputDesc[curr_field] = ast.literal_eval(stmt.value)
+                outputDesc[curr_field] = content
 
         # Compute the current field.
         if (isinstance(stmt, ast.Assign)

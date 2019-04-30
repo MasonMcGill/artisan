@@ -24,13 +24,16 @@ import dtype from 'dtype'
 import yaml from 'js-yaml'
 import flatten from 'lodash/flatten'
 import globToRegExp from 'glob-to-regexp'
+import get from 'lodash/get'
 import mapValues from 'lodash/mapValues'
+import map from 'lodash/map'
 import omit from 'lodash/omit'
 import nj from 'numjs'
 import prism from 'prismjs'
 import qs from 'query-string'
 import React, { Suspense, useEffect, useState } from 'react'
 import ReactDOM from 'react-dom'
+import Markdown from 'react-markdown-renderer'
 import { FaDatabase, FaFile, FaFolder } from 'react-icons/fa'
 import { BrowserRouter, Route, Link } from 'react-router-dom'
 
@@ -75,7 +78,7 @@ class Cache {
 
     // Launch a fetch, if necessary.
     if (req.status === 'unsent' ||
-        req.status !== 'pending' && req.launchTime < refetchCutoff) {
+        req.status === 'fulfilled' && req.launchTime < refetchCutoff) {
       req.promise = (
         fetch(`${url}?t_last=${req.launchTime || 0}`)
         .then(res => res.arrayBuffer())
@@ -180,6 +183,20 @@ class App {
   }
 }
 
+
+function tryFetch(app: App, paths: any): any {
+  try { return app.fetch(paths) }
+  catch (e) { if (e instanceof Promise) throw e }
+}
+
+
+function fetchSchema(app: App, meta: any): any {
+  const rootMeta = tryFetch(app, '/_meta')
+  return meta.spec !== null && rootMeta !== undefined
+    ? rootMeta.schema.definitions[meta.spec.type]
+    : { description: '', outputDescriptions: {}, properties: {} }
+}
+
 //- User interface ------------------------------------------------------------
 
 export type UIOptions = {
@@ -254,7 +271,7 @@ function TitleBar({ app }) {
   return (
     <div className='aui__title-bar'>
       <div className='aui__host-selector' onClick={selectHost}>
-          [select host]
+        {'< Select host >'}
       </div>
       <Link className='aui__breadcrumb' to='/'>
         {app.params.host}/
@@ -273,21 +290,71 @@ function TitleBar({ app }) {
 
 
 function MetaView({ app }) {
-  let meta = app.fetch('_meta')
-  const text = yaml.dump(
+  const meta = tryFetch(app, '_meta') || { spec: null }
+  if (meta.spec === null) return null
+
+  const schema = fetchSchema(app, meta)
+  const [descHead, ...descBody] = schema.description.trim().split('\n\n')
+  const conf = omit(meta.spec, 'type')
+  const specText = yaml.dump(
     { ...meta.spec, status: meta.status },
     { lineWidth: 72 }
   )
-  return meta.spec === null ? null : (
-    <div className='aui__meta-view' dangerouslySetInnerHTML={{
-      __html: prism.highlight(text, prism.languages.yaml, 'yaml')
-    }}/>
+
+  return (
+    <div className='aui__meta-view'>
+      {/* <span
+        className='aui__desc-head'
+        style={{color: 'gray', fontStyle: 'italic'}}
+        markdown={descHead}
+      /> */}
+      <span className='token atrule'>type: </span>
+      {meta.spec.type}
+      <span style={{color: '#a0a0a0', fontFamily: 'Yrsa', fontStyle: 'italic'}}>
+        {' \u00A0—\u00A0 '}{descHead}
+      </span>
+      {
+        Object.keys(conf).map(key => {
+          const propSchema = schema.properties[key] || {}
+          return (
+            <div key={key}>
+              <span className='token atrule'>{key}: </span> {conf[key]}
+              {
+                propSchema.description === undefined ? null : (
+                  <span style={{color: '#a0a0a0', fontFamily: 'Yrsa', fontStyle: 'italic'}}>
+                    {' \u00A0—\u00A0 '}{propSchema.description}
+                  </span>
+                )
+              }
+            </div>
+          )
+        })
+      }
+      <DescBody app={app}/>
+      {/* <div className='aui__meta-view' dangerouslySetInnerHTML={{
+        __html: prism.highlight(specText, prism.languages.yaml, 'yaml')
+      }}/> */}
+      {/* <Markdown className='aui__desc-body' markdown={descBody.join('\n\n')} /> */}
+      {/* <pre style={{color: '#a0a0a0', fontFamily: 'Yrsa', fontStyle: 'italic'}}>
+        {descBody.join('\n\n')}
+      </pre> */}
+    </div>
   )
 }
 
 
 function EntryList({ app }) {
-  const names = app.fetch('_entry-names')
+  const meta = tryFetch(app, '_meta') || { spec: null }
+  const schema = fetchSchema(app, meta)
+  const comment = name => (
+    schema.outputDescriptions[name] === undefined ? null : (
+      <span style={{color: '#a0a0a0', fontFamily: 'Yrsa', fontStyle: 'italic'}}>
+        {' \u00A0—\u00A0 '}{schema.outputDescriptions[name]}
+      </span>
+    )
+  )
+
+  const names = tryFetch(app, '_entry-names') || []
   const artifactNames = names.filter(n => n.endsWith('/'))
   const arrayNames = names.filter(n => !n.endsWith('/') && !n.includes('.'))
   const fileNames = names.filter(n => !n.endsWith('/') && n.includes('.'))
@@ -298,20 +365,52 @@ function EntryList({ app }) {
           <Link to={app.params.path + n}>
             <FaFolder className='aui__icon'/>{' ' + n}
           </Link>
+          {comment(n.slice(0, -1))}
         </div>
       ))}
       {...arrayNames.sort().map(n => (
         <div className='aui__entry' key={n}>
           <FaDatabase className='aui__icon'/>{' ' + n}
+          {comment(n)}
         </div>
       ))}
       {...fileNames.sort().map(n => (
         <div className='aui__entry' key={n}>
           <FaFile className='aui__icon'/>{' ' + n}
+          {comment(n)}
         </div>
       ))}
     </div>
   )
+}
+
+
+function DescBody({ app }) {
+  const [collapsed, setCollapsed] = useState(true)
+
+  if (collapsed) {
+    return (
+      <div className='aui__desc-body--collapsed'
+           onClick={() => setCollapsed(false)}>
+        {'< Expand description >'}
+      </div>
+    )
+  }
+
+  else {
+    const meta = tryFetch(app, '_meta') || { spec: null }
+    if (meta.spec === null) return null
+
+    const schema = fetchSchema(app, meta)
+    const [descHead, ...descBody] = schema.description.trim().split('\n\n')
+
+    return (
+      <div className="aui__desc-body"
+           onClick={() => setCollapsed(true)}>
+        <Markdown markdown={descBody.join('\n\n')}/>
+      </div>
+    )
+  }
 }
 
 
@@ -321,13 +420,36 @@ function CustomViews({ app, views }) {
       return (
         <div className='aui__data-view'>
           {flatten([viewSet]).map((View, i) => (
-            <Suspense key={i} fallback={<div/>}>
-              <View app={app}/>
-            </Suspense>
+            <ErrorBoundary>
+              <Suspense key={i} fallback={<div/>}>
+                <View app={app}/>
+              </Suspense>
+            </ErrorBoundary>
           ))}
         </div>
       )
     }
   }
   return null
+}
+
+
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props)
+    this.state = { error: null }
+  }
+
+  componentDidCatch(error) {
+    this.setState({ error })
+  }
+
+  render() {
+    if (this.state.error !== null) {
+      return <pre><code>{this.state.error.message}</code></pre>
+    }
+    else {
+      return this.props.children
+    }
+  }
 }
