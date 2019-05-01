@@ -52,6 +52,13 @@ if (args.extPath !== null) {
       serving = true
       serve(args, state)
     }
+    else if (e.code === 'FATAL') {
+      console.error(
+        'Rollup (ArtisanUI\'s module bundler) encountered a fatal error.\n' +
+        'This can happen during the initial build when there are\n' +
+        'syntax errors in your extension. (See Rollup issue #1773.)'
+      )
+    }
   })
 }
 else {
@@ -91,6 +98,10 @@ function watch(args, state) {
       stateUpdaterPlugin(state),
       errorConverterPlugin()
     ],
+    onwarn: (warning, propagate) => {
+      if (warning.code !== 'THIS_IS_UNDEFINED')
+        propagate(warning)
+    },
     treeshake: false
   })
 }
@@ -151,13 +162,19 @@ function errorConverterPlugin() {
 
 function extensionFromError(msg) {
   return (`
-    const $ = React.createElement
-    const msg = ${JSON.stringify(msg)}
-    export default {
-      views: [
-        ['*', () => $('pre', {}, $('code', {}, msg))]
-      ]
-    }
+    (() => {
+      const $ = React.createElement
+      const msg = ${JSON.stringify(msg)}
+      window.Extension = {
+        default: {
+          views: [['**', () => (
+            $('pre', {style: {color: "#800"}},
+              $('code', {}, msg)
+            )
+          )]]
+        }
+      }
+    })()
   `)
 }
 
