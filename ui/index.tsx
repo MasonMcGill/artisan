@@ -411,6 +411,7 @@ function CustomViews({ app, views }) {
             <ErrorBoundary key={i}>
               <Suspense fallback={<div/>}>
                 <View app={app}/>
+                <br/>
               </Suspense>
             </ErrorBoundary>
           ))}
