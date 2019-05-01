@@ -1,0 +1,351 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Using ArtisanUI &mdash; artisan  documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script type="text/javascript" src="_static/jquery.js"></script>
+        <script type="text/javascript" src="_static/underscore.js"></script>
+        <script type="text/javascript" src="_static/doctools.js"></script>
+        <script type="text/javascript" src="_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="API reference" href="api-reference.html" />
+    <link rel="prev" title="Using Artisan" href="using-artisan.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home"> artisan
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="using-artisan.html">Using Artisan</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Using ArtisanUI</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#getting-started">Getting started</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#defining-custom-views">Defining custom views</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#app-api">App API</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api-reference.html">API reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="related-projects.html">Related projects</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">artisan</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+      <li>Using ArtisanUI</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/using-artisan-ui.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="using-artisanui">
+<h1>Using ArtisanUI<a class="headerlink" href="#using-artisanui" title="Permalink to this headline">¶</a></h1>
+<p>ArtisanUI can be used to view artifacts exposed as a REST API via
+<code class="docutils literal notranslate"><span class="pre">artisan.serve</span></code>. It supports custom views defined as a <a class="reference external" href="https://reactjs.org/">React</a> components.</p>
+<div class="section" id="getting-started">
+<h2>Getting started<a class="headerlink" href="#getting-started" title="Permalink to this headline">¶</a></h2>
+<p>Install <a class="reference external" href="https://nodejs.org">NodeJS</a>, then run <code class="xref py py-obj docutils literal notranslate"><span class="pre">npx</span> <span class="pre">artisan-ui</span></code> to start
+a visualization server on <a class="reference external" href="http://localhost:1234">localhost:1234</a>.</p>
+<p><em>– Screenshot –</em></p>
+<p>See <a class="reference external" href="https://docs.npmjs.com/cli/install">npm’s documentation</a> for more
+installation options.</p>
+</div>
+<div class="section" id="defining-custom-views">
+<h2>Defining custom views<a class="headerlink" href="#defining-custom-views" title="Permalink to this headline">¶</a></h2>
+<p>ArtisanUI can be extended by pointing it to a Javascript module that exports a
+configuration object.</p>
+<p>If the file starts with a block comment, that comment will be treated as YAML
+frontmatter, allowing build-time options to specified, even though the code in
+the file is only ever executed within the ArtisanUI web app.</p>
+<p>An example, with all of the supported fields:</p>
+<div class="highlight-jsx notranslate"><div class="highlight"><pre><span></span><span class="cm">/*</span>
+<span class="cm">  scripts:</span>
+<span class="cm">    # Each entry inserts a corresponding &lt;script&gt; tag into the app.</span>
+<span class="cm">    # Both URLs and file paths are supported. When resolving paths, the</span>
+<span class="cm">    # current working directory is treated as the filesystem root.</span>
+<span class="cm">    - https://cdn.jsdelivr.net/npm/lodash@4.17.11/lodash.min.js</span>
+<span class="cm">    - https://cdn.plot.ly/plotly-latest.min.js</span>
+<span class="cm">    - /my-local-library.min.js</span>
+
+<span class="cm">  styles:</span>
+<span class="cm">    # Like `scripts`, but each entry generates a corresponding &lt;link&gt; tag.</span>
+<span class="cm">    - https://cdnjs.cloudflare.com/ajax/libs/bulma/0.7.4/css/bulma.min.css</span>
+<span class="cm">    - /dependencies/my-fork-of-artisan-ui-styles.min.css</span>
+
+<span class="cm">  bindings:</span>
+<span class="cm">    # Allows global symbols (defined by the scripts in the `scripts` list)</span>
+<span class="cm">    # to be `import`ed. ArtisanUI&#39;s core dependencies, &quot;react&quot; and &quot;numjs&quot;,</span>
+<span class="cm">    # are bound implicitly. When more library authors start providing</span>
+<span class="cm">    # ECMAScript module builds, this field (and possibly all build</span>
+<span class="cm">    # configuration) will no longer be necessary.</span>
+<span class="cm">    lodash: _</span>
+<span class="cm">    plotly: Plotly</span>
+<span class="cm">    my-local-library: SomeIdiosyncraticGlobal</span>
+<span class="cm">*/</span>
+
+<span class="kr">export</span> <span class="k">default</span> <span class="p">{</span>
+  <span class="cm">/**</span>
+<span class="cm">   * The default host to view</span>
+<span class="cm">   */</span>
+  <span class="nx">host</span><span class="o">:</span> <span class="s1">&#39;localhost:3000&#39;</span><span class="p">,</span>
+
+  <span class="cm">/**</span>
+<span class="cm">   * The time between automatic data refreshes, in milliseconds</span>
+<span class="cm">   * (`null` disables automatic data refreshing.)</span>
+<span class="cm">   */</span>
+  <span class="nx">refreshInterval</span><span class="o">:</span> <span class="mi">5000</span><span class="p">,</span>
+
+  <span class="cm">/**</span>
+<span class="cm">   * A custom view library, expressed as an array of `[pattern, view]` pairs.</span>
+<span class="cm">   * When a page corresponding to an artifact is loaded, the first pair</span>
+<span class="cm">   * matching the artifact&#39;s path is used. Patterns use the glob syntax</span>
+<span class="cm">   * parsed by the `minimatch` library. Views can be React components or</span>
+<span class="cm">   * arrays or React components.</span>
+<span class="cm">   */</span>
+  <span class="nx">views</span><span class="o">:</span> <span class="p">[</span>
+    <span class="p">[</span><span class="s1">&#39;FooSimulation*&#39;</span><span class="p">,</span> <span class="p">()</span> <span class="p">=&gt;</span> <span class="p">(</span>
+      <span class="p">&lt;</span><span class="nt">div</span><span class="p">&gt;</span><span class="nx">This</span> <span class="nx">is</span> <span class="nx">totally</span> <span class="nx">what</span> <span class="nx">an</span> <span class="nx">actual</span> <span class="nx">foo</span> <span class="nx">would</span> <span class="k">do</span><span class="p">.&lt;/</span><span class="nt">div</span><span class="p">&gt;</span>
+    <span class="p">)],</span>
+    <span class="p">[</span><span class="s1">&#39;BarRegression*/errors&#39;</span><span class="p">,</span> <span class="p">({</span> <span class="nx">app</span> <span class="p">})</span> <span class="p">=&gt;</span> <span class="p">(</span>
+      <span class="p">&lt;</span><span class="nt">pre</span><span class="p">&gt;</span><span class="nx">residuals</span><span class="o">:</span> <span class="p">{</span><span class="nx">app</span><span class="p">.</span><span class="nx">fetch</span><span class="p">(</span><span class="s1">&#39;residuals&#39;</span><span class="p">)}&lt;/</span><span class="nt">pre</span><span class="p">&gt;</span>
+    <span class="p">)],</span>
+    <span class="p">[</span><span class="s1">&#39;**&#39;</span><span class="p">,</span> <span class="p">()</span> <span class="p">=&gt;</span> <span class="p">(</span>
+      <span class="p">&lt;</span><span class="nt">div</span><span class="p">&gt;</span><span class="nx">No</span> <span class="nx">specialized</span> <span class="nx">views</span> <span class="nx">to</span> <span class="nx">show</span><span class="p">&lt;/</span><span class="nt">div</span><span class="p">&gt;</span>
+    <span class="p">)]</span>
+  <span class="p">]</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>ArtisanUI uses <a class="reference external" href="https://rollupjs.org/guide/en">Rollup</a> to bundle user-defined
+extensions and finds <em>node_modules</em> dependencies. Two popular Javascript syntax
+extensions, <a class="reference external" href="https://www.typescriptlang.org/">Typescript</a> and <a class="reference external" href="https://reactjs.org/docs/introducing-jsx.html">JSX</a>, are also supported.</p>
+<p>To run the modified ArtisanUI, pass the path to the extension module as an
+argument:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>&gt; npx artisan-ui artisan-ui.config.js
+</pre></div>
+</div>
+<p><em>– Screenshot –</em></p>
+</div>
+<div class="section" id="app-api">
+<h2>App API<a class="headerlink" href="#app-api" title="Permalink to this headline">¶</a></h2>
+<p>Custom views are rendered with an <code class="xref py py-obj docutils literal notranslate"><span class="pre">app</span></code> property that allows them to access
+ArtisanUI’s functionality. <code class="xref py py-obj docutils literal notranslate"><span class="pre">app</span></code> has the following members:</p>
+<dl class="attribute">
+<dt id="params: object">
+<code class="descname">params: object</code><a class="headerlink" href="#params: object" title="Permalink to this definition">¶</a></dt>
+<dd><p>The parameters encoded in the page URL. <code class="xref py py-obj docutils literal notranslate"><span class="pre">host</span></code> and <code class="xref py py-obj docutils literal notranslate"><span class="pre">path</span></code> are defined by the
+root view, but other parameters can be defined to configure custom views.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="navigate(params: object): void">
+<code class="descname">navigate(params: object): void</code><a class="headerlink" href="#navigate(params: object): void" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sets the application’s parameters to the given object, updates the navbar’s
+URL, and rerenders. This is generally less useful than <code class="xref py py-obj docutils literal notranslate"><span class="pre">navUpdating</span></code>, but is
+included for completeness.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="navUpdating(updates: object): void">
+<code class="descname">navUpdating(updates: object): void</code><a class="headerlink" href="#navUpdating(updates: object): void" title="Permalink to this definition">¶</a></dt>
+<dd><p>Merges <code class="xref py py-obj docutils literal notranslate"><span class="pre">updates</span></code> into the application’s parameters, updates the navbar’s URL,
+and rerenders. This can be called <em>e.g.</em> in a <code class="xref py py-obj docutils literal notranslate"><span class="pre">&lt;select&gt;</span></code> element’s <code class="xref py py-obj docutils literal notranslate"><span class="pre">change</span></code>
+listener to change a view parameter, and have that change reflected in the URL
+(to facilitate sharing, bookmarking, <em>etc.</em>).</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="fetch: Function">
+<code class="descname">fetch: Function</code><a class="headerlink" href="#fetch: Function" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns data from the data server, if it is available. Otherwise, ensures that
+the data has been requested, and suspends rendering until it has been loaded.</p>
+<dl class="simple">
+<dt>Overloads</dt><dd><dl class="simple">
+<dt><strong>fetch</strong>(<em>path: string</em>): Resource</dt><dd><p>Return the resource at the given path.</p>
+</dd>
+<dt><strong>fetch</strong>(<em>paths: string[]</em>): Resource[]</dt><dd><p>Return the resources at every path in an array of paths, as an analogous
+array (<code class="xref py py-obj docutils literal notranslate"><span class="pre">paths[i]</span></code> corresponds to <code class="xref py py-obj docutils literal notranslate"><span class="pre">resources[i]</span></code>).</p>
+</dd>
+<dt><strong>fetch</strong>(<em>paths: {[key: string]: string}</em>): {[key: string]: Resource}</dt><dd><p>Return the resources at every path in an object, as an analogous object
+(<code class="xref py py-obj docutils literal notranslate"><span class="pre">paths[key]</span></code> corresponds to <code class="xref py py-obj docutils literal notranslate"><span class="pre">resources[key]</span></code>).</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p><code class="xref py py-obj docutils literal notranslate"><span class="pre">ArrayFile</span></code>s are fetched as NumJs arrays, <code class="xref py py-obj docutils literal notranslate"><span class="pre">EncodedFile</span></code>s are fetched as raw
+files, and <code class="xref py py-obj docutils literal notranslate"><span class="pre">Artifact</span></code>s are fetched as objects with fields corresponding to
+their entries. Metadata resources (<em>e.g.</em> <code class="xref py py-obj docutils literal notranslate"><span class="pre">a/b/c/_entry-names</span></code> or
+<code class="xref py py-obj docutils literal notranslate"><span class="pre">x/y/z/_meta</span></code>) are also returned as objects.</p>
+<p>Both absolute paths (<code class="xref py py-obj docutils literal notranslate"><span class="pre">/path/from/root</span></code>) and relative paths
+(<code class="xref py py-obj docutils literal notranslate"><span class="pre">path/from/current/artifact</span></code>) are supported.</p>
+</dd></dl>
+
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="api-reference.html" class="btn btn-neutral float-right" title="API reference" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="using-artisan.html" class="btn btn-neutral float-left" title="Using Artisan" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2019, Mason McGill
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

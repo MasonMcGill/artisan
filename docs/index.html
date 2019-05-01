@@ -1,0 +1,306 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Artisan &mdash; artisan  documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script type="text/javascript" src="_static/jquery.js"></script>
+        <script type="text/javascript" src="_static/underscore.js"></script>
+        <script type="text/javascript" src="_static/doctools.js"></script>
+        <script type="text/javascript" src="_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Using Artisan" href="using-artisan.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="#" class="icon icon-home"> artisan
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="using-artisan.html">Using Artisan</a></li>
+<li class="toctree-l1"><a class="reference internal" href="using-artisan-ui.html">Using ArtisanUI</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api-reference.html">API reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="related-projects.html">Related projects</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="#">artisan</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="#">Docs</a> &raquo;</li>
+        
+      <li>Artisan</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/index.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="artisan">
+<h1>Artisan<a class="headerlink" href="#artisan" title="Permalink to this headline">¶</a></h1>
+<p>Artisan is a build system for explainable science. It lets you write code like
+this</p>
+<div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">SineWave</span><span class="p">(</span><span class="n">Artifact</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; A sampled sine wave &#39;&#39;&#39;</span>
+
+    <span class="k">class</span> <span class="nc">Conf</span><span class="p">:</span>
+        <span class="n">f</span><span class="p">:</span> <span class="nb">float</span><span class="p">;</span> <span class="s1">&#39;Frequency&#39;</span>
+        <span class="n">φ</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="s1">&#39;Phase shift&#39;</span>
+
+    <span class="sd">&#39;&#39;&#39; Computes sin(2πf⋅t + φ) for t ∈ [0, 1), sampled at 44.1kHz. &#39;&#39;&#39;</span>
+
+    <span class="c1">#-- Fields --#</span>
+    <span class="n">x</span><span class="p">:</span> <span class="n">ArrayFile</span><span class="p">;</span> <span class="s1">&#39;Timepoints sampled ∈ [0, 1)&#39;</span>
+    <span class="n">t</span><span class="p">:</span> <span class="n">ArrayFile</span><span class="p">;</span> <span class="s1">&#39;Function values at those timepoints&#39;</span>
+
+    <span class="k">def</span> <span class="nf">build</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">c</span><span class="p">:</span> <span class="n">Conf</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">t</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">44100</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">c</span><span class="o">.</span><span class="n">f</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">t</span> <span class="o">+</span> <span class="n">c</span><span class="o">.</span><span class="n">φ</span><span class="p">)</span>
+
+<span class="n">SineWave</span><span class="p">(</span><span class="n">f</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">φ</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span> <span class="c1"># Generates &quot;SineWave_0000/&quot;</span>
+<span class="n">SineWave</span><span class="p">(</span><span class="n">f</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span> <span class="n">φ</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span> <span class="c1"># Generates &quot;SineWave_0001/&quot;</span>
+<span class="n">SineWave</span><span class="p">(</span><span class="n">f</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">φ</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span> <span class="c1"># Uses the existing &quot;SineWave_0000/&quot;</span>
+</pre></div>
+</div>
+<p>to generate file trees like this</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>├── _meta.yaml
+├── SineWave_0000/
+│   ├── _meta.yaml
+│   ├── t.h5
+│   └── x.h5
+└── SineWave_0001/
+    ├── _meta.yaml
+    ├── t.h5
+    └── x.h5
+</pre></div>
+</div>
+<p>that can be viewed as highly customizable, live-updated, interactive documents
+like this</p>
+<p><em>– artisan-ui screenshot –</em></p>
+<p>Artisan acts as a “package manager” for the results of configurable operations
+(artifacts), keeping track of dependencies, versioning artifacts based on their
+configuration, and allowing authors to associate documentation and interactive
+visualizations with each artifact type.</p>
+<div class="section" id="features">
+<h2>Features<a class="headerlink" href="#features" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><p>Support for defining <strong>artifact types</strong> corresponding to file-generating
+operations</p></li>
+<li><p>Memoized artifact instantiation (Artifacts will only be built if they don’t
+already exist.)</p></li>
+<li><p>A configuration validator that understands artifact type hierarchies</p></li>
+<li><p>Concurrency-friendly array storage, via <a class="reference external" href="http://docs.h5py.org/en/stable/swmr.html">HDF5-SWMR</a> (and graceful handling of
+non-array data)</p></li>
+<li><p>Automatic storage of metadata, including each artifact’s specification and
+build status, as well a glossary (as a <a class="reference external" href="https://json-schema.org/">JSON-Schema</a>) describing the universe of artifacts that can
+be created</p></li>
+<li><p>REST API generation, with support for bandwidth-efficient <a class="reference external" href="https://cbor.io/">CBOR</a> encoding</p></li>
+<li><p>Visualization via ArtisanUI, which supports rendering custom <a class="reference external" href="https://reactjs.org/">React</a> components (including components from <a class="reference external" href="https://uber.github.io/react-vis/">React-Vis</a>, <a class="reference external" href="https://github.com/plotly/react-plotly.js/">React-Plotly</a>, <a class="reference external" href="https://microsoft.github.io/chart-parts/">Chart-Parts</a>, <em>etc.</em>)</p></li>
+<li><p>Full compatibility with <a class="reference external" href="http://mypy-lang.org/">MyPy</a> strong mode</p></li>
+</ul>
+</div>
+<div class="section" id="motivation">
+<h2>Motivation<a class="headerlink" href="#motivation" title="Permalink to this headline">¶</a></h2>
+<p>Programming systems based on composing components with structured interfaces can
+support powerful introspective development tools (<em>e.g.</em> <a class="reference external" href="https://chrome.google.com/webstore/detail/react-developer-tools/fmkadmapgofadopljbjfkapdkoienihi?hl=en">React’s browser extension</a>,
+for user interface programming, or <a class="reference external" href="https://en.wikipedia.org/wiki/Max_(software)">Max/MSP/Jitter</a>, for multimedia art creation).</p>
+<p>Artisan is an experiment in component-oriented scientific/numerical/analytical
+software. Its goal is to enable developers to define metadata-rich artifact
+types in a natural, readable way, then use that metadata to automate as much as
+possible, (configuration validation, file name generation, dependency
+resolution, documentation generation, data presentation, thesis writing…)</p>
+</div>
+<div class="section" id="contents">
+<h2>Contents<a class="headerlink" href="#contents" title="Permalink to this headline">¶</a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="using-artisan.html">Using Artisan</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="using-artisan.html#defining-artifact-types">Defining artifact types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="using-artisan.html#instantiating-artifacts">Instantiating artifacts</a></li>
+<li class="toctree-l2"><a class="reference internal" href="using-artisan.html#in-memory-components">In-memory components</a></li>
+<li class="toctree-l2"><a class="reference internal" href="using-artisan.html#global-configuration">Global configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="using-artisan.html#configuration-schema-details">Configuration schema details</a></li>
+<li class="toctree-l2"><a class="reference internal" href="using-artisan.html#generating-a-rest-api">Generating a REST API</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="using-artisan-ui.html">Using ArtisanUI</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="using-artisan-ui.html#getting-started">Getting started</a></li>
+<li class="toctree-l2"><a class="reference internal" href="using-artisan-ui.html#defining-custom-views">Defining custom views</a></li>
+<li class="toctree-l2"><a class="reference internal" href="using-artisan-ui.html#app-api">App API</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api-reference.html">API reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="api-reference.html#summary">Summary</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api-reference.html#details">Details</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="related-projects.html">Related projects</a></li>
+</ul>
+</div>
+</div>
+<div class="section" id="contributing">
+<h2>Contributing<a class="headerlink" href="#contributing" title="Permalink to this headline">¶</a></h2>
+<p>Please do!</p>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="using-artisan.html" class="btn btn-neutral float-right" title="Using Artisan" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2019, Mason McGill
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>
