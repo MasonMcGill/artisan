@@ -55,7 +55,7 @@ visualizations with each artifact type.
 Features
 --------
 
-- Support for defining **artifact types** corresponding to file-generating
+- Support for defining artifact types corresponding to file-generating
   operations
 - Memoized artifact instantiation (Artifacts will only be built if they don't
   already exist.)
