@@ -24,10 +24,9 @@ import dtype from 'dtype'
 import yaml from 'js-yaml'
 import flatten from 'lodash/flatten'
 import globToRegExp from 'glob-to-regexp'
-import get from 'lodash/get'
 import mapValues from 'lodash/mapValues'
-import map from 'lodash/map'
 import omit from 'lodash/omit'
+import values from 'lodash/values'
 import nj from 'numjs'
 import prism from 'prismjs'
 import qs from 'query-string'
@@ -37,6 +36,7 @@ import Markdown from 'react-markdown-renderer'
 import { FaDatabase, FaFile, FaFolder } from 'react-icons/fa'
 import { BrowserRouter, Route, Link } from 'react-router-dom'
 
+// @ts-ignore
 window.Prism = prism
 import 'prismjs/components/prism-yaml'
 
@@ -166,8 +166,8 @@ class App {
       for (const i in reqs)
         if (reqs[i].status === 'failed')
           throw reqs[i].result
-      if (Object.values(reqs).some(r => r.result === undefined))
-        throw Promise.all(Object.values(reqs).map(r => r.promise))
+      if (values(reqs).some(r => r.result === undefined))
+        throw Promise.all(values(reqs).map(r => r.promise))
       return mapValues(reqs, r => r.result)
     }
   }
@@ -435,6 +435,8 @@ function CustomViews({ app, views }) {
 
 
 class ErrorBoundary extends React.Component {
+  public state: { error: any; };
+
   constructor(props) {
     super(props)
     this.state = { error: null }
