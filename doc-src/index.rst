@@ -44,13 +44,12 @@ to generate file trees like this
 that can be viewed as highly customizable, live-updated, interactive documents
 like this
 
-*-- artisan-ui screenshot (explorer next to glossary) --*
+*-- artisan-ui screenshot --*
 
 Artisan acts as a "package manager" for the results of configurable operations
 (artifacts), keeping track of dependencies, versioning artifacts based on their
 configuration, and allowing authors to associate documentation and interactive
 visualizations with each artifact type.
-
 
 
 Features
@@ -81,16 +80,17 @@ Features
 Motivation
 ----------
 
-Artisan aims to be for libraries what interactive notebooks are for linear,
-imperative code. If you like `Jupyter notebooks <https://jupyter.org/>`_ or
-`Google Colaboratory
-<https://colab.research.google.com/notebooks/welcome.ipynb>`_, but your project
-involves a computational graph of configurable operations, the outputs of which
-you'd like to cache and inspect, Artisan may be worth a look.
+Programming systems based on composing components with structured interfaces can
+support powerful introspective development tools (*e.g.* `React's browser extension
+<https://chrome.google.com/webstore/detail/react-developer-tools/fmkadmapgofadopljbjfkapdkoienihi?hl=en>`_,
+for user interface programming, or `Max/MSP/Jitter
+<https://en.wikipedia.org/wiki/Max_(software)>`_, for multimedia art creation).
 
-Its goal is to enable developers to define artifact types in a natural way,
-without having to worry about validating configurations, generating directory
-names, caching results, or encoding and transmitting data for visualization.
+Artisan is an experiment in component-oriented scientific/numerical/analytical
+software. Its goal is to enable developers to define metadata-rich artifact
+types in a natural, readable way, then use that metadata to automate as much as
+possible, (configuration validation, file name generation, dependency
+resolution, documentation generation, data presentation, thesis writing...)
 
 
 Contents
@@ -102,3 +102,9 @@ Contents
   using-artisan-ui
   api-reference
   related-projects
+
+
+Contributing
+------------
+
+Please do!
