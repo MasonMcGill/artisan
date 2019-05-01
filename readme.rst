@@ -50,7 +50,7 @@ Artisan acts as a "package manager" for the results of configurable operations
 (artifacts), keeping track of dependencies, versioning artifacts based on their
 configuration, and allowing authors to associate documentation and interactive
 visualizations with each artifact type. The full documentation can be found
-`here <MasonMcGill.github.io/artisan>`_.
+`here <https://masonmcgill.github.io/artisan/>`_.
 
 
 Features
