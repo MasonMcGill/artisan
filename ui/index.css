@@ -41,7 +41,6 @@
 .aui__host-selector {
   float: right;
   font-family: 'Yrsa';
-  /* font-style: italic; */
   cursor: pointer;
   font-weight: normal;
   color: #a0a0a0;
@@ -55,7 +54,6 @@
 .aui__meta-view {
   box-sizing: border-box;
   padding: 0px 0px 5px 10px;
-  /* white-space: pre; */
   margin: 0px auto 10px 3px;
   border-left: 2px dashed #ccc;
 }
@@ -87,8 +85,6 @@
   color: #a0a0a0;
   font-family: 'Yrsa';
   margin-top: 10px;
-  /* font-style: italic; */
-  /* text-align: center; */
   cursor: pointer;
 }
 .aui__desc-body--collapsed:hover {
@@ -97,15 +93,6 @@
 
 .aui__desc-body {
   margin-bottom: 0px;
-  /* margin-top: 15px; */
-  /* margin-left: 10px; */
-  /* margin-right: 20px; */
-  /* padding: 1px 10px 1px 10px; */
-  /* background: #fbfbfb; */
-  /* box-shadow: 0px 5px 15px #bbb; */
-  /* border-left: 2px #ccc dashed; */
-  /* border-top: 2px #ccc dashed; */
-  /* border-bottom: 2px #ccc dashed; */
   color: #a0a0a0;
   font-family: 'Yrsa';
   font-style: italic;
@@ -122,6 +109,14 @@
 }
 .aui__desc-body ul, ol, p {
   margin: 0px;
+}
+
+/* Comments */
+
+.aui__comment {
+  font-family: 'Yrsa';
+  font-style: italic;
+  color: #a0a0a0;
 }
 
 /* User-defined data view */

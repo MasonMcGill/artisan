@@ -303,14 +303,9 @@ function MetaView({ app }) {
 
   return (
     <div className='aui__meta-view'>
-      {/* <span
-        className='aui__desc-head'
-        style={{color: 'gray', fontStyle: 'italic'}}
-        markdown={descHead}
-      /> */}
       <span className='token atrule'>type: </span>
       {meta.spec.type}
-      <span style={{color: '#a0a0a0', fontFamily: 'Yrsa', fontStyle: 'italic'}}>
+      <span className='aui__comment'>
         {' \u00A0—\u00A0 '}{descHead}
       </span>
       {
@@ -321,7 +316,7 @@ function MetaView({ app }) {
               <span className='token atrule'>{key}: </span> {conf[key]}
               {
                 propSchema.description === undefined ? null : (
-                  <span style={{color: '#a0a0a0', fontFamily: 'Yrsa', fontStyle: 'italic'}}>
+                  <span className='aui__comment'>
                     {' \u00A0—\u00A0 '}{propSchema.description}
                   </span>
                 )
@@ -331,13 +326,6 @@ function MetaView({ app }) {
         })
       }
       <DescBody app={app}/>
-      {/* <div className='aui__meta-view' dangerouslySetInnerHTML={{
-        __html: prism.highlight(specText, prism.languages.yaml, 'yaml')
-      }}/> */}
-      {/* <Markdown className='aui__desc-body' markdown={descBody.join('\n\n')} /> */}
-      {/* <pre style={{color: '#a0a0a0', fontFamily: 'Yrsa', fontStyle: 'italic'}}>
-        {descBody.join('\n\n')}
-      </pre> */}
     </div>
   )
 }
@@ -348,7 +336,7 @@ function EntryList({ app }) {
   const schema = fetchSchema(app, meta)
   const comment = name => (
     schema.outputDescriptions[name] === undefined ? null : (
-      <span style={{color: '#a0a0a0', fontFamily: 'Yrsa', fontStyle: 'italic'}}>
+      <span className='aui__comment'>
         {' \u00A0—\u00A0 '}{schema.outputDescriptions[name]}
       </span>
     )
@@ -420,8 +408,8 @@ function CustomViews({ app, views }) {
       return (
         <div className='aui__data-view'>
           {flatten([viewSet]).map((View, i) => (
-            <ErrorBoundary>
-              <Suspense key={i} fallback={<div/>}>
+            <ErrorBoundary key={i}>
+              <Suspense fallback={<div/>}>
                 <View app={app}/>
               </Suspense>
             </ErrorBoundary>
@@ -451,7 +439,7 @@ class ErrorBoundary extends React.Component {
       return <pre><code>{this.state.error.message}</code></pre>
     }
     else {
-      return this.props.children
+      return <>{this.props.children}</>
     }
   }
 }
