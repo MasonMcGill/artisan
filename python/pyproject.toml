@@ -9,6 +9,7 @@ readme = "readme.md"
 [tool.poetry.dependencies]
 cbor2 = "*"
 falcon = "*"
+gunicorn = "*"
 h5py = "*"
 jsonschema = "*"
 numpy = "*"
