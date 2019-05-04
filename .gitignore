@@ -1,5 +1,8 @@
+.vscode/
+.mypy_cache/
+
 docs/.doctrees/
 docs/.buildinfo
 
-.mypy_cache/
-.vscode/
+ui/node_modules/
+ui/dist/
