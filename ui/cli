@@ -13,6 +13,15 @@ Options:
   --dst=<dst>    The path to which the site should be written
 
 "artisan-ui ..." is shorthand for "artisan-ui serve ...".
+
+In the future, the interface will be something like the following:
+
+artisan-ui
+  [<extPath>]
+  [--dst=...] // includes the core/core deps if defined
+  [--include-data] // downloads data
+  [--include-deps] // downloads extension deps
+  [--port=...] // sets the server port
 `)
 
 const fs = require('fs-extra')
