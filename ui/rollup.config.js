@@ -1,11 +1,9 @@
-import ruCommonjs from 'rollup-plugin-commonjs'
-import ruJson from 'rollup-plugin-json'
-import ruResolve from 'rollup-plugin-node-resolve'
-import ruSucrase from 'rollup-plugin-sucrase'
-import ruReplace from 'rollup-plugin-replace'
+import commonjs from 'rollup-plugin-commonjs'
+import resolve from 'rollup-plugin-node-resolve'
+import sucrase from 'rollup-plugin-sucrase'
 
 export default {
-  input: 'index.tsx',
+  input: 'client/index.tsx',
   external: [
     'react', 'react-dom', 'numjs'
   ],
@@ -18,22 +16,18 @@ export default {
       'react-dom': 'ReactDOM',
       'numjs': 'nj'
     },
-    sourcemap: 'inline'
+    sourcemap: true
   },
   plugins: [
-    ruSucrase({
+    sucrase({
       transforms: ['typescript', 'jsx'],
       exclude: ['node_modules/**']
     }),
-    ruReplace({
-      'process.env.NODE_ENV': '"production"'
-    }),
-    ruResolve(),
-    ruCommonjs({
-      namedExports: {
-        'node_modules/lodash/lodash.js': ['mapValues']
-      }
-    }),
-    ruJson()
-  ]
+    resolve(),
+    commonjs({sourceMap: false})
+  ],
+  onwarn: (warning, propagate) => {
+    if (warning.code !== 'THIS_IS_UNDEFINED')
+      propagate(warning)
+  }
 }

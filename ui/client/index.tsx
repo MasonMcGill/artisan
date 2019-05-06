@@ -21,24 +21,14 @@
 
 import cbor from 'cbor-js'
 import dtype from 'dtype'
-import yaml from 'js-yaml'
-import flatten from 'lodash/flatten'
 import globToRegExp from 'glob-to-regexp'
-import mapValues from 'lodash/mapValues'
-import omit from 'lodash/omit'
-import values from 'lodash/values'
 import nj from 'numjs'
-import prism from 'prismjs'
 import qs from 'query-string'
 import React, { Suspense, useEffect, useState } from 'react'
 import ReactDOM from 'react-dom'
 import Markdown from 'react-markdown-renderer'
 import { FaDatabase, FaFile, FaFolder } from 'react-icons/fa'
 import { BrowserRouter, Route, Link } from 'react-router-dom'
-
-// @ts-ignore
-window.Prism = prism
-import 'prismjs/components/prism-yaml'
 
 //- View parameters and data fetching -----------------------------------------
 
@@ -162,13 +152,19 @@ class App {
       return reqs.map(r => r.result)
     }
     else if (typeof paths === 'object') {
-      const reqs = mapValues(paths, p => this.getRequest(p))
-      for (const i in reqs)
-        if (reqs[i].status === 'failed')
-          throw reqs[i].result
-      if (values(reqs).some(r => r.result === undefined))
-        throw Promise.all(values(reqs).map(r => r.promise))
-      return mapValues(reqs, r => r.result)
+      const reqs: { [k: string]: Request } = {}
+      const resps: { [k: string]: Response } = {}
+      for (const k in paths) {
+        reqs[k] = this.getRequest(paths[k])
+        if (reqs[k].status === 'failed')
+          throw reqs[k].result
+      }
+      for (const k in paths) {
+        if (reqs[k].result === undefined)
+          throw Promise.all(Object.values(reqs).map(r => r.promise))
+        resps[k] = reqs[k].result
+      }
+      return resps
     }
   }
 
@@ -213,7 +209,7 @@ export function render(options: UIOptions) {
 
 
 function RootView({ host, refreshInterval, views }: UIOptions) {
-  host = host || 'http://localhost:3000'
+  const defaultHost = host || 'http://localhost:3000'
   refreshInterval = refreshInterval || 5000
   views = views || []
 
@@ -230,17 +226,19 @@ function RootView({ host, refreshInterval, views }: UIOptions) {
     <BrowserRouter>
       <Route path='/*' render={({ location, history }) => {
         function navigate(params) {
+          const { path, host, ...viewParams } = params
           history.push(
             (params.path || '/') + '?' +
             qs.stringify(
-              params.host == host
-              ? omit(params, ['path', 'host'])
-              : omit(params, ['path'])
+              host === defaultHost
+              ? viewParams
+              : { host, ...viewParams }
             )
           )
         }
         const params = {
-          host, path: location.pathname,
+          host: defaultHost,
+          path: location.pathname,
           ...qs.parse(location.search)
         }
         const app = new App(params, navigate, cache, time)
@@ -295,11 +293,11 @@ function MetaView({ app }) {
 
   const schema = fetchSchema(app, meta)
   const [descHead, ...descBody] = schema.description.trim().split('\n\n')
-  const conf = omit(meta.spec, 'type')
-  const specText = yaml.dump(
-    { ...meta.spec, status: meta.status },
-    { lineWidth: 72 }
-  )
+  const { type, ...conf } = meta.spec
+  // const specText = yaml.dump(
+  //   { ...meta.spec, status: meta.status },
+  //   { lineWidth: 72 }
+  // )
 
   return (
     <div className='aui__meta-view'>
@@ -403,11 +401,12 @@ function DescBody({ app }) {
 
 
 function CustomViews({ app, views }) {
-  for (const [pattern, viewSet] of views) {
+  for (const [pattern, viewSpec] of views) {
     if (globToRegExp(pattern).test(app.params.path)) {
+      const viewArray = Array.isArray(viewSpec) ? viewSpec : [viewSpec]
       return (
         <div className='aui__data-view'>
-          {flatten([viewSet]).map((View, i) => (
+          {viewArray.map((View, i) => (
             <ErrorBoundary key={i}>
               <Suspense fallback={<div/>}>
                 <View app={app}/>
