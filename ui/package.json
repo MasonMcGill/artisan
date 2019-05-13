@@ -1,7 +1,7 @@
 {
   "name": "artisan-ui",
   "version": "0.1.0",
-  "description": "A visualization library for the artisan build system",
+  "description": "A visualization library for the Artisan build system",
   "repository": {
     "type": "git",
     "url": "https://github.com/MasonMcGill/artisan.git"
@@ -13,41 +13,33 @@
   },
   "scripts": {
     "build": "rollup -c",
-    "watch": "rollup -c --watch"
+    "watch": "rollup -c --watch",
+    "prepublishOnly": "rollup -c"
   },
   "dependencies": {
-    "@types/react": "^16.8.15",
-    "cbor-js": "^0.1.0",
     "docopt": "^0.6.2",
-    "dtype": "^2.0.0",
     "express": "^4.16.4",
-    "fs-extra": "^7.0.1",
-    "glob-to-regexp": "^0.4.1",
-    "handlebars": "^4.1.2",
     "is-url": "^1.2.4",
     "js-yaml": "^3.12.1",
-    "lodash": "^4.17.11",
     "numjs": "github:MasonMcGill/numjs#master",
-    "prismjs": "^1.15.0",
-    "query-string": "^6.4.2",
     "react": "^16.8.0",
     "react-dom": "^16.8.0",
-    "react-icons": "^3.5.0",
-    "react-markdown-renderer": "^1.4.0",
-    "react-router-dom": "^4.3.1",
     "rollup": "^1.10.1",
     "rollup-plugin-commonjs": "^9.3.4",
-    "rollup-plugin-json": "^4.0.0",
     "rollup-plugin-node-resolve": "^4.2.3",
-    "rollup-plugin-replace": "^2.2.0",
     "rollup-plugin-sucrase": "^2.1.0"
   },
   "devDependencies": {
     "@types/js-yaml": "^3.12.0",
     "@types/lodash": "4.14.123",
     "@types/numjs": "^0.14.4",
-    "@types/prismjs": "^1.16.0",
-    "@types/react": "^16.8.8",
-    "typescript": "^3.4.1"
+    "@types/react": "^16.8.15",
+    "cbor-js": "^0.1.0",
+    "dtype": "^2.0.0",
+    "glob-to-regexp": "^0.4.1",
+    "query-string": "^6.4.2",
+    "react-icons": "^3.5.0",
+    "react-markdown-renderer": "^1.4.0",
+    "rollup-plugin-replace": "^2.2.0"
   }
 }

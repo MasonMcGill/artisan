@@ -1,16 +1,12 @@
-/** Global styles for ArtisanUI **/
-
-/*******************************************************************************
+/*****************************************************************************
  * Fonts
- ******************************************************************************/
+ *****************************************************************************/
 
  @import url('https://fonts.googleapis.com/css?family=Inconsolata|Yrsa');
 
-/*******************************************************************************
-* CommandGraph client styles
-******************************************************************************/
-
-/* Root component */
+/*****************************************************************************
+ * Root component
+ *****************************************************************************/
 
 .aui__root {
   box-sizing: border-box;
@@ -19,11 +15,14 @@
   font-family: 'Inconsolata';
 }
 
-/* Title bar */
+/*****************************************************************************
+ * Title bar
+ *****************************************************************************/
 
 .aui__title-bar {
   margin: 10px auto;
   font-weight: bold;
+  cursor: pointer;
 }
 
 .aui__home-icon {
@@ -49,7 +48,9 @@
   color: hsl(216, 40%, 55%);
 }
 
-/* Metadata view */
+/*****************************************************************************
+ * Metadata view
+ *****************************************************************************/
 
 .aui__meta-view {
   box-sizing: border-box;
@@ -57,28 +58,6 @@
   margin: 0px auto 10px 3px;
   border-left: 2px dashed #ccc;
 }
-
-/* Entry list */
-
-.aui__entry {
-  margin: 5px 0px;
-  color: hsl(216, 0%, 45%);
-}
-
-.aui__entry a {
-  color: inherit;
-  text-decoration: none;
-}
-.aui__entry a:hover {
-  color: hsl(216, 40%, 55%);
-}
-
-.aui__icon {
-  font-size: 0.67em;
-  vertical-align: middle;
-}
-
-/* Description body */
 
 .aui__desc-body--collapsed {
   display: block;
@@ -111,15 +90,32 @@
   margin: 0px;
 }
 
-/* Comments */
+/****************************************************************************
+ * Entry list
+ *****************************************************************************/
 
-.aui__comment {
-  font-family: 'Yrsa';
-  font-style: italic;
-  color: #a0a0a0;
+.aui__entry {
+  margin: 5px 0px;
+  color: hsl(216, 0%, 45%);
 }
 
-/* User-defined data view */
+.aui__entry a {
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+.aui__entry a:hover {
+  color: hsl(216, 40%, 55%);
+}
+
+.aui__icon {
+  font-size: 0.67em;
+  vertical-align: middle;
+}
+
+/*****************************************************************************
+ * User-defined data view
+ *****************************************************************************/
 
 .aui__data-view {
   margin-top: 35px;
@@ -138,9 +134,20 @@
   font-size: 0.9em;
 }
 
-/*******************************************************************************
-* Syntax highlighting (based on the prism.js default theme by Lea Verou)
-******************************************************************************/
+/*****************************************************************************
+ * Comments
+ *****************************************************************************/
+
+.aui__comment {
+  font-family: 'Yrsa';
+  font-style: italic;
+  color: #a0a0a0;
+}
+
+/*****************************************************************************
+ * Syntax highlighting (based on the prism.js default theme by Lea Verou)
+ *****************************************************************************/
+
 
 .aui__meta-view .token.comment { color: slategray; }
 .aui__meta-view .token.punctuation { color: #999; }
@@ -148,3 +155,4 @@
 .aui__meta-view .token.number { color: #905; }
 .aui__meta-view .token.string { color: #690; }
 .aui__meta-view .token.atrule { color: #07a; }
+
