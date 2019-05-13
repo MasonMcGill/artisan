@@ -125,7 +125,7 @@ export async function pollForUpdates(ts: Timestamp = {}) {
 
 
 function updateExtension() {
-  const oldScript = document.querySelector('script[src=/extension/index.js]')
+  const oldScript = document.querySelector('script[src="/extension/index.js"]')
   const newScript = document.createElement('script')
   newScript.src = '/extension/index.js'
   newScript.onload = render
