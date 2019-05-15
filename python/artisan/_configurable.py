@@ -199,7 +199,9 @@ def _prop_schema_from_ann(ann: type) -> dict:
     elif issubclass(ann, Configurable):
         return {'$ref': '#/definitions/'+_identify(ann)}
     else:
-        raise ValueError(f'Type "{ann}" can\'t be mapped to a schema.')
+        # [Temporary workaround to support unimplemented forms]
+        return {}
+        # raise ValueError(f'Type "{ann}" can\'t be mapped to a schema.')
 
 #-- Syntax tree parsing -------------------------------------------------------
 
