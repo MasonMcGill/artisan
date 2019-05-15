@@ -20,9 +20,8 @@ class ConfigurableMeta(type):
 
         super().__init__(name, bases, dict_)
 
-        self.Spec = Spec()
-        self.Spec._impl = self
-
+        self.Spec = type('Spec', (Spec,), {'_impl': self})
+        
         entry = default_scope.get(name, None)
         default_scope[name] = (
             self if entry is None else
