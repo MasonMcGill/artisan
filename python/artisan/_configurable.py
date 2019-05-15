@@ -2,7 +2,7 @@ import ast
 from inspect import getsource
 from pathlib import Path
 from textwrap import dedent
-from typing import DefaultDict, Dict, Iterator, List, Mapping, Tuple, cast
+from typing import Any, DefaultDict, Dict, Iterator, List, Mapping, Tuple, cast
 
 from ruamel import yaml
 
@@ -52,7 +52,33 @@ class Configurable(metaclass=ConfigurableMeta):
         assert type_name is None or isinstance(type_name, str)
         type_ = cls if type_name is None else _resolve(type_name)
         assert isinstance(type_, type) and issubclass(type_, cls)
-        return cast('Configurable', super().__new__(type_))
+        obj = cast('Configurable', super().__new__(type_))
+        obj.conf = _namespacify({k: v for k, v in spec.items() if k != 'type'})
+        return obj
+
+#-- Namespaces ----------------------------------------------------------------
+
+class _Namespace(Dict[str, object]):
+    'A `dict` that supports accessing items as attributes'
+
+    def __getattr__(self, key: str) -> Any:
+        return dict.__getitem__(self, key)
+
+    def __setattr__(self, key: str, val: object) -> None:
+        dict.__setitem__(self, key, val)
+
+    def __getattribute__(self, key: str) -> Any:
+        if key == '__dict__': return self
+        else: return object.__getattribute__(self, key)
+
+
+def _namespacify(obj: object) -> object:
+    if isinstance(obj, dict):
+        return _Namespace({k: _namespacify(obj[k]) for k in obj})
+    elif isinstance(obj, list):
+        return [_namespacify(v) for v in obj]
+    else:
+        return obj
 
 #-- Global metadata writing ---------------------------------------------------
 
