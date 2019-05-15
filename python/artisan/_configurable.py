@@ -21,7 +21,7 @@ class ConfigurableMeta(type):
         super().__init__(name, bases, dict_)
 
         self.Spec = type('Spec', (Spec,), {'_impl': self})
-        
+
         entry = default_scope.get(name, None)
         default_scope[name] = (
             self if entry is None else
@@ -52,7 +52,9 @@ class Configurable(metaclass=ConfigurableMeta):
         type_ = cls if type_name is None else _resolve(type_name)
         assert isinstance(type_, type) and issubclass(type_, cls)
         obj = cast('Configurable', super().__new__(type_))
-        obj.conf = _namespacify({k: v for k, v in spec.items() if k != 'type'})
+        object.__setattr__(obj, 'conf', _namespacify({
+            k: v for k, v in spec.items() if k != 'type'
+        }))
         return obj
 
 #-- Namespaces ----------------------------------------------------------------
