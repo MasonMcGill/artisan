@@ -126,6 +126,9 @@ class Artifact(Configurable):
         for p in self.path.glob('[!_]*'):
             yield p.name[:-3] if p.suffix == '.h5' else p.name
 
+    def keys(self) -> Iterator[str]:
+        return self.__iter__()
+
     def __getitem__(self, key: str) -> ArtifactEntry:
         '''
         Returns an `ArrayFile`, `EncodedFile`, or `Artifact` corresponding to
@@ -169,26 +172,23 @@ class Artifact(Configurable):
         '''
         path = self.path / key.replace('__', '.')
 
-        # Write an array.
-        if isinstance(val, np.ndarray):
-            assert path.suffix == ''
-            _write_h5(path.with_suffix('.h5'), val)
-
         # Copy an existing file.
-        elif isinstance(val, Path):
+        if isinstance(val, Path):
             assert path.suffix != ''
             _copy_file(path, val)
 
         # Write a subartifact.
-        elif isinstance(val, Mapping):
+        elif isinstance(val, (Mapping, Artifact)):
             assert path.suffix == ''
             MutRec.update(
                 cast(MutRec, Artifact(path)),
                 cast(Rec, val)
             )
 
+        # Write an array.
         else:
-            raise TypeError()
+            assert path.suffix == ''
+            _write_h5(path.with_suffix('.h5'), val)
 
     def __delitem__(self, key: str) -> None:
         '''
@@ -215,24 +215,21 @@ class Artifact(Configurable):
         '''
         path = self.path / key
 
-        # Append an array.
-        if isinstance(val, np.ndarray):
-            assert path.suffix == ''
-            _exend_h5(path, val)
-
-        # Copy an existing file.
-        elif isinstance(val, Path):
+        # Append an existing file.
+        if isinstance(val, Path):
             assert path.suffix != ''
             _extend_file(path, val)
 
-        # Write a subartifact.
-        elif isinstance(val, Mapping):
+        # Append a subartifact.
+        elif isinstance(val, (Mapping, Artifact)):
             assert path.suffix == ''
             for k, v in val.items():
                 Artifact(path).extend(k, v)
 
+        # Append an array.
         else:
-            raise TypeError()
+            assert path.suffix == ''
+            _exend_h5(path, val)
 
     #-- Attribute-style element access --------------------
 
@@ -352,27 +349,32 @@ def _read_h5(path: Path) -> ArrayFile:
 
 def _write_h5(path: Path, val: object) -> None:
     val = np.asarray(val)
-    shutil.rmtree(path, ignore_errors=True)
     path.parent.mkdir(parents=True, exist_ok=True)
+    if path.is_dir(): path.rmdir()
+    elif path.exists(): path.unlink()
     f = h5.File(path, libver='latest')
     f.create_dataset('data', data=np.asarray(val))
 
 
 def _exend_h5(path: Path, val: object) -> None:
     val = np.asarray(val)
+    path.parent.mkdir(parents=True, exist_ok=True)
     f = h5.File(path, libver='latest')
-    dset = f.require_dataset(
-        name='data',
-        shape=None,
-        maxshape=(None, *val.shape[1:]),
-        dtype=val.dtype,
-        data=np.empty((0, *val.shape[1:]), val.dtype),
-        chunks=(
-            int(np.ceil(2**12 / np.prod(val.shape[1:]))),
-            *val.shape[1:]
+    if 'data' not in f:
+        dset = f.require_dataset(
+            name = 'data',
+            shape = None,
+            maxshape = (None, *val.shape[1:]),
+            dtype = val.dtype,
+            data = np.empty((0, *val.shape[1:]), val.dtype),
+            chunks = (
+                int(np.ceil(2**12 / np.prod(val.shape[1:]))),
+                *val.shape[1:]
+            )
         )
-    )
-    f.swmr_mode = True
+        f.swmr_mode = True
+    else:
+        dset = f['data']
     dset.resize(dset.len() + len(val), 0)
     dset[-len(val):] = val
     dset.flush()
