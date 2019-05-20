@@ -395,7 +395,8 @@ def _read_meta(a: Artifact) -> Rec:
 
 
 def _write_meta(a: Artifact, meta: Rec) -> None:
-    (a.path / '_meta.yaml').write_text(yaml.round_trip_dump(meta))
+    # (a.path / '_meta.yaml').write_text(yaml.round_trip_dump(meta))
+    import json; (a.path / '_meta.yaml').write_text(json.dumps(meta))
 
 #-- Namespaces ----------------------------------------------------------------
 
