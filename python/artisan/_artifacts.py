@@ -229,7 +229,7 @@ class Artifact(Configurable):
         # Append an array.
         else:
             assert path.suffix == ''
-            _exend_h5(path, val)
+            _extend_h5(path.with_suffix('.h5'), val)
 
     #-- Attribute-style element access --------------------
 
@@ -356,7 +356,7 @@ def _write_h5(path: Path, val: object) -> None:
     f.create_dataset('data', data=np.asarray(val))
 
 
-def _exend_h5(path: Path, val: object) -> None:
+def _extend_h5(path: Path, val: object) -> None:
     val = np.asarray(val)
     path.parent.mkdir(parents=True, exist_ok=True)
     f = h5.File(path, libver='latest')
