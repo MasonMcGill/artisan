@@ -46,6 +46,8 @@ class Configurable(metaclass=ConfigurableMeta):
     arbitrarily nested `bool`, `int`, `float`, `str`, `NoneType`, sequence, and
     string-keyed mapping objects.
     '''
+    Spec = Dict[str, object]
+
     def __new__(cls, spec: Rec, *args: object, **kwargs: object) -> 'Configurable':
         type_name = spec.get('type', None)
         assert type_name is None or isinstance(type_name, str)
