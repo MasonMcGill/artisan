@@ -33,7 +33,7 @@ class ConfStack(threading.local):
         self.value = [Conf(root_dir='.', scope=default_scope)]
 
 
-default_scope: Dict[str, object] = {}
+default_scope: Dict[str, type] = {}
 conf_stack = ConfStack()
 
 
