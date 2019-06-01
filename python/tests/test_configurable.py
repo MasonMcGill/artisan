@@ -18,35 +18,47 @@ class ChildB(Parent):
         x: float
         y: float
 
-#-- Tests ---------------------------------------------------------------------
+#-- `Configurable` tests ------------------------------------------------------
 
 def test_direct_instantiation():
-    obj = ChildA(dict(x=1, y=2))
+    obj = ChildA(dict(a=1, b=2))
     assert isinstance(obj, ChildA)
-    assert obj.conf.x == 1
-    assert obj.conf.y == 2
+    assert obj.conf.a == 1
+    assert obj.conf.b == 2
 
 
-def test_subclass_forwarding():
-    obj = Parent(dict(type='ChildA', x=1, y=2))
+def test_subclass_forwarding_with_types():
+    obj = Parent(dict(type=ChildA, a=1.0, b=2.0))
     assert isinstance(obj, ChildA)
-    assert obj.conf.x == 1
-    assert obj.conf.y == 2
-
-    obj = Parent(dict(type='ChildB', a=1.0, b=2.0))
-    assert isinstance(obj, ChildB)
     assert obj.conf.a == 1.0
     assert obj.conf.b == 2.0
+
+    obj = Parent(dict(type=ChildB, x=1, y=2))
+    assert isinstance(obj, ChildB)
+    assert obj.conf.x == 1
+    assert obj.conf.y == 2
+
+
+def test_subclass_forwarding_with_strings():
+    obj = Parent(dict(type='ChildA', a=1.0, b=2.0))
+    assert isinstance(obj, ChildA)
+    assert obj.conf.a == 1.0
+    assert obj.conf.b == 2.0
+
+    obj = Parent(dict(type='ChildB', x=1, y=2))
+    assert isinstance(obj, ChildB)
+    assert obj.conf.x == 1
+    assert obj.conf.y == 2
 
 
 def test_custom_scopes():
     with using_conf(scope={'Parent': Parent, 'A': ChildA, 'B': ChildB}):
-        obj = Parent(dict(type='A', x=1, y=2))
+        obj = Parent(dict(type='A', a=1.0, b=2.0))
         assert isinstance(obj, ChildA)
-        assert obj.conf.x == 1
-        assert obj.conf.y == 2
-
-        obj = Parent(dict(type='B', a=1.0, b=2.0))
-        assert isinstance(obj, ChildB)
         assert obj.conf.a == 1.0
         assert obj.conf.b == 2.0
+
+        obj = Parent(dict(type='B', x=1, y=2))
+        assert isinstance(obj, ChildB)
+        assert obj.conf.x == 1
+        assert obj.conf.y == 2

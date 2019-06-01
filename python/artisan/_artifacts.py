@@ -3,7 +3,7 @@ from pathlib import Path
 import shutil
 from time import sleep
 from typing import (
-    Any, Iterator, Dict, Mapping, MutableMapping,
+    Any, Iterator, Mapping, MutableMapping,
     Optional as Opt, Tuple, Union, cast
 )
 
@@ -11,10 +11,11 @@ import h5py as h5
 import numpy as np
 from ruamel import yaml
 
+from ._configurable import Configurable, schema
 from ._global_conf import get_conf
-from ._configurable import Configurable, write_meta
+from ._namespaces import namespacify, Namespace
 
-__all__ = ['Artifact', 'ArrayFile', 'EncodedFile']
+__all__ = ['Artifact', 'ArrayFile', 'EncodedFile', 'write_meta']
 
 #-- Type aliases --------------------------------------------------------------
 
@@ -98,12 +99,12 @@ class Artifact(Configurable):
         pass
 
     @property
-    def meta(self) -> Rec:
+    def meta(self) -> Any:
         '''
         The metadata stored in `{self.path}/_meta.yaml`
         '''
         # TODO: Implement caching
-        return cast(Rec, _namespacify(_read_meta(self)))
+        return cast(Rec, namespacify(_read_meta(self)))
 
     #-- MutableMapping methods ----------------------------
 
@@ -323,7 +324,7 @@ def _build(artifact: Artifact, spec: Rec) -> None:
 
     try:
         n_build_args = artifact.build.__code__.co_argcount
-        artifact.build(*([_Namespace(spec)] if n_build_args > 1 else []))
+        artifact.build(*([Namespace(spec)] if n_build_args > 1 else []))
         _write_meta(artifact, dict(spec=spec, status='done'))
     except BaseException as e:
         _write_meta(artifact, dict(spec=spec, status='stopped'))
@@ -400,29 +401,14 @@ def _write_meta(a: Artifact, meta: Rec) -> None:
     # (a.path / '_meta.yaml').write_text(yaml.round_trip_dump(meta))
     import json; (a.path / '_meta.yaml').write_text(json.dumps(meta))
 
-#-- Namespaces ----------------------------------------------------------------
 
-class _Namespace(Dict[str, object]):
-    'A `dict` that supports accessing items as attributes'
-
-    def __getattr__(self, key: str) -> Any:
-        return dict.__getitem__(self, key)
-
-    def __setattr__(self, key: str, val: object) -> None:
-        dict.__setitem__(self, key, val)
-
-    def __getattribute__(self, key: str) -> Any:
-        if key == '__dict__': return self
-        else: return object.__getattribute__(self, key)
-
-
-def _namespacify(obj: object) -> object:
-    if isinstance(obj, dict):
-        return _Namespace({k: _namespacify(obj[k]) for k in obj})
-    elif isinstance(obj, list):
-        return [_namespacify(v) for v in obj]
-    else:
-        return obj
+def write_meta() -> None:
+    '''
+    Write global config information to `{root_path}/_meta.yaml`.
+    '''
+    meta = {'spec': None, 'schema': schema()}
+    meta_text = yaml.round_trip_dump(meta)
+    Path(f'{get_conf().root_dir}/_meta.yaml').write_text(meta_text)
 
 #-- Scope search --------------------------------------------------------------
 

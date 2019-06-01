@@ -1,8 +1,8 @@
 '''
 A build system for explainable science
-'''
-from ._artifacts import Artifact, ArrayFile, EncodedFile
-from ._configurable import Configurable, write_meta
+''' 
+from ._artifacts import Artifact, ArrayFile, EncodedFile, write_meta
+from ._configurable import Configurable
 from ._global_conf import Conf, push_conf, pop_conf, using_conf, get_conf
 from ._http import serve
 
