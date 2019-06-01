@@ -1,4 +1,4 @@
-from artisan._configurable import Configurable
+from artisan._configurables import Configurable
 from artisan._global_conf import using_conf
 
 #-- Shared definitions --------------------------------------------------------

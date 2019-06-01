@@ -11,7 +11,7 @@ import h5py as h5
 import numpy as np
 from ruamel import yaml
 
-from ._configurable import Configurable, schema
+from ._configurables import Configurable, schema
 from ._global_conf import get_conf
 from ._namespaces import namespacify, Namespace
 
