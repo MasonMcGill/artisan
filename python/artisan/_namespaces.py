@@ -9,7 +9,7 @@ class Namespace(Dict[str, Any]):
     A `dict` that supports accessing items as attributes
     '''
     def __dir__(self) -> List[str]:
-        return list(dict.__iter__(self))
+        return list(set([*dict.__dir__(self), *dict.__iter__(self)]))
 
     def __getattr__(self, key: str) -> Any:
         return dict.__getitem__(self, key)
