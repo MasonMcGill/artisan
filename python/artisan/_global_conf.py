@@ -44,13 +44,12 @@ def get_conf() -> Conf:
 
 def push_conf(conf: Opt[Conf] = None, **updates: object) -> None:
     'Pushes a `Conf` onto the stack, making it the active `Conf`'
-    conf = get_conf() if conf is None else copy(conf)
+    conf = copy(get_conf() if conf is None else conf)
     for key, val in updates.items():
         setattr(conf, key, val)
     for val in conf.scope.values():
         assert isinstance(val, type)
     conf_stack.contents.append(conf)
-
 
 def pop_conf() -> Conf:
     'Pops the top `Conf` off of the stack'
