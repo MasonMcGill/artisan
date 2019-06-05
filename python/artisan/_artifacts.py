@@ -3,7 +3,7 @@ from pathlib import Path
 import shutil
 from time import sleep
 from typing import (
-    Any, Iterator, Mapping, MutableMapping,
+    Any, Iterator, List, Mapping, MutableMapping,
     Optional as Opt, Tuple, Union, cast
 )
 
@@ -75,9 +75,10 @@ class Artifact(Configurable):
         if spec is not None:
             spec = {'type': _identify(cls), **spec}
 
-        # Instantiate the artifact.
+        # Instantiate the artifact. (TODO: Type should be loaded from _meta.yaml if possible.)
         artifact = cast(Artifact, Configurable.__new__(cls, spec or {}))
         object.__setattr__(artifact, 'path', path)
+        object.__setattr__(artifact, '_cached_keys', set())
 
         # Point its path to a matching prebuilt artifact, or build it.
         if path is None:
@@ -238,12 +239,27 @@ class Artifact(Configurable):
     __setattr__ = __setitem__
     __delattr__ = __delitem__
 
-    # [A hack to get REPL autocompletion to work]
+    #-- A hack to get REPL autocompletion to work ---------
+
     def __getattribute__(self, key: str) -> Any:
-        return (
-            {k: None for k in self} if key == '__dict__'
-            else object.__getattribute__(self, key)
-        )
+        if key in object.__getattribute__(self, '_cached_keys'):
+            try:
+                object.__setattr__(self, key, self[key])
+            except KeyError:
+                object.__delattr__(self, key)
+                object.__getattribute__(self, '_cached_keys').remove(key)
+        return object.__getattribute__(self, key)
+
+    def __dir__(self) -> List[str]:
+        for key in self._cached_keys:
+            object.__delattr__(self, key)
+        self._cached_keys.clear()
+
+        for key in set(self).difference(object.__dir__(self)):
+            object.__setattr__(self, key, self[key])
+            self._cached_keys.add(key)
+
+        return cast(list, object.__dir__(self))
 
 #-- Artifact construction -----------------------------------------------------
 
