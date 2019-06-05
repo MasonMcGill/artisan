@@ -20,6 +20,10 @@ class Namespace(Dict[str, Any]):
     def __delattr__(self, key: str) -> None:
         dict.__delitem__(self, key)
 
+    @property
+    def __dict__(self) -> dict: # type: ignore
+        return self
+
 
 def namespacify(obj: object) -> object:
     '''
