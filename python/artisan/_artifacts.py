@@ -232,9 +232,14 @@ class Artifact(Configurable):
 
     #-- Attribute-style element access --------------------
 
-    __getattr__ = __getitem__
-    __setattr__ = __setitem__
-    __delattr__ = __delitem__
+    def __getattr__(self, key: str) -> ArtifactEntry:
+        return self.__getitem__(key)
+
+    def __setattr__(self, key: str, value: object) -> None:
+        self.__setitem__(key, value)
+
+    def __delattr__(self, key: str) -> None:
+        self.__delitem__(key)
 
     #-- A hack to get REPL autocompletion to work ---------
 
