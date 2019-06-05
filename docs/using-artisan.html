@@ -297,7 +297,7 @@ artifact to construct (see <em>Nested configurations</em> for more details).</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">Greeting</span><span class="p">(</span><span class="s1">&#39;Greeting_0000&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>Specifying a path <em>and</em> a specification returns a matching artifact, if it
+<p>Providing a path <em>and</em> a specification returns a matching artifact, if it
 exists at that path, and otherwise creates one, at that path.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">Greeting</span><span class="p">(</span><span class="s1">&#39;greetings/hello4sven&#39;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;Sven&#39;</span><span class="p">,</span> <span class="n">punctuation</span><span class="o">=</span><span class="s1">&#39;!&#39;</span><span class="p">)</span>
 </pre></div>
@@ -346,7 +346,7 @@ object property schemas.</p>
 <li><p>Identifier definitions are translated to property names.</p></li>
 <li><p>Type annotations are translated to “type”, and sometimes “items”, constraints.
 Supported types include <code class="xref py py-obj docutils literal notranslate"><span class="pre">bool</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">str</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">NoneType</span></code>,
-artifact or component specification types (<em>e.g.</em> <code class="xref py py-obj docutils literal notranslate"><span class="pre">Greeting.Spec</span></code>), and
+artifact or component configuration types (<em>e.g.</em> <code class="xref py py-obj docutils literal notranslate"><span class="pre">Greeting.Conf</span></code>), and
 <code class="xref py py-obj docutils literal notranslate"><span class="pre">typing.List</span></code> specializations of other supported types
 (<em>e.g.</em> <code class="xref py py-obj docutils literal notranslate"><span class="pre">List[int]</span></code>).</p></li>
 <li><p>Assignments (<em>e.g.</em> <code class="xref py py-obj docutils literal notranslate"><span class="pre">x</span> <span class="pre">=</span> <span class="pre">1</span></code>) add “default” fields.</p></li>
@@ -354,7 +354,7 @@ artifact or component specification types (<em>e.g.</em> <code class="xref py py
 <li><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">dict</span></code> literals following definitions are merged into the schema.
 <code class="xref py py-obj docutils literal notranslate"><span class="pre">(str,</span> <span class="pre">dict)</span></code> and <code class="xref py py-obj docutils literal notranslate"><span class="pre">(dict,</span> <span class="pre">str)</span></code> literal pairs are also supported.</p></li>
 </ul>
-<p>A configurating entry matching <code class="xref py py-obj docutils literal notranslate"><span class="pre">&lt;SomeArtifactType&gt;.Spec</span></code> must</p>
+<p>A configurating entry matching <code class="xref py py-obj docutils literal notranslate"><span class="pre">&lt;SomeArtifactType&gt;.Conf</span></code> must</p>
 <ul class="simple">
 <li><p>have a “type” field resloving, in the current <code class="xref py py-obj docutils literal notranslate"><span class="pre">scope</span></code>, to a subclass of
 <code class="xref py py-obj docutils literal notranslate"><span class="pre">&lt;SomeArtifactType&gt;</span></code>, and</p></li>
