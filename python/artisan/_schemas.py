@@ -78,7 +78,7 @@ def conf_schema_from_concrete_type(type_: type, scope: TypeDict) -> ObjDict:
 
     # Collect property defaults.
     for key, val in vars(Conf).items():
-        if not key.startswith('__'):
+        if not key.startswith('_'):
             schema['properties'][key]['default'] = val
 
     # Collect property descriptions and raw property schema.
