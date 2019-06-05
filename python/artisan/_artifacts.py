@@ -182,10 +182,7 @@ class Artifact(Configurable):
         # Write a subartifact.
         elif isinstance(val, (Mapping, Artifact)):
             assert path.suffix == ''
-            MutRec.update(
-                cast(MutRec, Artifact(path)),
-                cast(Rec, val)
-            )
+            MutRec.update(Artifact(path), val) # type: ignore
 
         # Write an array.
         else:
