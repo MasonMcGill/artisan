@@ -33,6 +33,9 @@ class ConfigurableMeta(type):
         # Make the configurable class accessable from the configuration class.
         self.Conf.__recipient_type__ = self # type: ignore
 
+        # [Temporary, for backward compatibility]
+        self.Spec = self.Conf
+
         # Add the configurable class to the default scope.
         default_scope[self.__qualname__] = (
             NameConflict if self.__qualname__ in default_scope
