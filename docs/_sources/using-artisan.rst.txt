@@ -71,13 +71,13 @@ definition.
           # array to an attribute creates a single-dataset HDF5 file.
           # Subscript syntax (`self['key'] = value`) is also supported.
           #
-          self.message = [f'Hello, {c.name}{c.punctuation}.']
+          self.message = f'Hello, {c.name}{c.punctuation}.'.encode()
 
           ####
           # Array fields can also be extended. `extend` implicitly
           # creates a file if necessary.
           #
-          self.extend('message', ['Be not afraid.', 'I come in peace.'])
+          self.extend('message', [b'Be not afraid.', b'I come in peace.'])
 
           ####
           # Assigning a path to a field copies the file at that

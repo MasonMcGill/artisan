@@ -221,13 +221,13 @@ definition.</p>
         <span class="c1"># array to an attribute creates a single-dataset HDF5 file.</span>
         <span class="c1"># Subscript syntax (`self[&#39;key&#39;] = value`) is also supported.</span>
         <span class="c1">#</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">message</span> <span class="o">=</span> <span class="p">[</span><span class="n">f</span><span class="s1">&#39;Hello, </span><span class="si">{c.name}{c.punctuation}</span><span class="s1">.&#39;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">message</span> <span class="o">=</span> <span class="n">f</span><span class="s1">&#39;Hello, </span><span class="si">{c.name}{c.punctuation}</span><span class="s1">.&#39;</span><span class="o">.</span><span class="n">encode</span><span class="p">()</span>
 
         <span class="c1">####</span>
         <span class="c1"># Array fields can also be extended. `extend` implicitly</span>
         <span class="c1"># creates a file if necessary.</span>
         <span class="c1">#</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="s1">&#39;message&#39;</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;Be not afraid.&#39;</span><span class="p">,</span> <span class="s1">&#39;I come in peace.&#39;</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="s1">&#39;message&#39;</span><span class="p">,</span> <span class="p">[</span><span class="sa">b</span><span class="s1">&#39;Be not afraid.&#39;</span><span class="p">,</span> <span class="sa">b</span><span class="s1">&#39;I come in peace.&#39;</span><span class="p">])</span>
 
         <span class="c1">####</span>
         <span class="c1"># Assigning a path to a field copies the file at that</span>
