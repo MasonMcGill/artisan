@@ -1,0 +1,111 @@
+#!/usr/bin/env python3
+from shutil import rmtree
+from typing import Union
+
+import artisan; from artisan import Artifact, ArrayFile
+import numpy as np
+
+#-- Define artifact types. ----------------------------------------------------
+
+class Signal(Artifact):
+    ''' A periodically sampled time-varying function '''
+
+    sample_rate: ArrayFile; 'Number of samples per second'
+    samples: ArrayFile; 'Successive values of the function'
+
+
+class SineWave(Signal):
+    ''' A sampled sine wave '''
+
+    class Conf:
+        f: float; 'Frequency'
+        φ: float; 'Phase shift'
+        t_end: float; 'Time of the last point to compute'
+        δt: float; 'Timestep size'
+
+    ''' Computes sin(2πf⋅t + φ) for t ∈ {0, δt, 2⋅δt, ...t_end}. '''
+
+    sample_rate: ArrayFile; 'Number of samples per second'
+    samples: ArrayFile; 'Successive values of the function'
+
+    def build(self, c: Conf) -> None:
+        t = np.arange(0, c.t_end, c.δt)
+        self.sample_rate = 1 / c.δt
+        self.samples = np.sin(2 * np.pi * c.f * t + c.φ)
+
+
+class SawWave(Signal):
+    ''' A sampled sawtooth wave '''
+
+    class Conf:
+        f: float; 'Frequency'
+        φ: float; 'Phase shift'
+        t_end: float; 'Time of the last point to compute'
+        δt: float; 'Timestep size'
+
+    ''' Computes (2f⋅t + φ) % 2 for t ∈ {0, δt, 2⋅δt, ...t_end}. '''
+
+    sample_rate: ArrayFile; 'Number of samples per second'
+    samples: ArrayFile; 'Successive values of the function'
+
+    def build(self, c: Conf) -> None:
+        t = np.arange(0, c.t_end, c.δt)
+        self.sample_rate = 1 / c.δt
+        self.samples = (2 * c.f * t + c.φ) % 2
+
+
+class BoxFilteredSignal(Signal):
+    ''' An existing signal, convolved with a box filter '''
+
+    class Conf:
+        src: Union[Signal.Conf, str]; 'Input signal'
+        w_box: float; 'Filter width, in seconds'
+
+    sample_rate: ArrayFile; 'Number of samples per second'
+    samples: ArrayFile; 'Successive values of the function'
+
+    def build(self, c: Conf) -> None:
+        src = Signal(c.src)
+        box = np.ones(int(src.sample_rate[...] * c.w_box))
+        self.sample_rate = src.sample_rate
+        self.samples = np.convolve(src.samples, box / len(box), 'same')
+
+
+class BoxFilterTest(Artifact):
+    ''' A signal, pre- and post-box-filter '''
+
+    class Conf:
+        signal: Signal.Conf; 'Input signal'
+        w_box: float; 'Filter width, in seconds'
+
+    signal: Signal
+    filtered_signal: BoxFilteredSignal
+
+    def build(self, c: Conf) -> None:
+        Signal(f'{self.path}/signal', c.signal)
+        BoxFilteredSignal(
+            f'{self.path}/filtered_signal',
+            src = f'{self.path}/signal',
+            w_box = c.w_box
+        )
+
+#-- Construct and serve artifacts. --------------------------------------------
+
+rmtree('.test-data', ignore_errors=True)
+artisan.push_conf(root_dir='.test-data')
+
+BoxFilterTest(
+    signal = dict(
+        type = SineWave,
+        f = 10,
+        φ = 0,
+        t_end = 1,
+        δt = 0.001
+    ),
+    w_box = 0.1
+)
+
+try:
+    artisan.serve()
+except BaseException:
+    rmtree('.test-data', ignore_errors=True)
