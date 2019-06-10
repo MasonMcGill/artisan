@@ -1,10 +1,11 @@
 import itertools
+import json
 from pathlib import Path
 import shutil
 from time import sleep
 from typing import (
     Any, Iterator, List, Mapping, MutableMapping,
-    Optional as Opt, Tuple, Union, cast
+    Optional, Tuple, Union, cast
 )
 
 import h5py as h5
@@ -15,13 +16,9 @@ from ._configurables import Configurable, schema
 from ._global_conf import get_conf
 from ._namespaces import namespacify, Namespace
 
-__all__ = ['Artifact', 'ArrayFile', 'EncodedFile', 'write_meta']
+__all__ = ['Artifact', 'ArrayFile', 'EncodedFile', 'write_global_meta']
 
 #-- Type aliases --------------------------------------------------------------
-
-Rec = Mapping[str, object]
-MutRec = MutableMapping[str, object]
-Tuple_ = Tuple[object, ...]
 
 from pathlib import Path as EncodedFile
 from h5py import Dataset as ArrayFile
@@ -36,16 +33,16 @@ class Artifact(Configurable):
     Arguments:
         path (Path|str): The path at which the artifact is, or should be,
             stored
-        spec (Mapping[str, object]): The subtype-specific configuration,
+        conf (Mapping[str, object]): The subtype-specific configuration,
             optionally including a "type" field indicating what type of
             artifact to construct
 
     Constructors:
-        - Artifact(spec: *Mapping[str, object]*)
-        - Artifact(**spec_elem: *object*)
+        - Artifact(conf: *Mapping[str, object]*)
+        - Artifact(**conf_elem: *object*)
         - Artifact(path: *Path|str*)
-        - Artifact(path: *Path|str*, spec: *Mapping[str, object]*)
-        - Artifact(path: *Path|str*, **spec_elem: *object*)
+        - Artifact(path: *Path|str*, conf: *Mapping[str, object]*)
+        - Artifact(path: *Path|str*, **conf_elem: *object*)
 
     Fields:
         - **path** (*Path*): The path to the root of the file tree backing this \
@@ -62,50 +59,20 @@ class Artifact(Configurable):
     path: Path
 
     def __new__(cls, *args: object, **kwargs: object) -> Any:
-        # Parse arguments.
-        path, spec = _parse_artifact_args(args, kwargs)
-
-        # Resolve `path`, dereferencing "~" and "@".
-        if path is not None:
-            if str(path).startswith('@/'):
-                path = Path(get_conf().root_dir) / str(path)[2:]
-            path = path.expanduser().resolve()
-
-        # Add type information to `spec`.
-        if spec is not None:
-            spec = {'type': _identify(cls), **spec}
-
-        # Instantiate the artifact. (TODO: Type should be loaded from _meta.yaml if possible.)
-        artifact = cast(Artifact, Configurable.__new__(cls, spec or {}))
-        object.__setattr__(artifact, 'path', path)
-        object.__setattr__(artifact, '_cached_keys', set())
-
-        # Point its path to a matching prebuilt artifact, or build it.
-        if path is None:
-            assert spec is not None
-            _find_or_build(artifact, spec)
-        elif spec is not None:
-            _ensure_built(artifact, spec)
-
-        # Return it.
-        return artifact
-
-    def build(self, conf: Any) -> None:
-        '''
-        Write arrays, encoded files, and subartifacts
-
-        `build` is called during instantiation if a matching existing artifact
-        is not found. Override it to construct nontrivial cacheable artifacts.
-        '''
-        pass
+        path, conf = _parse_artifact_args(args, kwargs)
+        if path is not None and conf is None:
+            return _artifact_from_path(cls, _resolve_path(path))
+        elif path is None and conf is not None:
+            return _artifact_from_conf(cls, conf)
+        elif path is not None and conf is not None:
+            return _artifact_from_path_and_conf(cls, _resolve_path(path), conf)
 
     @property
-    def meta(self) -> Any:
+    def meta(self) -> Namespace:
         '''
         The metadata stored in `{self.path}/_meta.yaml`
         '''
-        # TODO: Implement caching
-        return cast(Rec, namespacify(_read_meta(self)))
+        return _read_meta(self.path)
 
     #-- MutableMapping methods ----------------------------
 
@@ -182,7 +149,7 @@ class Artifact(Configurable):
         # Write a subartifact.
         elif isinstance(val, (Mapping, Artifact)):
             assert path.suffix == ''
-            MutRec.update(Artifact(path), val) # type: ignore
+            MutableMapping.update(Artifact(path), val) # type: ignore
 
         # Write an array.
         else:
@@ -209,7 +176,7 @@ class Artifact(Configurable):
         extending `EncodedFile`s performs byte-level concatenation, and
         extending subartifacts extends their fields.
 
-        File corresponding to `self[key]` are created if they do not already
+        Files corresponding to `self[key]` are created if they do not already
         exist.
         '''
         path = self.path / key
@@ -241,7 +208,7 @@ class Artifact(Configurable):
     def __delattr__(self, key: str) -> None:
         self.__delitem__(key)
 
-    #-- A hack to get REPL autocompletion to work ---------
+    #-- Attribute preemption, for REPL autocompletion -----
 
     def __getattribute__(self, key: str) -> Any:
         if key in object.__getattribute__(self, '_cached_keys'):
@@ -265,14 +232,23 @@ class Artifact(Configurable):
 
 #-- Artifact construction -----------------------------------------------------
 
-def _parse_artifact_args(args: Tuple_, kwargs: Rec) -> Tuple[Opt[Path], Opt[Rec]]:
-    # (spec)
+def _parse_artifact_args(
+        args: Tuple[object, ...],
+        kwargs: Mapping[str, object]
+    ) -> Tuple[
+        Optional[Path],
+        Optional[Mapping[str, object]]
+    ]:
+    '''
+    Return `(path, conf)` or raise an error.
+    '''
+    # (conf)
     if (len(args) == 1
         and isinstance(args[0], Mapping)
         and len(kwargs) == 0):
         return None, dict(args[0])
 
-    # (**spec)
+    # (**conf)
     elif (len(args) == 0
           and len(kwargs) > 0):
         return None, kwargs
@@ -283,14 +259,14 @@ def _parse_artifact_args(args: Tuple_, kwargs: Rec) -> Tuple[Opt[Path], Opt[Rec]
           and len(kwargs) == 0):
         return Path(args[0]), None
 
-    # (path, spec)
+    # (path, conf)
     elif (len(args) == 2
           and isinstance(args[0], (str, Path))
           and isinstance(args[1], Mapping)
           and len(kwargs) == 0):
         return Path(args[0]), dict(args[1])
 
-    # (path, **spec)
+    # (path, **conf)
     elif (len(args) == 1
           and isinstance(args[0], (str, Path))
           and len(kwargs) > 0):
@@ -302,56 +278,124 @@ def _parse_artifact_args(args: Tuple_, kwargs: Rec) -> Tuple[Opt[Path], Opt[Rec]
             'Invalid argument types for the `Artifact` constructor.\n'
             'Valid signatures:\n'
             '\n'
-            '    - Artifact(spec: Mapping[str, object])\n'
-            '    - Artifact(**spec_elem: object)\n'
+            '    - Artifact(conf: Mapping[str, object])\n'
+            '    - Artifact(**conf_elem: object)\n'
             '    - Artifact(path: Path|str)\n'
-            '    - Artifact(path: Path|str, spec: Mapping[str, object])\n'
-            '    - Artifact(path: Path|str, **spec_elem: object)\n'
+            '    - Artifact(path: Path|str, conf: Mapping[str, object])\n'
+            '    - Artifact(path: Path|str, **conf_elem: object)\n'
         )
 
 
-def _find_or_build(artifact: Artifact, spec: Rec) -> None:
+def _artifact_from_path(cls: type, path: Path) -> Artifact:
+    '''
+    Return an artifact corresponding to the file tree at `path`.
+
+    An error is raised if the type recorded in `_meta.yaml`, if any, is not a
+    subtype of `cls`.
+    '''
+    spec = _read_meta(path).spec or {}
+    written_type = get_conf().scope.get(spec.get('type', None), None)
+
+    if written_type is not None and not issubclass(written_type, cls):
+        raise FileExistsError(
+            f'{path} is a {written_type.__module__}.{written_type.__qualname__}'
+            f', not a {cls.__module__}.{cls.__qualname__}.'
+        )
+
+    artifact = cast(Artifact, Configurable.__new__(cls, spec))
+    object.__setattr__(artifact, '_cached_keys', set())
+    object.__setattr__(artifact, 'path', path)
+    return artifact
+
+
+def _artifact_from_conf(cls: type, conf: Mapping[str, object]) -> Artifact:
+    '''
+    Find or build an artifact with the given type and configuration.
+    '''
+    artifact = cast(Artifact, Configurable.__new__(cls, conf))
+    object.__setattr__(artifact, '_cached_keys', set())
+    spec = Namespace(type=_identify(type(artifact)), **artifact.conf)
+
     for path in Path(get_conf().root_dir).glob('*'):
-        object.__setattr__(artifact, 'path', path)
-        try: return _ensure_built(artifact, spec)
-        except FileExistsError: pass
-    object.__setattr__(artifact, 'path', _new_artifact_path(type(artifact)))
-    _build(artifact, spec)
+        meta = _read_meta(path)
+        if meta.spec == spec:
+            while meta.status == 'running':
+                sleep(0.01)
+                meta = _read_meta(path)
+            if meta.status == 'done':
+                object.__setattr__(artifact, 'path', path)
+                return artifact
+    else:
+        object.__setattr__(artifact, 'path', _new_artifact_path(type(artifact)))
+        _build(artifact)
+        return artifact
 
 
-def _ensure_built(artifact: Artifact, spec: Rec) -> None:
-    # [Already started]
-    if artifact.path.exists():
-        if _read_meta(artifact)['spec'] != spec:
+def _artifact_from_path_and_conf(cls: type,
+                                 path: Path,
+                                 conf: Mapping[str, object]) -> Artifact:
+    '''
+    Find or build an artifact with the given type, path, and configuration.
+    '''
+    artifact = cast(Artifact, Configurable.__new__(cls, conf))
+    object.__setattr__(artifact, '_cached_keys', set())
+    object.__setattr__(artifact, 'path', path)
+
+    if path.exists():
+        meta = _read_meta(path)
+        if meta.spec != {'type': _identify(type(artifact)), **artifact.conf}:
             raise FileExistsError(f'"{artifact.path}" (incompatible spec)')
-        while _read_meta(artifact)['status'] == 'running':
-            sleep(0.001)
-        if _read_meta(artifact)['status'] == 'stopped':
+        while meta.status == 'running':
+            sleep(0.01)
+            meta = _read_meta(path)
+        if artifact.meta.status == 'stopped':
             raise FileExistsError(f'"{artifact.path}" was stopped mid-build.')
+    else:
+        _build(artifact)
 
-    # [Starting from scratch]
-    else: _build(artifact, spec)
+    return artifact
 
 
-def _build(artifact: Artifact, spec: Rec) -> None:
+def _build(artifact: Artifact) -> None:
+    '''
+    Create parent directories, invoke `artifact.build`, and store metadata.
+    '''
     if Path(get_conf().root_dir) in artifact.path.parents:
-        write_meta()
+        write_global_meta()
+
+    # TODO: Fix YAML generation.
+    meta_path = artifact.path / '_meta.yaml'
+    spec = Namespace(type=_identify(type(artifact)), **artifact.conf)
+    write_meta = lambda **kwargs: meta_path.write_text(json.dumps(kwargs))
 
     artifact.path.mkdir(parents=True)
-    _write_meta(artifact, dict(spec=spec, status='running'))
+    write_meta(spec=spec, status='running')
 
     try:
-        n_build_args = artifact.build.__code__.co_argcount
-        artifact.build(*([Namespace(spec)] if n_build_args > 1 else []))
-        _write_meta(artifact, dict(spec=spec, status='done'))
+        if callable(getattr(type(artifact), 'build', None)):
+            n_build_args = artifact.build.__code__.co_argcount
+            build_args = [artifact.conf] if n_build_args > 1 else []
+            artifact.build(*build_args)
+        write_meta(spec=spec, status='done')
     except BaseException as e:
-        _write_meta(artifact, dict(spec=spec, status='stopped'))
+        write_meta(spec=spec, status='stopped')
         raise e
 
 
+def _resolve_path(path: Path) -> Path:
+    '''
+    Dereference ".", "..", "~", and "@".
+    '''
+    if str(path).startswith('@/'):
+        path = Path(get_conf().root_dir) / str(path)[2:]
+    return path.expanduser().resolve()
+
+
 def _new_artifact_path(type_: type) -> Path:
-    conf = get_conf()
-    root = Path(conf.root_dir)
+    '''
+    Generate an unused path in the artifact root directory.
+    '''
+    root = Path(get_conf().root_dir)
     type_name = _identify(type_)
     for i in itertools.count():
         dst = root / f'{type_name}_{i:04x}'
@@ -410,17 +454,19 @@ def _extend_file(dst: Path, src: Path) -> None:
             f_dst.write(f_src.read())
 
 
-def _read_meta(a: Artifact) -> Rec:
-    try: return cast(Rec, yaml.safe_load((a.path / '_meta.yaml').read_text()))
-    except: return dict(spec=None, status='done')
+def _read_meta(path: Path) -> Namespace:
+    # TODO: Implement caching
+    try:
+        meta = namespacify(yaml.safe_load((path/'_meta.yaml').read_text()))
+        assert isinstance(meta, Namespace)
+        assert isinstance(meta.spec, Namespace)
+        assert isinstance(meta.status, str)
+        return meta
+    except:
+        return Namespace(spec=None, status='done')
 
 
-def _write_meta(a: Artifact, meta: Rec) -> None:
-    # (a.path / '_meta.yaml').write_text(yaml.round_trip_dump(meta))
-    import json; (a.path / '_meta.yaml').write_text(json.dumps(meta))
-
-
-def write_meta() -> None:
+def write_global_meta() -> None:
     '''
     Write global config information to `{root_path}/_meta.yaml`.
     '''
