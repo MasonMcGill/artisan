@@ -5,7 +5,7 @@ import shutil
 from time import sleep
 from typing import (
     Any, Iterator, List, Mapping, MutableMapping,
-    Optional, Tuple, Union, cast
+    Optional, Tuple, cast
 )
 from typing_extensions import Protocol
 
@@ -101,7 +101,7 @@ class Artifact(Configurable):
     def keys(self) -> Iterator[str]:
         return self.__iter__()
 
-    def __getitem__(self, key: str) -> Union[Path, h5.Dataset, 'Artifact']:
+    def __getitem__(self, key: str) -> Any:
         '''
         Returns an `ArrayFile`, `EncodedFile`, or `Artifact` corresponding to
         `self.path/key`
@@ -202,7 +202,7 @@ class Artifact(Configurable):
 
     #-- Attribute-style element access --------------------
 
-    def __getattr__(self, key: str) -> Union[Path, h5.Dataset, 'Artifact']:
+    def __getattr__(self, key: str) -> Any:
         return self.__getitem__(key)
 
     def __setattr__(self, key: str, value: object) -> None:
