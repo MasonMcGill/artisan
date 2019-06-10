@@ -79,3 +79,51 @@ def test_namespacify_with_nesting():
     assert isinstance(namespacify(obj).namespace, Namespace)
     assert isinstance(namespacify(obj).namespace.c, Namespace)
     assert isinstance(namespacify(obj).namespace.d, Namespace)
+
+
+def test_repr():
+    ns_a = Namespace()
+    assert repr(ns_a) == 'Namespace()'
+
+    ns_b = Namespace(
+        list = [
+            Namespace(a=0, b=1),
+            Namespace(c=2, d=3)
+        ],
+        dict = Namespace(
+            a = Namespace(a=0, b=1),
+            b = Namespace(c=2, d=3)
+        ),
+        namespace = Namespace(
+            c = Namespace(a=0, b=1),
+            d = Namespace(c=2, d=3)
+        )
+    )
+    assert repr(ns_b) == (
+        'Namespace(\n'
+        '  list = [Namespace(a=0, b=1), Namespace(c=2, d=3)],\n'
+        '  dict = Namespace(a=Namespace(a=0, b=1), b=Namespace(c=2, d=3)),\n'
+        '  namespace = Namespace(c=Namespace(a=0, b=1), d=Namespace(c=2, d=3))\n'
+        ')'
+    )
+
+    ns_c = Namespace(
+        bool = False,
+        int = 0,
+        float = 1.1,
+        large_entry = Namespace(
+            list = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+            str = 'The quick brown fox jumped over the lazy dog.'
+        )
+    )
+    assert repr(ns_c) == (
+        'Namespace(\n'
+        '  bool = False,\n'
+        '  int = 0,\n'
+        '  float = 1.1,\n'
+        '  large_entry = Namespace(\n'
+        '    list = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],\n'
+        '    str = \'The quick brown fox jumped over the lazy dog.\'\n'
+        '  )\n'
+        ')'
+    )

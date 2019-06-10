@@ -26,6 +26,52 @@ class Namespace(Dict[str, Any]):
     def __dict__(self) -> dict: # type: ignore
         return self
 
+    def __repr__(self) -> str:
+        def single_line_repr(elem: object) -> str:
+            if isinstance(elem, list):
+                return '[' + ', '.join(map(single_line_repr, elem)) + ']'
+            elif isinstance(elem, Namespace):
+                return (
+                    'Namespace('
+                    + ', '.join(
+                        f'{k}={single_line_repr(v)}'
+                        for k, v in elem.items()
+                    )
+                    + ')'
+                )
+            else:
+                return repr(elem).replace('\n', ' ')
+
+        def repr_in_context(elem: object, curr_col: int, indent: int) -> str:
+            sl_repr = single_line_repr(elem)
+            if len(sl_repr) <= 80 - curr_col:
+                return sl_repr
+            elif isinstance(elem, list):
+                return (
+                    '[\n'
+                    + ' ' * (indent + 2)
+                    + (',\n' + ' ' * (indent + 2)).join(
+                        repr_in_context(e, indent + 2, indent + 2)
+                        for e in elem
+                    )
+                    + '\n' + ' ' * indent + ']'
+                )
+            elif isinstance(elem, Namespace):
+                return (
+                    'Namespace(\n'
+                    + ' ' * (indent + 2)
+                    + (',\n' + ' ' * (indent + 2)).join(
+                        f'{k} = '
+                        + repr_in_context(v, indent + 5 + len(k), indent + 2)
+                        for k, v in elem.items()
+                    )
+                    + '\n' + ' ' * indent + ')'
+                )
+            else:
+                return repr(elem)
+
+        return repr_in_context(self, 0, 0)
+
 
 def namespacify(obj: object) -> object:
     '''
