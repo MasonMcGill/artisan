@@ -311,7 +311,7 @@ def _parse_artifact_args(args: Tuple_, kwargs: Rec) -> Tuple[Opt[Path], Opt[Rec]
 
 
 def _find_or_build(artifact: Artifact, spec: Rec) -> None:
-    for path in Path(get_conf().root_dir).iterdir():
+    for path in Path(get_conf().root_dir).glob('*'):
         object.__setattr__(artifact, 'path', path)
         try: return _ensure_built(artifact, spec)
         except FileExistsError: pass
@@ -426,6 +426,7 @@ def write_meta() -> None:
     '''
     meta = {'spec': None, 'schema': schema()}
     meta_text = yaml.round_trip_dump(meta)
+    Path(get_conf().root_dir).mkdir(parents=True, exist_ok=True)
     Path(f'{get_conf().root_dir}/_meta.yaml').write_text(meta_text)
 
 #-- Scope search --------------------------------------------------------------
