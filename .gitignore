@@ -1,6 +1,7 @@
 .vscode/
 .mypy_cache/
 .pytest_cache/
+.test-data/
 
 docs/.doctrees/
 docs/.buildinfo
