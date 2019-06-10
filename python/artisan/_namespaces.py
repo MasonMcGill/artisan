@@ -30,7 +30,7 @@ def namespacify(obj: object) -> object:
     Recursively convert mappings (item access only) and ad-hoc namespaces
     (attribute access only) to `Namespace`s (both item and element access).
     '''
-    if isinstance(obj, (type(None), bool, int, float, str)):
+    if isinstance(obj, (type(None), bool, int, float, str, type)):
         return obj
     elif isinstance(obj, list):
         return [namespacify(v) for v in obj]
