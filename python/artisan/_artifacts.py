@@ -7,6 +7,7 @@ from typing import (
     Any, Iterator, List, Mapping, MutableMapping,
     Optional, Tuple, Union, cast
 )
+from typing_extensions import Protocol
 
 import h5py as h5
 import numpy as np
@@ -18,11 +19,13 @@ from ._namespaces import namespacify, Namespace
 
 __all__ = ['Artifact', 'ArrayFile', 'EncodedFile', 'write_global_meta']
 
-#-- Type aliases --------------------------------------------------------------
+#-- Static type definitions ---------------------------------------------------
 
 from pathlib import Path as EncodedFile
-from h5py import Dataset as ArrayFile
-ArtifactEntry = Union['Artifact', ArrayFile, EncodedFile]
+
+class ArrayFile(Protocol):
+    def __get__(self, obj: object, type_: Optional[type]) -> h5.Dataset: ...
+    def __set__(self, obj: object, val: object) -> None: ...
 
 #-- Artifacts -----------------------------------------------------------------
 
@@ -98,7 +101,7 @@ class Artifact(Configurable):
     def keys(self) -> Iterator[str]:
         return self.__iter__()
 
-    def __getitem__(self, key: str) -> ArtifactEntry:
+    def __getitem__(self, key: str) -> Union[Path, h5.Dataset, 'Artifact']:
         '''
         Returns an `ArrayFile`, `EncodedFile`, or `Artifact` corresponding to
         `self.path/key`
@@ -199,7 +202,7 @@ class Artifact(Configurable):
 
     #-- Attribute-style element access --------------------
 
-    def __getattr__(self, key: str) -> ArtifactEntry:
+    def __getattr__(self, key: str) -> Union[Path, h5.Dataset, 'Artifact']:
         return self.__getitem__(key)
 
     def __setattr__(self, key: str, value: object) -> None:
