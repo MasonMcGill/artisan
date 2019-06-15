@@ -14,6 +14,7 @@
   "scripts": {
     "build": "rollup -c",
     "watch": "rollup -c --watch",
+    "test": "rollup -c --watch & python3 tests/serve-data & artisan-ui tests/test.config.js",
     "prepublishOnly": "rollup -c"
   },
   "dependencies": {
