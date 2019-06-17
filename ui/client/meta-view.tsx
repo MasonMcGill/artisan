@@ -1,45 +1,19 @@
-import React, { useState } from 'react'
-import Markdown from 'react-markdown-renderer'
+import React from 'react'
 
-import { fetchSchema, tryFetch } from './app'
+import { tryFetch } from './app'
 
 
 //-----------------------------------------------------------------------------
 
 
 export default function MetaView({ app }) {
+  const schema = tryFetch(app, '/_meta').schema || { definitions: {} }
   const meta = tryFetch(app, '_meta') || { spec: null }
   if (meta.spec === null) return null
 
-  const schema = fetchSchema(app, meta)
-  const [descHead, ...descBody] = schema.description.trim().split('\n\n')
-  const { type, ...conf } = meta.spec
-
   return (
     <div className='aui__meta-view'>
-      <span className='token atrule'>type: </span>
-      {meta.spec.type}
-      <span className='aui__comment'>
-        {' \u00A0—\u00A0 '}{descHead}
-      </span>
-      {
-        Object.keys(conf).map(key => {
-          const propSchema = schema.properties[key] || {}
-          return (
-            <div key={key}>
-              <span className='token atrule'>{key}: </span> {conf[key].toString()}
-              {
-                propSchema.description === undefined ? null : (
-                  <span className='aui__comment'>
-                    {' \u00A0—\u00A0 '}{propSchema.description}
-                  </span>
-                )
-              }
-            </div>
-          )
-        })
-      }
-      <DescBody app={app}/>
+      {render(meta.spec, 0, 0, schema)}
     </div>
   )
 }
@@ -48,30 +22,50 @@ export default function MetaView({ app }) {
 //-----------------------------------------------------------------------------
 
 
-function DescBody({ app }) {
-  const [collapsed, setCollapsed] = useState(true)
+type Schema = { definitions: {} }
 
-  if (collapsed) {
-    return (
-      <div className='aui__desc-body--collapsed'
-            onClick={() => setCollapsed(false)}>
-        {'< Expand description >'}
-      </div>
-    )
+
+function render(val: any, indent: number, currCol: number, schema: Schema) {
+  if (Array.isArray(val)) {
+    const elements = []
+    for (const e of val) {
+      elements.push(<br/>)
+      elements.push('\u00A0'.repeat(indent + 2) + '- ')
+      if (typeof e === 'object')
+        elements.push(<br/>)
+      elements.push(render(e, indent + 2, indent + 4, schema))
+    }
+    return <>{...elements.slice(1)}</>
+  }
+
+  else if (typeof val === 'object' && val.constructor === Object) {
+    const typeSchema = schema.definitions[val.type] || {}
+    const propSchemas = typeSchema.properties || {}
+    const elements = []
+    for (const k of Object.keys(val)) {
+      const desc = (propSchemas[k] || {}).description
+      elements.push(<br/>)
+      elements.push('\u00A0'.repeat(indent))
+      elements.push(<span className='token atrule' title={desc}>{k + ': '}</span>)
+      if (typeof val[k] === 'object')
+        elements.push(<br/>)
+      elements.push(render(val[k], indent + 2, indent + 4 + k.length, schema))
+    }
+    return <>{...elements.slice(1)}</>
+  }
+
+  else if (typeof val === 'string') {
+    const desc = (schema.definitions[val] || {}).description
+    return desc !== undefined
+      ? <span className='token symbol' title={desc}>{val}</span>
+      : <span className='token string' title={desc}>{val}</span>
+  }
+
+  else if (typeof val === 'number') {
+    return <span className='token number'>{val}</span>
   }
 
   else {
-    const meta = tryFetch(app, '_meta') || { spec: null }
-    if (meta.spec === null) return null
-
-    const schema = fetchSchema(app, meta)
-    const [descHead, ...descBody] = schema.description.trim().split('\n\n')
-
-    return (
-      <div className="aui__desc-body"
-            onClick={() => setCollapsed(true)}>
-        <Markdown markdown={descBody.join('\n\n')}/>
-      </div>
-    )
+    return <span className='token boolean'>{val}</span>
   }
 }

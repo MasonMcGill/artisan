@@ -154,5 +154,6 @@
 .aui__meta-view .token.boolean { color: #905; }
 .aui__meta-view .token.number { color: #905; }
 .aui__meta-view .token.string { color: #690; }
+.aui__meta-view .token.symbol { color: #690; text-decoration: underline }
 .aui__meta-view .token.atrule { color: #07a; }
 
