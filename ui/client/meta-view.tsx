@@ -27,7 +27,7 @@ export default function MetaView({ app }) {
           const propSchema = schema.properties[key] || {}
           return (
             <div key={key}>
-              <span className='token atrule'>{key}: </span> {conf[key]}
+              <span className='token atrule'>{key}: </span> {conf[key].toString()}
               {
                 propSchema.description === undefined ? null : (
                   <span className='aui__comment'>
