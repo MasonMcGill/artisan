@@ -27,6 +27,7 @@ import TitleBar from './title-bar'
 import MetaView from './meta-view'
 import EntryList from './entry-list'
 import CustomViewSet from './custom-view-set'
+import ContentView from './content-view'
 
 
 //-----------------------------------------------------------------------------
@@ -55,7 +56,7 @@ function RootView(props: RootViewProps) {
   const refreshInterval = props.refreshInterval || 5000
 
   // Define state.
-  const [params, setParams] = useState(initParams)  
+  const [params, setParams] = useState(initParams)
   const [cache] = useState(() => new Cache())
   const [time, setTime] = useState(() => Date.now())
 
@@ -79,6 +80,7 @@ function RootView(props: RootViewProps) {
       <Suspense fallback={<div/>}>
         <MetaView app={app}/>
         <EntryList app={app}/>
+        <ContentView app={app}/>
         <CustomViewSet app={app} views={views}/>
       </Suspense>
     </div>

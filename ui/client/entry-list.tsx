@@ -37,10 +37,10 @@ function ArrayEntry(app: App, e: any) {
   const shapeString = e.shape.length == 0 ? '' : ', ' + e.shape.join(' × ')
   return (
     <div className='aui__entry'>
-      {/* <Link app={app} target={app.params.path + e.name}> */}
+      <Link app={app} target={app.params.path + e.name}>
         <FaDatabase className='aui__icon'/>
         {` ${e.name} (${e.dtype}${shapeString})`}
-      {/* </Link> */}
+      </Link>
     </div>
   )
 }

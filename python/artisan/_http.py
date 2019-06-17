@@ -47,7 +47,13 @@ def serve(port: int = 3000, root_dir: Opt[str] = None) -> None:
 
         elif req.path.endswith('/_meta'):
             key = req.path[1:-len('/_meta')]
-            res.data = cbor2.dumps(_read_meta(root, key))
+            if (root / key).with_suffix('.h5').is_file():
+                res.data = cbor2.dumps(dict(
+                    type='plain-object',
+                    content={'IS_ARRAY': True}
+                ))
+            else:
+                res.data = cbor2.dumps(_read_meta(root, key))
 
         else:
             t_last = float(req.get_param('t_last') or 0) / 1000
