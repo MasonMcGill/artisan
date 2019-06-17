@@ -6,5 +6,7 @@
 docs/.doctrees/
 docs/.buildinfo
 
+python/dist/
+
 ui/node_modules/
 ui/dist/

@@ -1,10 +1,13 @@
 [tool.poetry]
-name = "artisan"
-version = "0.2.0"
+name = "artisan-builder"
+version = "0.1.0"
 description = "A build system for explainable science"
 license = "MIT"
 authors = ["Mason McGill <mmcgill@caltech.edu>"]
-readme = "readme.md"
+readme = "readme.rst"
+packages = [
+    { include = "artisan" }
+]
 
 [tool.poetry.dependencies]
 cbor2 = "*"
