@@ -5,7 +5,7 @@ sys.path.insert(0, os.path.normpath(f'{__file__}../../../python'))
 from shutil import rmtree
 from typing import Union
 
-import artisan; from artisan import Artifact, ArrayFile
+import artisan; from artisan import Artifact, ArrayFile, EncodedFile
 import numpy as np
 
 #-- Define artifact types. ----------------------------------------------------
@@ -30,11 +30,13 @@ class SineWave(Signal):
 
     sample_rate: ArrayFile; 'Number of samples per second'
     samples: ArrayFile; 'Successive values of the function'
+    log__txt: EncodedFile
 
     def build(self, c: Conf) -> None:
         t = np.arange(0, c.t_end, c.δt)
         self.sample_rate = 1 / c.δt
         self.samples = np.sin(2 * np.pi * c.f * t + c.φ)
+        (self.path/'log.txt').write_text('This\nis\na\nlog.')
 
 
 class SawWave(Signal):

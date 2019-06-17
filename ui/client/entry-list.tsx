@@ -37,7 +37,7 @@ function ArrayEntry(app: App, e: any) {
   const shapeString = e.shape.length == 0 ? '' : ', ' + e.shape.join(' × ')
   return (
     <div className='aui__entry'>
-      {/* <Link app={app} target={''}> */}
+      {/* <Link app={app} target={app.params.path + e.name}> */}
         <FaDatabase className='aui__icon'/>
         {` ${e.name} (${e.dtype}${shapeString})`}
       {/* </Link> */}
@@ -49,7 +49,7 @@ function ArrayEntry(app: App, e: any) {
 function FileEntry(app: App, e: any) {
   return (
     <div className='aui__entry'>
-      {/* <Link app={app} target={''}> */}
+      <a href={`${app.params.host}${app.params.path}${e.name}`}>
         <FaFile className='aui__icon'/>{' ' + e.name}
         {
           e.size <= 2**10 ? `(${e.size}B)` :
@@ -57,7 +57,7 @@ function FileEntry(app: App, e: any) {
           e.size <= 2**30 ? `(${e.size/2**20}MB)` :
           `(${e.size/2**30}GB)`
         }
-      {/* </Link> */}
+      </a>
     </div>
   )
 }
