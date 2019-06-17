@@ -1,7 +1,7 @@
 from multiprocessing import cpu_count
 from pathlib import Path
 import re
-from typing import Dict, Optional as Opt, cast
+from typing import Dict, Iterator, Optional as Opt, cast
 
 import cbor2
 from falcon import API, HTTPStatus, Request, Response, HTTP_200, HTTP_404
@@ -35,6 +35,14 @@ def serve(port: int = 3000, root_dir: Opt[str] = None) -> None:
                     re.sub(r'\.h5$', '', p.name) + ('/' if p.is_dir() else '')
                     for p in path.glob('[!_]*')
                 ])
+            ))
+
+        elif req.path.endswith('/_entries'):
+            path = root / req.path[1:-len('/_entries')]
+            if path.is_file(): raise HTTPStatus(HTTP_404)
+            res.data = cbor2.dumps(dict(
+                type='plain-object',
+                content=list(_entries(path))
             ))
 
         elif req.path.endswith('/_meta'):
@@ -107,7 +115,7 @@ def _read_array(root: Path, key: str, t_last: float) -> Dict[str, object]:
         return dict(type='cached-value', content=None)
 
     f = h5.File(f'{root}/{key}.h5', 'r', libver='latest', swmr=True)
-    a = f['data'][:]
+    a = f['data'][()]
 
     if a.dtype.kind in ['U', 'S']:
         return dict(
@@ -147,3 +155,33 @@ def _read_meta(root: Path, key: str) -> Dict[str, object]:
     try: meta = yaml.safe_load(path.read_text())
     except: meta = dict(spec=None, status='done')
     return dict(type='plain-object', content=meta)
+
+
+def _entries(path: Path) -> Iterator[dict]:
+    for p in sorted(path.glob('[!_]*')):
+        if p.is_dir():
+            yield {
+                'type': 'artifact',
+                'name': p.name,
+                'nEntries': len(list(p.iterdir()))
+            }
+
+        elif p.suffix == '.h5':
+            f = h5.File(p, 'r', libver='latest', swmr=True)
+            a = f['data'][()]
+            yield {
+                'type': (
+                    'string-array' if a.dtype.kind in ['U', 'S']
+                    else 'numeric-array'
+                ),
+                'name': p.stem,
+                'dtype': _web_dtypes[a.dtype.name],
+                'shape': a.shape
+            }
+
+        else:
+            yield {
+                'type': 'file',
+                'name': p.name,
+                'size': p.stat().st_size
+            }
