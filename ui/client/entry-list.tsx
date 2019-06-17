@@ -50,12 +50,12 @@ function FileEntry(app: App, e: any) {
   return (
     <div className='aui__entry'>
       <a href={`${app.params.host}${app.params.path}${e.name}`}>
-        <FaFile className='aui__icon'/>{' ' + e.name}
+        <FaFile className='aui__icon'/>{` ${e.name} `}
         {
           e.size <= 2**10 ? `(${e.size}B)` :
-          e.size <= 2**20 ? `(${e.size/2**10}KB)` :
-          e.size <= 2**30 ? `(${e.size/2**20}MB)` :
-          `(${e.size/2**30}GB)`
+          e.size <= 2**20 ? `(${Math.floor(e.size/2**10)}KB)` :
+          e.size <= 2**30 ? `(${Math.floor(e.size/2**20)}MB)` :
+          `(${Math.floor(e.size/2**30)}GB)`
         }
       </a>
     </div>
