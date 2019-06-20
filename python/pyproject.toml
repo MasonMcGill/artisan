@@ -10,6 +10,7 @@ packages = [
 ]
 
 [tool.poetry.dependencies]
+dataclasses = "*"
 cbor2 = "*"
 falcon = "*"
 gunicorn = "*"
@@ -17,6 +18,7 @@ h5py = "*"
 jsonschema = "*"
 numpy = "*"
 "ruamel.yaml" = "*"
+typing_extensions = "*"
 
 [tool.poetry.dev-dependencies]
 pytest = "*"
