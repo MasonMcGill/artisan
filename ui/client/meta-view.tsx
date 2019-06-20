@@ -30,7 +30,7 @@ function render(val: any, indent: number, currCol: number, schema: Schema) {
     const elements = []
     for (const e of val) {
       elements.push(<br/>)
-      elements.push('\u00A0'.repeat(indent + 2) + '- ')
+      elements.push('\u00A0'.repeat(indent) + '- ')
       if (typeof e === 'object')
         elements.push(<br/>)
       elements.push(render(e, indent + 2, indent + 4, schema))
