@@ -26,5 +26,4 @@ serve.__module__ = __name__
 
 #-- Wonky alias docstring definitions -----------------------------------------
 
-ArrayFile = ArrayFile; 'An alias for `h5py.Dataset`' # type: ignore
 EncodedFile = EncodedFile; 'An alias for `pathlib.Path`' # type: ignore

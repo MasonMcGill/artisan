@@ -149,13 +149,13 @@
 <span></span><span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">A build system for explainable science</span>
 <span class="sd">&#39;&#39;&#39;</span>
-<span class="kn">from</span> <span class="nn">._artifacts</span> <span class="k">import</span> <span class="n">Artifact</span><span class="p">,</span> <span class="n">ArrayFile</span><span class="p">,</span> <span class="n">EncodedFile</span><span class="p">,</span> <span class="n">write_meta</span>
+<span class="kn">from</span> <span class="nn">._artifacts</span> <span class="k">import</span> <span class="n">Artifact</span><span class="p">,</span> <span class="n">ArrayFile</span><span class="p">,</span> <span class="n">EncodedFile</span><span class="p">,</span> <span class="n">write_global_meta</span>
 <span class="kn">from</span> <span class="nn">._configurables</span> <span class="k">import</span> <span class="n">Configurable</span>
 <span class="kn">from</span> <span class="nn">._global_conf</span> <span class="k">import</span> <span class="n">Conf</span><span class="p">,</span> <span class="n">push_conf</span><span class="p">,</span> <span class="n">pop_conf</span><span class="p">,</span> <span class="n">using_conf</span><span class="p">,</span> <span class="n">get_conf</span>
 <span class="kn">from</span> <span class="nn">._http</span> <span class="k">import</span> <span class="n">serve</span>
 
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
-    <span class="s1">&#39;Configurable&#39;</span><span class="p">,</span> <span class="s1">&#39;Artifact&#39;</span><span class="p">,</span> <span class="s1">&#39;ArrayFile&#39;</span><span class="p">,</span> <span class="s1">&#39;EncodedFile&#39;</span><span class="p">,</span> <span class="s1">&#39;write_meta&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;Configurable&#39;</span><span class="p">,</span> <span class="s1">&#39;Artifact&#39;</span><span class="p">,</span> <span class="s1">&#39;ArrayFile&#39;</span><span class="p">,</span> <span class="s1">&#39;EncodedFile&#39;</span><span class="p">,</span> <span class="s1">&#39;write_global_meta&#39;</span><span class="p">,</span>
     <span class="s1">&#39;Conf&#39;</span><span class="p">,</span> <span class="s1">&#39;push_conf&#39;</span><span class="p">,</span> <span class="s1">&#39;pop_conf&#39;</span><span class="p">,</span> <span class="s1">&#39;using_conf&#39;</span><span class="p">,</span> <span class="s1">&#39;get_conf&#39;</span><span class="p">,</span>
     <span class="s1">&#39;serve&#39;</span>
 <span class="p">]</span>
@@ -164,7 +164,7 @@
 
 <span class="n">Configurable</span><span class="o">.</span><span class="vm">__module__</span> <span class="o">=</span> <span class="vm">__name__</span>
 <span class="n">Artifact</span><span class="o">.</span><span class="vm">__module__</span> <span class="o">=</span> <span class="vm">__name__</span>
-<span class="n">write_meta</span><span class="o">.</span><span class="vm">__module__</span> <span class="o">=</span> <span class="vm">__name__</span>
+<span class="n">write_global_meta</span><span class="o">.</span><span class="vm">__module__</span> <span class="o">=</span> <span class="vm">__name__</span>
 <span class="n">Conf</span><span class="o">.</span><span class="vm">__module__</span> <span class="o">=</span> <span class="vm">__name__</span>
 <span class="n">push_conf</span><span class="o">.</span><span class="vm">__module__</span> <span class="o">=</span> <span class="vm">__name__</span>
 <span class="n">pop_conf</span><span class="o">.</span><span class="vm">__module__</span> <span class="o">=</span> <span class="vm">__name__</span>
@@ -174,7 +174,6 @@
 
 <span class="c1">#-- Wonky alias docstring definitions -----------------------------------------</span>
 
-<span class="n">ArrayFile</span> <span class="o">=</span> <span class="n">ArrayFile</span><span class="p">;</span> <span class="s1">&#39;An alias for `h5py.Dataset`&#39;</span> <span class="c1"># type: ignore</span>
 <span class="n">EncodedFile</span> <span class="o">=</span> <span class="n">EncodedFile</span><span class="p">;</span> <span class="s1">&#39;An alias for `pathlib.Path`&#39;</span> <span class="c1"># type: ignore</span>
 </pre></div>
 

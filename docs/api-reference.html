@@ -170,7 +170,7 @@
 <td><p>An array- and metadata-friendly view into a directory</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">ArrayFile</span></code></p></td>
-<td><p>alias of <code class="xref py py-class docutils literal notranslate"><span class="pre">h5py._hl.dataset.Dataset</span></code></p></td>
+<td><p>A property that corresponds to a single-array HDF5 file</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">EncodedFile</span></code></p></td>
 <td><p>alias of <code class="xref py py-class docutils literal notranslate"><span class="pre">pathlib.Path</span></code></p></td>
@@ -228,12 +228,6 @@ calls (with the <code class="xref py py-obj docutils literal notranslate"><span 
 defined without one.</p>
 </dd></dl>
 
-<dl class="attribute">
-<dt id="artisan.Configurable.Spec">
-<code class="descname">Spec</code><a class="headerlink" href="#artisan.Configurable.Spec" title="Permalink to this definition">¶</a></dt>
-<dd><p>alias of <code class="xref py py-class docutils literal notranslate"><span class="pre">artisan._configurables.Configurable.Conf</span></code></p>
-</dd></dl>
-
 </dd></dl>
 
 <dl class="class">
@@ -245,7 +239,7 @@ defined without one.</p>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>path</strong> (<em>Path|str</em>) – The path at which the artifact is, or should be,
 stored</p></li>
-<li><p><strong>spec</strong> (<em>Mapping</em><em>[</em><em>str</em><em>, </em><em>object</em><em>]</em>) – The subtype-specific configuration,
+<li><p><strong>conf</strong> (<em>Mapping</em><em>[</em><em>str</em><em>, </em><em>object</em><em>]</em>) – The subtype-specific configuration,
 optionally including a “type” field indicating what type of
 artifact to construct</p></li>
 </ul>
@@ -253,11 +247,11 @@ artifact to construct</p></li>
 </dl>
 <dl class="simple">
 <dt>Constructors:</dt><dd><ul class="simple">
-<li><p>Artifact(spec: <em>Mapping[str, object]</em>)</p></li>
-<li><p>Artifact(<a href="#id1"><span class="problematic" id="id2">**</span></a>spec_elem: <em>object</em>)</p></li>
+<li><p>Artifact(conf: <em>Mapping[str, object]</em>)</p></li>
+<li><p>Artifact(<a href="#id1"><span class="problematic" id="id2">**</span></a>conf_elem: <em>object</em>)</p></li>
 <li><p>Artifact(path: <em>Path|str</em>)</p></li>
-<li><p>Artifact(path: <em>Path|str</em>, spec: <em>Mapping[str, object]</em>)</p></li>
-<li><p>Artifact(path: <em>Path|str</em>, <a href="#id3"><span class="problematic" id="id4">**</span></a>spec_elem: <em>object</em>)</p></li>
+<li><p>Artifact(path: <em>Path|str</em>, conf: <em>Mapping[str, object]</em>)</p></li>
+<li><p>Artifact(path: <em>Path|str</em>, <a href="#id3"><span class="problematic" id="id4">**</span></a>conf_elem: <em>object</em>)</p></li>
 </ul>
 </dd>
 <dt>Fields:</dt><dd><ul class="simple">
@@ -330,7 +324,7 @@ attributes (i.e. <code class="xref py py-obj docutils literal notranslate"><span
 <p>Extending <a href="#id13"><span class="problematic" id="id14">`</span></a>ArrayFile`s performs concatenation along the first axis,
 extending <a href="#id15"><span class="problematic" id="id16">`</span></a>EncodedFile`s performs byte-level concatenation, and
 extending subartifacts extends their fields.</p>
-<p>File corresponding to <code class="xref py py-obj docutils literal notranslate"><span class="pre">self[key]</span></code> are created if they do not already
+<p>Files corresponding to <code class="xref py py-obj docutils literal notranslate"><span class="pre">self[key]</span></code> are created if they do not already
 exist.</p>
 </dd></dl>
 

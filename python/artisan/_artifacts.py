@@ -24,6 +24,7 @@ __all__ = ['Artifact', 'ArrayFile', 'EncodedFile', 'write_global_meta']
 from pathlib import Path as EncodedFile
 
 class ArrayFile(Protocol):
+    ''' A property that corresponds to a single-array HDF5 file '''
     def __get__(self, obj: object, type_: Optional[type]) -> h5.Dataset: ...
     def __set__(self, obj: object, val: object) -> None: ...
 

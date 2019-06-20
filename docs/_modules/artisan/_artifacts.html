@@ -149,13 +149,15 @@
             
   <h1>Source code for artisan._artifacts</h1><div class="highlight"><pre>
 <span></span><span class="kn">import</span> <span class="nn">itertools</span>
+<span class="kn">import</span> <span class="nn">json</span>
 <span class="kn">from</span> <span class="nn">pathlib</span> <span class="k">import</span> <span class="n">Path</span>
 <span class="kn">import</span> <span class="nn">shutil</span>
 <span class="kn">from</span> <span class="nn">time</span> <span class="k">import</span> <span class="n">sleep</span>
 <span class="kn">from</span> <span class="nn">typing</span> <span class="k">import</span> <span class="p">(</span>
     <span class="n">Any</span><span class="p">,</span> <span class="n">Iterator</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">,</span> <span class="n">MutableMapping</span><span class="p">,</span>
-    <span class="n">Optional</span> <span class="k">as</span> <span class="n">Opt</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Union</span><span class="p">,</span> <span class="n">cast</span>
+    <span class="n">Optional</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">cast</span>
 <span class="p">)</span>
+<span class="kn">from</span> <span class="nn">typing_extensions</span> <span class="k">import</span> <span class="n">Protocol</span>
 
 <span class="kn">import</span> <span class="nn">h5py</span> <span class="k">as</span> <span class="nn">h5</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
@@ -165,17 +167,16 @@
 <span class="kn">from</span> <span class="nn">._global_conf</span> <span class="k">import</span> <span class="n">get_conf</span>
 <span class="kn">from</span> <span class="nn">._namespaces</span> <span class="k">import</span> <span class="n">namespacify</span><span class="p">,</span> <span class="n">Namespace</span>
 
-<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;Artifact&#39;</span><span class="p">,</span> <span class="s1">&#39;ArrayFile&#39;</span><span class="p">,</span> <span class="s1">&#39;EncodedFile&#39;</span><span class="p">,</span> <span class="s1">&#39;write_meta&#39;</span><span class="p">]</span>
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;Artifact&#39;</span><span class="p">,</span> <span class="s1">&#39;ArrayFile&#39;</span><span class="p">,</span> <span class="s1">&#39;EncodedFile&#39;</span><span class="p">,</span> <span class="s1">&#39;write_global_meta&#39;</span><span class="p">]</span>
 
-<span class="c1">#-- Type aliases --------------------------------------------------------------</span>
-
-<span class="n">Rec</span> <span class="o">=</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">object</span><span class="p">]</span>
-<span class="n">MutRec</span> <span class="o">=</span> <span class="n">MutableMapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">object</span><span class="p">]</span>
-<span class="n">Tuple_</span> <span class="o">=</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">object</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
+<span class="c1">#-- Static type definitions ---------------------------------------------------</span>
 
 <span class="kn">from</span> <span class="nn">pathlib</span> <span class="k">import</span> <span class="n">Path</span> <span class="k">as</span> <span class="n">EncodedFile</span>
-<span class="kn">from</span> <span class="nn">h5py</span> <span class="k">import</span> <span class="n">Dataset</span> <span class="k">as</span> <span class="n">ArrayFile</span>
-<span class="n">ArtifactEntry</span> <span class="o">=</span> <span class="n">Union</span><span class="p">[</span><span class="s1">&#39;Artifact&#39;</span><span class="p">,</span> <span class="n">ArrayFile</span><span class="p">,</span> <span class="n">EncodedFile</span><span class="p">]</span>
+
+<span class="k">class</span> <span class="nc">ArrayFile</span><span class="p">(</span><span class="n">Protocol</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; A property that corresponds to a single-array HDF5 file &#39;&#39;&#39;</span>
+    <span class="k">def</span> <span class="nf">__get__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obj</span><span class="p">:</span> <span class="nb">object</span><span class="p">,</span> <span class="n">type_</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">type</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">h5</span><span class="o">.</span><span class="n">Dataset</span><span class="p">:</span> <span class="o">...</span>
+    <span class="k">def</span> <span class="nf">__set__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obj</span><span class="p">:</span> <span class="nb">object</span><span class="p">,</span> <span class="n">val</span><span class="p">:</span> <span class="nb">object</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span> <span class="o">...</span>
 
 <span class="c1">#-- Artifacts -----------------------------------------------------------------</span>
 
@@ -186,16 +187,16 @@
 <span class="sd">    Arguments:</span>
 <span class="sd">        path (Path|str): The path at which the artifact is, or should be,</span>
 <span class="sd">            stored</span>
-<span class="sd">        spec (Mapping[str, object]): The subtype-specific configuration,</span>
+<span class="sd">        conf (Mapping[str, object]): The subtype-specific configuration,</span>
 <span class="sd">            optionally including a &quot;type&quot; field indicating what type of</span>
 <span class="sd">            artifact to construct</span>
 
 <span class="sd">    Constructors:</span>
-<span class="sd">        - Artifact(spec: *Mapping[str, object]*)</span>
-<span class="sd">        - Artifact(**spec_elem: *object*)</span>
+<span class="sd">        - Artifact(conf: *Mapping[str, object]*)</span>
+<span class="sd">        - Artifact(**conf_elem: *object*)</span>
 <span class="sd">        - Artifact(path: *Path|str*)</span>
-<span class="sd">        - Artifact(path: *Path|str*, spec: *Mapping[str, object]*)</span>
-<span class="sd">        - Artifact(path: *Path|str*, **spec_elem: *object*)</span>
+<span class="sd">        - Artifact(path: *Path|str*, conf: *Mapping[str, object]*)</span>
+<span class="sd">        - Artifact(path: *Path|str*, **conf_elem: *object*)</span>
 
 <span class="sd">    Fields:</span>
 <span class="sd">        - **path** (*Path*): The path to the root of the file tree backing this \</span>
@@ -212,50 +213,20 @@
     <span class="n">path</span><span class="p">:</span> <span class="n">Path</span>
 
     <span class="k">def</span> <span class="nf">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">:</span> <span class="nb">object</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="nb">object</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
-        <span class="c1"># Parse arguments.</span>
-        <span class="n">path</span><span class="p">,</span> <span class="n">spec</span> <span class="o">=</span> <span class="n">_parse_artifact_args</span><span class="p">(</span><span class="n">args</span><span class="p">,</span> <span class="n">kwargs</span><span class="p">)</span>
-
-        <span class="c1"># Resolve `path`, dereferencing &quot;~&quot; and &quot;@&quot;.</span>
-        <span class="k">if</span> <span class="n">path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">if</span> <span class="nb">str</span><span class="p">(</span><span class="n">path</span><span class="p">)</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;@/&#39;</span><span class="p">):</span>
-                <span class="n">path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">get_conf</span><span class="p">()</span><span class="o">.</span><span class="n">root_dir</span><span class="p">)</span> <span class="o">/</span> <span class="nb">str</span><span class="p">(</span><span class="n">path</span><span class="p">)[</span><span class="mi">2</span><span class="p">:]</span>
-            <span class="n">path</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">expanduser</span><span class="p">()</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
-
-        <span class="c1"># Add type information to `spec`.</span>
-        <span class="k">if</span> <span class="n">spec</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">spec</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="n">_identify</span><span class="p">(</span><span class="bp">cls</span><span class="p">),</span> <span class="o">**</span><span class="n">spec</span><span class="p">}</span>
-
-        <span class="c1"># Instantiate the artifact. (TODO: Type should be loaded from _meta.yaml if possible.)</span>
-        <span class="n">artifact</span> <span class="o">=</span> <span class="n">cast</span><span class="p">(</span><span class="n">Artifact</span><span class="p">,</span> <span class="n">Configurable</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">spec</span> <span class="ow">or</span> <span class="p">{}))</span>
-        <span class="nb">object</span><span class="o">.</span><span class="fm">__setattr__</span><span class="p">(</span><span class="n">artifact</span><span class="p">,</span> <span class="s1">&#39;path&#39;</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span>
-        <span class="nb">object</span><span class="o">.</span><span class="fm">__setattr__</span><span class="p">(</span><span class="n">artifact</span><span class="p">,</span> <span class="s1">&#39;_cached_keys&#39;</span><span class="p">,</span> <span class="nb">set</span><span class="p">())</span>
-
-        <span class="c1"># Point its path to a matching prebuilt artifact, or build it.</span>
-        <span class="k">if</span> <span class="n">path</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">assert</span> <span class="n">spec</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
-            <span class="n">_find_or_build</span><span class="p">(</span><span class="n">artifact</span><span class="p">,</span> <span class="n">spec</span><span class="p">)</span>
-        <span class="k">elif</span> <span class="n">spec</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">_ensure_built</span><span class="p">(</span><span class="n">artifact</span><span class="p">,</span> <span class="n">spec</span><span class="p">)</span>
-
-        <span class="c1"># Return it.</span>
-        <span class="k">return</span> <span class="n">artifact</span>
-
-    <span class="k">def</span> <span class="nf">build</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">conf</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">        Write arrays, encoded files, and subartifacts</span>
-
-<span class="sd">        `build` is called during instantiation if a matching existing artifact</span>
-<span class="sd">        is not found. Override it to construct nontrivial cacheable artifacts.</span>
-<span class="sd">        &#39;&#39;&#39;</span>
-        <span class="k">pass</span>
+        <span class="n">path</span><span class="p">,</span> <span class="n">conf</span> <span class="o">=</span> <span class="n">_parse_artifact_args</span><span class="p">(</span><span class="n">args</span><span class="p">,</span> <span class="n">kwargs</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">conf</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">_artifact_from_path</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">_resolve_path</span><span class="p">(</span><span class="n">path</span><span class="p">))</span>
+        <span class="k">elif</span> <span class="n">path</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">conf</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">_artifact_from_conf</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">conf</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">conf</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">_artifact_from_path_and_conf</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">_resolve_path</span><span class="p">(</span><span class="n">path</span><span class="p">),</span> <span class="n">conf</span><span class="p">)</span>
 
     <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">meta</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">meta</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Namespace</span><span class="p">:</span>
         <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        The metadata stored in `{self.path}/_meta.yaml`</span>
 <span class="sd">        &#39;&#39;&#39;</span>
-        <span class="c1"># TODO: Implement caching</span>
-        <span class="k">return</span> <span class="n">cast</span><span class="p">(</span><span class="n">Rec</span><span class="p">,</span> <span class="n">namespacify</span><span class="p">(</span><span class="n">_read_meta</span><span class="p">(</span><span class="bp">self</span><span class="p">)))</span>
+        <span class="k">return</span> <span class="n">_read_meta</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="p">)</span>
 
     <span class="c1">#-- MutableMapping methods ----------------------------</span>
 
@@ -281,7 +252,7 @@
     <span class="k">def</span> <span class="nf">keys</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="fm">__iter__</span><span class="p">()</span>
 
-<div class="viewcode-block" id="Artifact.__getitem__"><a class="viewcode-back" href="../../api-reference.html#artisan.Artifact.__getitem__">[docs]</a>    <span class="k">def</span> <span class="nf">__getitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ArtifactEntry</span><span class="p">:</span>
+<div class="viewcode-block" id="Artifact.__getitem__"><a class="viewcode-back" href="../../api-reference.html#artisan.Artifact.__getitem__">[docs]</a>    <span class="k">def</span> <span class="nf">__getitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
         <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        Returns an `ArrayFile`, `EncodedFile`, or `Artifact` corresponding to</span>
 <span class="sd">        `self.path/key`</span>
@@ -332,7 +303,7 @@
         <span class="c1"># Write a subartifact.</span>
         <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">val</span><span class="p">,</span> <span class="p">(</span><span class="n">Mapping</span><span class="p">,</span> <span class="n">Artifact</span><span class="p">)):</span>
             <span class="k">assert</span> <span class="n">path</span><span class="o">.</span><span class="n">suffix</span> <span class="o">==</span> <span class="s1">&#39;&#39;</span>
-            <span class="n">MutRec</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">Artifact</span><span class="p">(</span><span class="n">path</span><span class="p">),</span> <span class="n">val</span><span class="p">)</span> <span class="c1"># type: ignore</span>
+            <span class="n">MutableMapping</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">Artifact</span><span class="p">(</span><span class="n">path</span><span class="p">),</span> <span class="n">val</span><span class="p">)</span> <span class="c1"># type: ignore</span>
 
         <span class="c1"># Write an array.</span>
         <span class="k">else</span><span class="p">:</span>
@@ -359,7 +330,7 @@
 <span class="sd">        extending `EncodedFile`s performs byte-level concatenation, and</span>
 <span class="sd">        extending subartifacts extends their fields.</span>
 
-<span class="sd">        File corresponding to `self[key]` are created if they do not already</span>
+<span class="sd">        Files corresponding to `self[key]` are created if they do not already</span>
 <span class="sd">        exist.</span>
 <span class="sd">        &#39;&#39;&#39;</span>
         <span class="n">path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">path</span> <span class="o">/</span> <span class="n">key</span>
@@ -382,7 +353,7 @@
 
     <span class="c1">#-- Attribute-style element access --------------------</span>
 
-    <span class="k">def</span> <span class="nf">__getattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ArtifactEntry</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">__getattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="fm">__getitem__</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">__setattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">object</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
@@ -391,7 +362,7 @@
     <span class="k">def</span> <span class="nf">__delattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="bp">self</span><span class="o">.</span><span class="fm">__delitem__</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
 
-    <span class="c1">#-- A hack to get REPL autocompletion to work ---------</span>
+    <span class="c1">#-- Attribute preemption, for REPL autocompletion -----</span>
 
     <span class="k">def</span> <span class="nf">__getattribute__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
         <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="nb">object</span><span class="o">.</span><span class="fm">__getattribute__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;_cached_keys&#39;</span><span class="p">):</span>
@@ -415,14 +386,23 @@
 
 <span class="c1">#-- Artifact construction -----------------------------------------------------</span>
 
-<span class="k">def</span> <span class="nf">_parse_artifact_args</span><span class="p">(</span><span class="n">args</span><span class="p">:</span> <span class="n">Tuple_</span><span class="p">,</span> <span class="n">kwargs</span><span class="p">:</span> <span class="n">Rec</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Opt</span><span class="p">[</span><span class="n">Path</span><span class="p">],</span> <span class="n">Opt</span><span class="p">[</span><span class="n">Rec</span><span class="p">]]:</span>
-    <span class="c1"># (spec)</span>
+<span class="k">def</span> <span class="nf">_parse_artifact_args</span><span class="p">(</span>
+        <span class="n">args</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">object</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span>
+        <span class="n">kwargs</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">object</span><span class="p">]</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span>
+        <span class="n">Optional</span><span class="p">[</span><span class="n">Path</span><span class="p">],</span>
+        <span class="n">Optional</span><span class="p">[</span><span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">object</span><span class="p">]]</span>
+    <span class="p">]:</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Return `(path, conf)` or raise an error.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="c1"># (conf)</span>
     <span class="k">if</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">args</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span>
         <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">Mapping</span><span class="p">)</span>
         <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">):</span>
         <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="nb">dict</span><span class="p">(</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
 
-    <span class="c1"># (**spec)</span>
+    <span class="c1"># (**conf)</span>
     <span class="k">elif</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">args</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span>
           <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">):</span>
         <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="n">kwargs</span>
@@ -433,14 +413,14 @@
           <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">):</span>
         <span class="k">return</span> <span class="n">Path</span><span class="p">(</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="kc">None</span>
 
-    <span class="c1"># (path, spec)</span>
+    <span class="c1"># (path, conf)</span>
     <span class="k">elif</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">args</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span>
           <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">))</span>
           <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">args</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">Mapping</span><span class="p">)</span>
           <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">):</span>
         <span class="k">return</span> <span class="n">Path</span><span class="p">(</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="nb">dict</span><span class="p">(</span><span class="n">args</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
 
-    <span class="c1"># (path, **spec)</span>
+    <span class="c1"># (path, **conf)</span>
     <span class="k">elif</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">args</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span>
           <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">))</span>
           <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">):</span>
@@ -452,56 +432,124 @@
             <span class="s1">&#39;Invalid argument types for the `Artifact` constructor.</span><span class="se">\n</span><span class="s1">&#39;</span>
             <span class="s1">&#39;Valid signatures:</span><span class="se">\n</span><span class="s1">&#39;</span>
             <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span>
-            <span class="s1">&#39;    - Artifact(spec: Mapping[str, object])</span><span class="se">\n</span><span class="s1">&#39;</span>
-            <span class="s1">&#39;    - Artifact(**spec_elem: object)</span><span class="se">\n</span><span class="s1">&#39;</span>
+            <span class="s1">&#39;    - Artifact(conf: Mapping[str, object])</span><span class="se">\n</span><span class="s1">&#39;</span>
+            <span class="s1">&#39;    - Artifact(**conf_elem: object)</span><span class="se">\n</span><span class="s1">&#39;</span>
             <span class="s1">&#39;    - Artifact(path: Path|str)</span><span class="se">\n</span><span class="s1">&#39;</span>
-            <span class="s1">&#39;    - Artifact(path: Path|str, spec: Mapping[str, object])</span><span class="se">\n</span><span class="s1">&#39;</span>
-            <span class="s1">&#39;    - Artifact(path: Path|str, **spec_elem: object)</span><span class="se">\n</span><span class="s1">&#39;</span>
+            <span class="s1">&#39;    - Artifact(path: Path|str, conf: Mapping[str, object])</span><span class="se">\n</span><span class="s1">&#39;</span>
+            <span class="s1">&#39;    - Artifact(path: Path|str, **conf_elem: object)</span><span class="se">\n</span><span class="s1">&#39;</span>
         <span class="p">)</span>
 
 
-<span class="k">def</span> <span class="nf">_find_or_build</span><span class="p">(</span><span class="n">artifact</span><span class="p">:</span> <span class="n">Artifact</span><span class="p">,</span> <span class="n">spec</span><span class="p">:</span> <span class="n">Rec</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-    <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="n">Path</span><span class="p">(</span><span class="n">get_conf</span><span class="p">()</span><span class="o">.</span><span class="n">root_dir</span><span class="p">)</span><span class="o">.</span><span class="n">iterdir</span><span class="p">():</span>
-        <span class="nb">object</span><span class="o">.</span><span class="fm">__setattr__</span><span class="p">(</span><span class="n">artifact</span><span class="p">,</span> <span class="s1">&#39;path&#39;</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span>
-        <span class="k">try</span><span class="p">:</span> <span class="k">return</span> <span class="n">_ensure_built</span><span class="p">(</span><span class="n">artifact</span><span class="p">,</span> <span class="n">spec</span><span class="p">)</span>
-        <span class="k">except</span> <span class="ne">FileExistsError</span><span class="p">:</span> <span class="k">pass</span>
-    <span class="nb">object</span><span class="o">.</span><span class="fm">__setattr__</span><span class="p">(</span><span class="n">artifact</span><span class="p">,</span> <span class="s1">&#39;path&#39;</span><span class="p">,</span> <span class="n">_new_artifact_path</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">artifact</span><span class="p">)))</span>
-    <span class="n">_build</span><span class="p">(</span><span class="n">artifact</span><span class="p">,</span> <span class="n">spec</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">_artifact_from_path</span><span class="p">(</span><span class="bp">cls</span><span class="p">:</span> <span class="nb">type</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Artifact</span><span class="p">:</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Return an artifact corresponding to the file tree at `path`.</span>
+
+<span class="sd">    An error is raised if the type recorded in `_meta.yaml`, if any, is not a</span>
+<span class="sd">    subtype of `cls`.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">spec</span> <span class="o">=</span> <span class="n">_read_meta</span><span class="p">(</span><span class="n">path</span><span class="p">)</span><span class="o">.</span><span class="n">spec</span> <span class="ow">or</span> <span class="p">{}</span>
+    <span class="n">written_type</span> <span class="o">=</span> <span class="n">get_conf</span><span class="p">()</span><span class="o">.</span><span class="n">scope</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;type&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span> <span class="kc">None</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">written_type</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">issubclass</span><span class="p">(</span><span class="n">written_type</span><span class="p">,</span> <span class="bp">cls</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">FileExistsError</span><span class="p">(</span>
+            <span class="n">f</span><span class="s1">&#39;</span><span class="si">{path}</span><span class="s1"> is a </span><span class="si">{written_type.__module__}</span><span class="s1">.</span><span class="si">{written_type.__qualname__}</span><span class="s1">&#39;</span>
+            <span class="n">f</span><span class="s1">&#39;, not a </span><span class="si">{cls.__module__}</span><span class="s1">.</span><span class="si">{cls.__qualname__}</span><span class="s1">.&#39;</span>
+        <span class="p">)</span>
+
+    <span class="n">artifact</span> <span class="o">=</span> <span class="n">cast</span><span class="p">(</span><span class="n">Artifact</span><span class="p">,</span> <span class="n">Configurable</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">spec</span><span class="p">))</span>
+    <span class="nb">object</span><span class="o">.</span><span class="fm">__setattr__</span><span class="p">(</span><span class="n">artifact</span><span class="p">,</span> <span class="s1">&#39;_cached_keys&#39;</span><span class="p">,</span> <span class="nb">set</span><span class="p">())</span>
+    <span class="nb">object</span><span class="o">.</span><span class="fm">__setattr__</span><span class="p">(</span><span class="n">artifact</span><span class="p">,</span> <span class="s1">&#39;path&#39;</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">artifact</span>
 
 
-<span class="k">def</span> <span class="nf">_ensure_built</span><span class="p">(</span><span class="n">artifact</span><span class="p">:</span> <span class="n">Artifact</span><span class="p">,</span> <span class="n">spec</span><span class="p">:</span> <span class="n">Rec</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-    <span class="c1"># [Already started]</span>
-    <span class="k">if</span> <span class="n">artifact</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
-        <span class="k">if</span> <span class="n">_read_meta</span><span class="p">(</span><span class="n">artifact</span><span class="p">)[</span><span class="s1">&#39;spec&#39;</span><span class="p">]</span> <span class="o">!=</span> <span class="n">spec</span><span class="p">:</span>
+<span class="k">def</span> <span class="nf">_artifact_from_conf</span><span class="p">(</span><span class="bp">cls</span><span class="p">:</span> <span class="nb">type</span><span class="p">,</span> <span class="n">conf</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">object</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Artifact</span><span class="p">:</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Find or build an artifact with the given type and configuration.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">artifact</span> <span class="o">=</span> <span class="n">cast</span><span class="p">(</span><span class="n">Artifact</span><span class="p">,</span> <span class="n">Configurable</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">conf</span><span class="p">))</span>
+    <span class="nb">object</span><span class="o">.</span><span class="fm">__setattr__</span><span class="p">(</span><span class="n">artifact</span><span class="p">,</span> <span class="s1">&#39;_cached_keys&#39;</span><span class="p">,</span> <span class="nb">set</span><span class="p">())</span>
+    <span class="n">spec</span> <span class="o">=</span> <span class="n">Namespace</span><span class="p">(</span><span class="nb">type</span><span class="o">=</span><span class="n">_identify</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">artifact</span><span class="p">)),</span> <span class="o">**</span><span class="n">artifact</span><span class="o">.</span><span class="n">conf</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="n">Path</span><span class="p">(</span><span class="n">get_conf</span><span class="p">()</span><span class="o">.</span><span class="n">root_dir</span><span class="p">)</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="s1">&#39;*&#39;</span><span class="p">):</span>
+        <span class="n">meta</span> <span class="o">=</span> <span class="n">_read_meta</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">meta</span><span class="o">.</span><span class="n">spec</span> <span class="o">==</span> <span class="n">spec</span><span class="p">:</span>
+            <span class="k">while</span> <span class="n">meta</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="s1">&#39;running&#39;</span><span class="p">:</span>
+                <span class="n">sleep</span><span class="p">(</span><span class="mf">0.01</span><span class="p">)</span>
+                <span class="n">meta</span> <span class="o">=</span> <span class="n">_read_meta</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">meta</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="s1">&#39;done&#39;</span><span class="p">:</span>
+                <span class="nb">object</span><span class="o">.</span><span class="fm">__setattr__</span><span class="p">(</span><span class="n">artifact</span><span class="p">,</span> <span class="s1">&#39;path&#39;</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span>
+                <span class="k">return</span> <span class="n">artifact</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="nb">object</span><span class="o">.</span><span class="fm">__setattr__</span><span class="p">(</span><span class="n">artifact</span><span class="p">,</span> <span class="s1">&#39;path&#39;</span><span class="p">,</span> <span class="n">_new_artifact_path</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">artifact</span><span class="p">)))</span>
+        <span class="n">_build</span><span class="p">(</span><span class="n">artifact</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">artifact</span>
+
+
+<span class="k">def</span> <span class="nf">_artifact_from_path_and_conf</span><span class="p">(</span><span class="bp">cls</span><span class="p">:</span> <span class="nb">type</span><span class="p">,</span>
+                                 <span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
+                                 <span class="n">conf</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">object</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Artifact</span><span class="p">:</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Find or build an artifact with the given type, path, and configuration.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">artifact</span> <span class="o">=</span> <span class="n">cast</span><span class="p">(</span><span class="n">Artifact</span><span class="p">,</span> <span class="n">Configurable</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">conf</span><span class="p">))</span>
+    <span class="nb">object</span><span class="o">.</span><span class="fm">__setattr__</span><span class="p">(</span><span class="n">artifact</span><span class="p">,</span> <span class="s1">&#39;_cached_keys&#39;</span><span class="p">,</span> <span class="nb">set</span><span class="p">())</span>
+    <span class="nb">object</span><span class="o">.</span><span class="fm">__setattr__</span><span class="p">(</span><span class="n">artifact</span><span class="p">,</span> <span class="s1">&#39;path&#39;</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+        <span class="n">meta</span> <span class="o">=</span> <span class="n">_read_meta</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">meta</span><span class="o">.</span><span class="n">spec</span> <span class="o">!=</span> <span class="p">{</span><span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="n">_identify</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">artifact</span><span class="p">)),</span> <span class="o">**</span><span class="n">artifact</span><span class="o">.</span><span class="n">conf</span><span class="p">}:</span>
             <span class="k">raise</span> <span class="ne">FileExistsError</span><span class="p">(</span><span class="n">f</span><span class="s1">&#39;&quot;</span><span class="si">{artifact.path}</span><span class="s1">&quot; (incompatible spec)&#39;</span><span class="p">)</span>
-        <span class="k">while</span> <span class="n">_read_meta</span><span class="p">(</span><span class="n">artifact</span><span class="p">)[</span><span class="s1">&#39;status&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;running&#39;</span><span class="p">:</span>
-            <span class="n">sleep</span><span class="p">(</span><span class="mf">0.001</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">_read_meta</span><span class="p">(</span><span class="n">artifact</span><span class="p">)[</span><span class="s1">&#39;status&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;stopped&#39;</span><span class="p">:</span>
+        <span class="k">while</span> <span class="n">meta</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="s1">&#39;running&#39;</span><span class="p">:</span>
+            <span class="n">sleep</span><span class="p">(</span><span class="mf">0.01</span><span class="p">)</span>
+            <span class="n">meta</span> <span class="o">=</span> <span class="n">_read_meta</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">artifact</span><span class="o">.</span><span class="n">meta</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="s1">&#39;stopped&#39;</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">FileExistsError</span><span class="p">(</span><span class="n">f</span><span class="s1">&#39;&quot;</span><span class="si">{artifact.path}</span><span class="s1">&quot; was stopped mid-build.&#39;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">_build</span><span class="p">(</span><span class="n">artifact</span><span class="p">)</span>
 
-    <span class="c1"># [Starting from scratch]</span>
-    <span class="k">else</span><span class="p">:</span> <span class="n">_build</span><span class="p">(</span><span class="n">artifact</span><span class="p">,</span> <span class="n">spec</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">artifact</span>
 
 
-<span class="k">def</span> <span class="nf">_build</span><span class="p">(</span><span class="n">artifact</span><span class="p">:</span> <span class="n">Artifact</span><span class="p">,</span> <span class="n">spec</span><span class="p">:</span> <span class="n">Rec</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="k">def</span> <span class="nf">_build</span><span class="p">(</span><span class="n">artifact</span><span class="p">:</span> <span class="n">Artifact</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Create parent directories, invoke `artifact.build`, and store metadata.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
     <span class="k">if</span> <span class="n">Path</span><span class="p">(</span><span class="n">get_conf</span><span class="p">()</span><span class="o">.</span><span class="n">root_dir</span><span class="p">)</span> <span class="ow">in</span> <span class="n">artifact</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">parents</span><span class="p">:</span>
-        <span class="n">write_meta</span><span class="p">()</span>
+        <span class="n">write_global_meta</span><span class="p">()</span>
+
+    <span class="c1"># TODO: Fix YAML generation.</span>
+    <span class="n">meta_path</span> <span class="o">=</span> <span class="n">artifact</span><span class="o">.</span><span class="n">path</span> <span class="o">/</span> <span class="s1">&#39;_meta.yaml&#39;</span>
+    <span class="n">spec</span> <span class="o">=</span> <span class="n">Namespace</span><span class="p">(</span><span class="nb">type</span><span class="o">=</span><span class="n">_identify</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">artifact</span><span class="p">)),</span> <span class="o">**</span><span class="n">artifact</span><span class="o">.</span><span class="n">conf</span><span class="p">)</span>
+    <span class="n">write_meta</span> <span class="o">=</span> <span class="k">lambda</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">meta_path</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">kwargs</span><span class="p">))</span>
 
     <span class="n">artifact</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-    <span class="n">_write_meta</span><span class="p">(</span><span class="n">artifact</span><span class="p">,</span> <span class="nb">dict</span><span class="p">(</span><span class="n">spec</span><span class="o">=</span><span class="n">spec</span><span class="p">,</span> <span class="n">status</span><span class="o">=</span><span class="s1">&#39;running&#39;</span><span class="p">))</span>
+    <span class="n">write_meta</span><span class="p">(</span><span class="n">spec</span><span class="o">=</span><span class="n">spec</span><span class="p">,</span> <span class="n">status</span><span class="o">=</span><span class="s1">&#39;running&#39;</span><span class="p">)</span>
 
     <span class="k">try</span><span class="p">:</span>
-        <span class="n">n_build_args</span> <span class="o">=</span> <span class="n">artifact</span><span class="o">.</span><span class="n">build</span><span class="o">.</span><span class="vm">__code__</span><span class="o">.</span><span class="n">co_argcount</span>
-        <span class="n">artifact</span><span class="o">.</span><span class="n">build</span><span class="p">(</span><span class="o">*</span><span class="p">([</span><span class="n">Namespace</span><span class="p">(</span><span class="n">spec</span><span class="p">)]</span> <span class="k">if</span> <span class="n">n_build_args</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="k">else</span> <span class="p">[]))</span>
-        <span class="n">_write_meta</span><span class="p">(</span><span class="n">artifact</span><span class="p">,</span> <span class="nb">dict</span><span class="p">(</span><span class="n">spec</span><span class="o">=</span><span class="n">spec</span><span class="p">,</span> <span class="n">status</span><span class="o">=</span><span class="s1">&#39;done&#39;</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">callable</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">artifact</span><span class="p">),</span> <span class="s1">&#39;build&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)):</span>
+            <span class="n">n_build_args</span> <span class="o">=</span> <span class="n">artifact</span><span class="o">.</span><span class="n">build</span><span class="o">.</span><span class="vm">__code__</span><span class="o">.</span><span class="n">co_argcount</span>
+            <span class="n">build_args</span> <span class="o">=</span> <span class="p">[</span><span class="n">artifact</span><span class="o">.</span><span class="n">conf</span><span class="p">]</span> <span class="k">if</span> <span class="n">n_build_args</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="k">else</span> <span class="p">[]</span>
+            <span class="n">artifact</span><span class="o">.</span><span class="n">build</span><span class="p">(</span><span class="o">*</span><span class="n">build_args</span><span class="p">)</span>
+        <span class="n">write_meta</span><span class="p">(</span><span class="n">spec</span><span class="o">=</span><span class="n">spec</span><span class="p">,</span> <span class="n">status</span><span class="o">=</span><span class="s1">&#39;done&#39;</span><span class="p">)</span>
     <span class="k">except</span> <span class="ne">BaseException</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-        <span class="n">_write_meta</span><span class="p">(</span><span class="n">artifact</span><span class="p">,</span> <span class="nb">dict</span><span class="p">(</span><span class="n">spec</span><span class="o">=</span><span class="n">spec</span><span class="p">,</span> <span class="n">status</span><span class="o">=</span><span class="s1">&#39;stopped&#39;</span><span class="p">))</span>
+        <span class="n">write_meta</span><span class="p">(</span><span class="n">spec</span><span class="o">=</span><span class="n">spec</span><span class="p">,</span> <span class="n">status</span><span class="o">=</span><span class="s1">&#39;stopped&#39;</span><span class="p">)</span>
         <span class="k">raise</span> <span class="n">e</span>
 
 
+<span class="k">def</span> <span class="nf">_resolve_path</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Dereference &quot;.&quot;, &quot;..&quot;, &quot;~&quot;, and &quot;@&quot;.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">if</span> <span class="nb">str</span><span class="p">(</span><span class="n">path</span><span class="p">)</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;@/&#39;</span><span class="p">):</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">get_conf</span><span class="p">()</span><span class="o">.</span><span class="n">root_dir</span><span class="p">)</span> <span class="o">/</span> <span class="nb">str</span><span class="p">(</span><span class="n">path</span><span class="p">)[</span><span class="mi">2</span><span class="p">:]</span>
+    <span class="k">return</span> <span class="n">path</span><span class="o">.</span><span class="n">expanduser</span><span class="p">()</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
+
+
 <span class="k">def</span> <span class="nf">_new_artifact_path</span><span class="p">(</span><span class="n">type_</span><span class="p">:</span> <span class="nb">type</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
-    <span class="n">conf</span> <span class="o">=</span> <span class="n">get_conf</span><span class="p">()</span>
-    <span class="n">root</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">conf</span><span class="o">.</span><span class="n">root_dir</span><span class="p">)</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Generate an unused path in the artifact root directory.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">root</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">get_conf</span><span class="p">()</span><span class="o">.</span><span class="n">root_dir</span><span class="p">)</span>
     <span class="n">type_name</span> <span class="o">=</span> <span class="n">_identify</span><span class="p">(</span><span class="n">type_</span><span class="p">)</span>
     <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">itertools</span><span class="o">.</span><span class="n">count</span><span class="p">():</span>
         <span class="n">dst</span> <span class="o">=</span> <span class="n">root</span> <span class="o">/</span> <span class="n">f</span><span class="s1">&#39;</span><span class="si">{type_name}</span><span class="s1">_</span><span class="si">{i:04x}</span><span class="s1">&#39;</span>
@@ -560,22 +608,25 @@
             <span class="n">f_dst</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">f_src</span><span class="o">.</span><span class="n">read</span><span class="p">())</span>
 
 
-<span class="k">def</span> <span class="nf">_read_meta</span><span class="p">(</span><span class="n">a</span><span class="p">:</span> <span class="n">Artifact</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Rec</span><span class="p">:</span>
-    <span class="k">try</span><span class="p">:</span> <span class="k">return</span> <span class="n">cast</span><span class="p">(</span><span class="n">Rec</span><span class="p">,</span> <span class="n">yaml</span><span class="o">.</span><span class="n">safe_load</span><span class="p">((</span><span class="n">a</span><span class="o">.</span><span class="n">path</span> <span class="o">/</span> <span class="s1">&#39;_meta.yaml&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">read_text</span><span class="p">()))</span>
-    <span class="k">except</span><span class="p">:</span> <span class="k">return</span> <span class="nb">dict</span><span class="p">(</span><span class="n">spec</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">status</span><span class="o">=</span><span class="s1">&#39;done&#39;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">_read_meta</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Namespace</span><span class="p">:</span>
+    <span class="c1"># TODO: Implement caching</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">meta</span> <span class="o">=</span> <span class="n">namespacify</span><span class="p">(</span><span class="n">yaml</span><span class="o">.</span><span class="n">safe_load</span><span class="p">((</span><span class="n">path</span><span class="o">/</span><span class="s1">&#39;_meta.yaml&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">read_text</span><span class="p">()))</span>
+        <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">meta</span><span class="p">,</span> <span class="n">Namespace</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">meta</span><span class="o">.</span><span class="n">spec</span><span class="p">,</span> <span class="n">Namespace</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">meta</span><span class="o">.</span><span class="n">status</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">meta</span>
+    <span class="k">except</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">Namespace</span><span class="p">(</span><span class="n">spec</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">status</span><span class="o">=</span><span class="s1">&#39;done&#39;</span><span class="p">)</span>
 
 
-<span class="k">def</span> <span class="nf">_write_meta</span><span class="p">(</span><span class="n">a</span><span class="p">:</span> <span class="n">Artifact</span><span class="p">,</span> <span class="n">meta</span><span class="p">:</span> <span class="n">Rec</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-    <span class="c1"># (a.path / &#39;_meta.yaml&#39;).write_text(yaml.round_trip_dump(meta))</span>
-    <span class="kn">import</span> <span class="nn">json</span><span class="p">;</span> <span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">path</span> <span class="o">/</span> <span class="s1">&#39;_meta.yaml&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">meta</span><span class="p">))</span>
-
-
-<span class="k">def</span> <span class="nf">write_meta</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="k">def</span> <span class="nf">write_global_meta</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
     <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">    Write global config information to `{root_path}/_meta.yaml`.</span>
 <span class="sd">    &#39;&#39;&#39;</span>
     <span class="n">meta</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;spec&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;schema&#39;</span><span class="p">:</span> <span class="n">schema</span><span class="p">()}</span>
     <span class="n">meta_text</span> <span class="o">=</span> <span class="n">yaml</span><span class="o">.</span><span class="n">round_trip_dump</span><span class="p">(</span><span class="n">meta</span><span class="p">)</span>
+    <span class="n">Path</span><span class="p">(</span><span class="n">get_conf</span><span class="p">()</span><span class="o">.</span><span class="n">root_dir</span><span class="p">)</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
     <span class="n">Path</span><span class="p">(</span><span class="n">f</span><span class="s1">&#39;{get_conf().root_dir}/_meta.yaml&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="n">meta_text</span><span class="p">)</span>
 
 <span class="c1">#-- Scope search --------------------------------------------------------------</span>
