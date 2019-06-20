@@ -175,15 +175,20 @@ def _entries(path: Path) -> Iterator[dict]:
         elif p.suffix == '.h5':
             f = h5.File(p, 'r', libver='latest', swmr=True)
             a = f['data'][()]
-            yield {
-                'type': (
-                    'string-array' if a.dtype.kind in ['U', 'S']
-                    else 'numeric-array'
-                ),
-                'name': p.stem,
-                'dtype': _web_dtypes[a.dtype.name],
-                'shape': a.shape
-            }
+            if a.dtype.kind in ['U', 'S']:
+                yield {
+                    'type': 'string-array',
+                    'name': p.stem,
+                    'dtype': 'string',
+                    'shape': a.shape
+                }
+            else:
+                yield {
+                    'type': 'numeric-array',
+                    'name': p.stem,
+                    'dtype': _web_dtypes[a.dtype.name],
+                    'shape': a.shape
+                }
 
         else:
             yield {
