@@ -14,6 +14,8 @@ TypeDict = Dict[str, type]
 
 #-- Top-level configuration schema generation ---------------------------------
 
+# TODO: make scope expect a dict of configurables rather than conf types
+
 def conf_schema_from_type(type_: type, scope: TypeDict = {}) -> ObjDict:
     '''
     Return a schema for the configuration of a `type_` instance.
@@ -142,8 +144,8 @@ def schema_from_type_ann(ann: Any, scope: TypeDict) -> ObjDict:
         item_schema = schema_from_type_ann(ann.__args__[1], scope)
         return {'type': 'object', 'additionalProperties': item_schema}
 
-    elif ann in scope.values():
-        name = next(k for k, v in scope.items() if v is ann)
+    elif ann in [getattr(v, 'Conf', None) for v in scope.values()]:
+        name = next(k for k in scope if getattr(scope[k], 'Conf', None) is ann)
         return {'$ref': '#/definitions/'+name}
 
     else:

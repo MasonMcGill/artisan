@@ -314,13 +314,14 @@ def test_postfix_annotations():
 # Nested prop types
 
 class CustomType:
-    pass
+    class Conf:
+        pass
 
 
 class NestedPropTypeTest:
     class Conf:
-        prop_a: CustomType
-        prop_b: CustomType = None # type: ignore
+        prop_a: CustomType.Conf
+        prop_b: CustomType.Conf = None # type: ignore
 
 
 def test_nested_prop_types():
