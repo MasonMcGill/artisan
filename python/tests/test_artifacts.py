@@ -3,8 +3,9 @@ from typing import List
 
 import h5py as h5
 import numpy as np
+import pytest
 
-from artisan._artifacts import Artifact
+from artisan._artifacts import Artifact, set_root_dir
 
 #-- Helper functions ----------------------------------------------------------
 
@@ -301,41 +302,119 @@ def test_artifact_deletion(tmp_path: Path) -> None:
 
 #-- [Subclass tests] Construction ---------------------------------------------
 
+class CustomArtifact(Artifact):
+    n_calls = 0
+    def build(self, conf) -> None:
+        CustomArtifact.n_calls += 1
+        self.zeros = np.zeros(conf.n_zeros)
+        self.ones = np.ones(conf.n_ones)
+
+
 def test_construction_from_path(tmp_path: Path) -> None:
-    '''
-    - Case 1: (path_given, exists)
-    - Case 2: (path_given, does_not_exists)
-    '''
+    # Setup
+    set_root_dir(tmp_path)
+    CustomArtifact.n_calls = 0
+    a0 = CustomArtifact(n_zeros=2, n_ones=3)
+
+    # Case 1: (path_given, exists)
+    a1 = CustomArtifact(a0.path)
+    a2 = CustomArtifact(f'{a0.path}')
+    a3 = CustomArtifact(f'@/{a0.path.name}')
+    assert_artifact_equals(a1, {'zeros': np.zeros(2), 'ones': np.ones(3)})
+    assert_artifact_equals(a2, {'zeros': np.zeros(2), 'ones': np.ones(3)})
+    assert_artifact_equals(a3, {'zeros': np.zeros(2), 'ones': np.ones(3)})
+    assert CustomArtifact.n_calls == 1
+
+    # Case 2: (path_given, does_not_exists)
+    with pytest.raises(FileNotFoundError):
+        CustomArtifact(tmp_path / 'invalid_path')
+
+    # Cleanup
+    set_root_dir(Path('.'))
 
 
 def test_construction_from_conf(tmp_path: Path) -> None:
-    '''
-    - Case 3: (spec_given, exists)
-    - Case 4: (spec_given, does_not_exist)
-    '''
+    # Setup
+    set_root_dir(tmp_path)
+    CustomArtifact.n_calls = 0
+    a0 = CustomArtifact(n_zeros=2, n_ones=3)
+
+    # Case 1: (conf_given, exists)
+    a1 = CustomArtifact(n_zeros=2, n_ones=3)
+    a2 = CustomArtifact(dict(n_zeros=2, n_ones=3))
+    assert_artifact_equals(a1, {'zeros': np.zeros(2), 'ones': np.ones(3)})
+    assert_artifact_equals(a2, {'zeros': np.zeros(2), 'ones': np.ones(3)})
+    assert a1.path == a0.path
+    assert a2.path == a0.path
+    assert CustomArtifact.n_calls == 1
+
+    # Case 2: (conf_given, does_not_exist)
+    a3 = CustomArtifact(n_zeros=2, n_ones=4)
+    a4 = CustomArtifact(dict(n_zeros=1, n_ones=3))
+    assert_artifact_equals(a3, {'zeros': np.zeros(2), 'ones': np.ones(4)})
+    assert_artifact_equals(a4, {'zeros': np.zeros(1), 'ones': np.ones(3)})
+    assert CustomArtifact.n_calls == 3
+
+    # Cleanup
+    set_root_dir(Path('.'))
 
 
 def test_construction_from_path_and_conf(tmp_path: Path) -> None:
-    '''
-    - Case 5: (path_given, spec_given, exists_and_matches)
-    - Case 6: (path_given, spec_given, exists_and_does_not_match)
-    - Case 7: (path_given, spec_given, does_not_exist)
-    '''
+    # Setup
+    set_root_dir(tmp_path)
+    CustomArtifact.n_calls = 0
+    a0 = CustomArtifact(n_zeros=2, n_ones=3)
+
+    # Case 1: (path_given, conf_given, exists_and_matches)
+    a1 = CustomArtifact(a0.path, n_zeros=2, n_ones=3)
+    a2 = CustomArtifact(a0.path, dict(n_zeros=2, n_ones=3))
+    a3 = CustomArtifact(f'@/{a0.path.name}', n_zeros=2, n_ones=3)
+    assert_artifact_equals(a1, {'zeros': np.zeros(2), 'ones': np.ones(3)})
+    assert_artifact_equals(a2, {'zeros': np.zeros(2), 'ones': np.ones(3)})
+    assert_artifact_equals(a3, {'zeros': np.zeros(2), 'ones': np.ones(3)})
+    assert a1.path == a0.path
+    assert a2.path == a0.path
+    assert a3.path == a0.path
+    assert CustomArtifact.n_calls == 1
+
+    # Case 2: (path_given, conf_given, exists_and_does_not_match)
+    with pytest.raises(FileExistsError):
+        CustomArtifact(a0.path, n_zeros=1, n_ones=3)
+    with pytest.raises(FileExistsError):
+        CustomArtifact(a0.path, dict(n_zeros=1, n_ones=4))
+    with pytest.raises(FileExistsError):
+        CustomArtifact(f'@/{a0.path.name}', n_zeros=2, n_ones=4)
+    assert CustomArtifact.n_calls == 1
+
+    # Case 3: (path_given, conf_given, does_not_exist)
+    a4 = CustomArtifact(tmp_path / 'a4', n_zeros=1, n_ones=3)
+    a5 = CustomArtifact(tmp_path / 'a5', dict(n_zeros=1, n_ones=4))
+    a6 = CustomArtifact('@/a6', n_zeros=2, n_ones=4)
+    assert_artifact_equals(a4, {'zeros': np.zeros(1), 'ones': np.ones(3)})
+    assert_artifact_equals(a5, {'zeros': np.zeros(1), 'ones': np.ones(4)})
+    assert_artifact_equals(a6, {'zeros': np.zeros(2), 'ones': np.ones(4)})
+    assert a4.path == tmp_path / 'a4'
+    assert a5.path == tmp_path / 'a5'
+    assert a6.path == tmp_path / 'a6'
+    assert CustomArtifact.n_calls == 4
+
+    # Cleanup
+    set_root_dir(Path('.'))
 
 #-- [Subclass tests] Build customization --------------------------------------
 
-class TypedArtifactA(Artifact):
+class ArtifactWithUnaryBuild(Artifact):
     def build(self) -> None:
         self.field = self.conf.prop
 
 
-class TypedArtifactB(Artifact):
+class ArtifactWithBinaryBuild(Artifact):
     def build(self, conf) -> None:
         self.field = conf.prop
 
 
 def test_build_customization(tmp_path: Path) -> None:
-    '''
-    - Calling `build`, passing in `conf`
-    - Calling `build` without passing in `conf`
-    '''
+    a_unary = ArtifactWithUnaryBuild(tmp_path / 'unary', prop=10)
+    a_binary = ArtifactWithUnaryBuild(tmp_path / 'binary', prop=10)
+    assert a_unary.field[()] == 10
+    assert a_binary.field[()] == 10
