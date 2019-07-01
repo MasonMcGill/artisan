@@ -214,16 +214,17 @@ instances (namespace := an object with a <code class="xref py py-obj docutils li
 instance of that type.</p>
 <p>Similarly, if <code class="xref py py-obj docutils literal notranslate"><span class="pre">conf</span></code> contains a “type” field that is a string, <code class="xref py py-obj docutils literal notranslate"><span class="pre">__new__</span></code>
 dereferences it in the current type scope and returns an instance of the
-resulting type (see <a class="reference internal" href="#artisan.push_conf" title="artisan.push_conf"><code class="xref py py-obj docutils literal notranslate"><span class="pre">push_conf</span></code></a>/<a class="reference internal" href="#artisan.pop_conf" title="artisan.pop_conf"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pop_conf</span></code></a>/<a class="reference internal" href="#artisan.get_conf" title="artisan.get_conf"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_conf</span></code></a>).</p>
+resulting type (the <code class="xref py py-obj docutils literal notranslate"><span class="pre">Artisan</span></code> class can be used to manipulate the type
+scope).</p>
 <dl class="class">
 <dt id="artisan.Configurable.Conf">
 <em class="property">class </em><code class="descname">Conf</code><span class="sig-paren">(</span><em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/artisan/_configurables.html#Configurable.Conf"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#artisan.Configurable.Conf" title="Permalink to this definition">¶</a></dt>
 <dd><p>A configuration</p>
-<p>If its definition is inline, it will be translated into a JSON-Schema to
-validate configurations passed into the outer class’ constructor.</p>
+<p>If its definition is inline (lexically within the containing class’
+definition), it will be translated into a JSON-Schema to validate
+configurations passed into the outer class’ constructor.</p>
 <p><a class="reference internal" href="#artisan.Conf" title="artisan.Conf"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Conf</span></code></a> classes are intended to be interface definitions. They can extend
-<code class="xref py py-obj docutils literal notranslate"><span class="pre">typing_extensions.Protocol</span></code> to support static analysis and <code class="xref py py-obj docutils literal notranslate"><span class="pre">isinstance</span></code>
-calls (with the <code class="xref py py-obj docutils literal notranslate"><span class="pre">typing_extensions.runtime</span></code> decorator).</p>
+<code class="xref py py-obj docutils literal notranslate"><span class="pre">typing_extensions.Protocol</span></code> to support static analysis.</p>
 <p>An empty <a class="reference internal" href="#artisan.Conf" title="artisan.Conf"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Conf</span></code></a> definition is created for every <a class="reference internal" href="#artisan.Configurable" title="artisan.Configurable"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Configurable</span></code></a> subclass
 defined without one.</p>
 </dd></dl>

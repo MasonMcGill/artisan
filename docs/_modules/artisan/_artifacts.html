@@ -163,11 +163,11 @@
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">from</span> <span class="nn">ruamel</span> <span class="k">import</span> <span class="n">yaml</span>
 
-<span class="kn">from</span> <span class="nn">._configurables</span> <span class="k">import</span> <span class="n">Configurable</span><span class="p">,</span> <span class="n">schema</span>
+<span class="kn">from</span> <span class="nn">._configurables</span> <span class="k">import</span> <span class="n">Configurable</span><span class="p">,</span> <span class="n">get_schema</span>
 <span class="kn">from</span> <span class="nn">._global_conf</span> <span class="k">import</span> <span class="n">get_conf</span>
 <span class="kn">from</span> <span class="nn">._namespaces</span> <span class="k">import</span> <span class="n">namespacify</span><span class="p">,</span> <span class="n">Namespace</span>
 
-<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;Artifact&#39;</span><span class="p">,</span> <span class="s1">&#39;ArrayFile&#39;</span><span class="p">,</span> <span class="s1">&#39;EncodedFile&#39;</span><span class="p">,</span> <span class="s1">&#39;write_global_meta&#39;</span><span class="p">]</span>
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;Artifact&#39;</span><span class="p">,</span> <span class="s1">&#39;ArrayFile&#39;</span><span class="p">,</span> <span class="s1">&#39;EncodedFile&#39;</span><span class="p">]</span>
 
 <span class="c1">#-- Static type definitions ---------------------------------------------------</span>
 
@@ -624,7 +624,7 @@
     <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">    Write global config information to `{root_path}/_meta.yaml`.</span>
 <span class="sd">    &#39;&#39;&#39;</span>
-    <span class="n">meta</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;spec&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;schema&#39;</span><span class="p">:</span> <span class="n">schema</span><span class="p">()}</span>
+    <span class="n">meta</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;spec&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;schema&#39;</span><span class="p">:</span> <span class="n">get_schema</span><span class="p">()}</span>
     <span class="n">meta_text</span> <span class="o">=</span> <span class="n">yaml</span><span class="o">.</span><span class="n">round_trip_dump</span><span class="p">(</span><span class="n">meta</span><span class="p">)</span>
     <span class="n">Path</span><span class="p">(</span><span class="n">get_conf</span><span class="p">()</span><span class="o">.</span><span class="n">root_dir</span><span class="p">)</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
     <span class="n">Path</span><span class="p">(</span><span class="n">f</span><span class="s1">&#39;{get_conf().root_dir}/_meta.yaml&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="n">meta_text</span><span class="p">)</span>

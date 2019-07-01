@@ -1,3 +1,9 @@
+'''
+This module exports the `conf_schema_from_type` function, which generates a
+JSON schema describing the space of JSON-like configurations accepted by a
+class' constructor.
+'''
+
 import ast
 from inspect import getsource
 from textwrap import dedent
@@ -14,11 +20,28 @@ TypeDict = Dict[str, type]
 
 #-- Top-level configuration schema generation ---------------------------------
 
-# TODO: make scope expect a dict of configurables rather than conf types
-
 def conf_schema_from_type(type_: type, scope: TypeDict = {}) -> ObjDict:
     '''
     Return a schema for the configuration of a `type_` instance.
+
+    A concrete type's schema (the schema of a type with no subclasses in
+    `scope`) has the following fields:
+
+    - `type (str)`: "object"
+    - `description (str)`: `type_`'s docstring, concatenated with any other
+      non-attribute-annotating top-level string literals in the body of
+      `type_`'s definition
+    - `outputDescriptions (Dict[str, str])`: Descriptions of `type_`'s
+      attributes, generated from top-level string literals immediately following
+      attribute type annotations
+    - `properties (Dict[str, dict])`: Per-property schemas, including
+      descriptions and/or defaults, generated from attribute
+      declarations/definitions in `type_`'s inner `Conf` class, if it exists
+    - `required (List[str])`: The list of required properties (those without
+      default values)
+
+    An abstract type's schema describes the type-tagged union of the schemas
+    of its subclasses.
     '''
     is_strict_subclass = lambda t: t is not type_ and issubclass(t, type_)
     if any(map(is_strict_subclass, scope.values())):

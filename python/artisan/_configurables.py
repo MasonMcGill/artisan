@@ -1,11 +1,61 @@
-from typing import Dict, Mapping, Tuple
-from typing_extensions import Protocol, runtime
+'''
+This module defines `Configurable`, a class of objects whose constructors accept
+a JSON-like configuration as their first argument. Configurable objects provide
+the following features:
 
-from ._global_conf import get_conf, default_scope
+- A `conf` field that stores the configuration passed into the constructor
+- The ability to define a `Conf` class (which is converted to a JSON-Schema)
+  that documents/validates the expected form of the configuration
+- Subclass forwarding — If the configuration contains a "type" field, it
+  determines the class of `Configurable` that is constructed. This is useful
+  e.g. when constructing objects from deserialized configurations.
+'''
+
+import threading
+from typing import Dict, Mapping, Optional, Tuple, Type
+from typing_extensions import Protocol
+
 from ._namespaces import Namespace, namespacify
 from ._schemas import conf_schema_from_type
 
-__all__ = ['Configurable', 'NameConflict', 'schema']
+__all__ = [
+    'Configurable', 'NameConflict', 'default_scope',
+    'get_schema', 'get_scope', 'set_scope'
+]
+
+#-- Scope management ----------------------------------------------------------
+
+default_scope: Dict[str, type] = {}
+context = threading.local()
+
+def set_scope(scope: Optional[Dict[str, type]]) -> None:
+    '''
+    Set the scope used for "type" field resolution.
+    '''
+    context.scope = scope if scope is not None else default_scope
+
+
+def get_scope() -> Dict[str, type]:
+    '''
+    Return the scope used for "type" field resolution.
+    '''
+    return getattr(context, 'scope', default_scope)
+
+#-- Schema generation ---------------------------------------------------------
+
+def get_schema() -> dict:
+    '''
+    Return a schema with a definition for each exposed type.
+    '''
+    scope = get_scope()
+    return {
+        '$schema': 'http://json-schema.org/draft-07/schema#',
+        'definitions': {
+            sym: conf_schema_from_type(type_, scope)
+            for sym, type_ in scope.items()
+        },
+        '$ref': '#/definitions/Configurable'
+    }
 
 #-- Configurable object metaclass ---------------------------------------------
 
@@ -16,6 +66,8 @@ class ConfigurableMeta(type):
 
     `ConfigurableMeta` is the metaclass for `Configurable`.
     '''
+    # TODO: Eliminate this class.
+
     def __init__(self,
                  name: str,
                  bases: Tuple[type, ...],
@@ -25,13 +77,10 @@ class ConfigurableMeta(type):
 
         # Generate `Conf` if it does not exist.
         if not hasattr(self, 'Conf'):
-            self.Conf = runtime(type('Conf', (Protocol,), { # type: ignore
+            self.Conf = type('Conf', (Protocol,), { # type: ignore
                 '__qualname__': self.__qualname__+'.Conf',
                 '__module__': self.__module__
-            }))
-
-        # Make the configurable class accessable from the configuration class.
-        self.Conf.__recipient_type__ = self # type: ignore
+            })
 
         # Add the configurable class to the default scope.
         default_scope[self.__qualname__] = (
@@ -61,19 +110,20 @@ class Configurable(metaclass=ConfigurableMeta):
 
     Similarly, if `conf` contains a "type" field that is a string, `__new__`
     dereferences it in the current type scope and returns an instance of the
-    resulting type (see `push_conf`/`pop_conf`/`get_conf`).
+    resulting type (the `Artisan` class can be used to manipulate the type
+    scope).
     '''
 
     class Conf(Protocol):
         '''
         A configuration
 
-        If its definition is inline, it will be translated into a JSON-Schema to
-        validate configurations passed into the outer class' constructor.
+        If its definition is inline (lexically within the containing class'
+        definition), it will be translated into a JSON-Schema to validate
+        configurations passed into the outer class' constructor.
 
         `Conf` classes are intended to be interface definitions. They can extend
-        `typing_extensions.Protocol` to support static analysis and `isinstance`
-        calls (with the `typing_extensions.runtime` decorator).
+        `typing_extensions.Protocol` to support static analysis.
 
         An empty `Conf` definition is created for every `Configurable` subclass
         defined without one.
@@ -81,7 +131,7 @@ class Configurable(metaclass=ConfigurableMeta):
         pass
 
     conf: Namespace; '''
-        The configuration passed into the constructer, coerced to a `Namespace`
+        The configuration passed into the constructor, coerced to a `Namespace`
     '''
 
     def __new__(cls,
@@ -100,30 +150,10 @@ class Configurable(metaclass=ConfigurableMeta):
         if isinstance(cls_override, type):
             cls = cls_override
         elif isinstance(cls_override, str):
-            try: cls = get_conf().scope[cls_override]
+            try: cls = get_scope()[cls_override]
             except: raise KeyError(f'"{cls_override}" can\'t be resolved.')
 
         # Construct and return a `Configurable` instance.
         obj = object.__new__(cls)
         object.__setattr__(obj, 'conf', namespacify(conf))
         return obj
-
-#-- Schema generation ---------------------------------------------------------
-
-def schema() -> dict:
-    '''
-    Return a schema with a definition for each exposed type.
-    '''
-    conf_types = {
-        sym: type_.Conf # type: ignore
-        for sym, type_ in get_conf().scope.items()
-        if hasattr(type_, 'Conf')
-    }
-    return {
-        '$schema': 'http://json-schema.org/draft-07/schema#',
-        'definitions': {
-            sym: conf_schema_from_type(type_, conf_types)
-            for sym, type_ in get_conf().scope.items()
-        },
-        '$ref': '#/definitions/Configurable'
-    }

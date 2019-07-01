@@ -1,3 +1,13 @@
+'''
+This module exports the `wsgi_app` object, a WSGI application that supports
+queries of artifact data and metadata.
+
+TODO: Switch to the following HTTP endpoints:
+- `/_schema`: The schema, in JSON format
+- `/x/y/z[t_last=null]`: A full fetch of an artifact, file, or array
+- `/x/y/z/_meta[depth=0]`: Artifact/file/array metadata
+'''
+
 from multiprocessing import cpu_count
 from pathlib import Path
 import re
@@ -9,75 +19,65 @@ from gunicorn.app.base import BaseApplication as GunicornApp
 import h5py as h5
 from ruamel import yaml
 
-from ._global_conf import get_conf
+from ._artifacts import get_root_dir
+from ._configurables import get_schema
 
 __all__ = ['serve']
 
-#------------------------------------------------------------------------------
-# Web API
+#-- Web API -------------------------------------------------------------------
 
-def serve(port: int = 3000, root_dir: Opt[str] = None) -> None:
-    '''
-    Starts a server providing access to the records in a directory
-    '''
-    root = Path(root_dir or get_conf().root_dir)
+def write_response(req: Request, res: Response) -> None:
+    root = get_root_dir()
+    res.content_type = 'application/cbor'
+    res.set_header('Access-Control-Allow-Origin', '*')
 
-    def write_response(req: Request, res: Response) -> None:
-        res.content_type = 'application/cbor'
-        res.set_header('Access-Control-Allow-Origin', '*')
+    if req.path.endswith('/_entry-names'):
+        path = root / req.path[1:-len('/_entry-names')]
+        if path.is_file(): raise HTTPStatus(HTTP_404)
+        res.data = cbor2.dumps(dict(
+            type='plain-object',
+            content=sorted([
+                re.sub(r'\.h5$', '', p.name) + ('/' if p.is_dir() else '')
+                for p in path.glob('[!_]*')
+            ])
+        ))
 
-        if req.path.endswith('/_entry-names'):
-            path = root / req.path[1:-len('/_entry-names')]
-            if path.is_file(): raise HTTPStatus(HTTP_404)
+    elif req.path.endswith('/_entries'):
+        path = root / req.path[1:-len('/_entries')]
+        if path.is_file(): raise HTTPStatus(HTTP_404)
+        res.data = cbor2.dumps(dict(
+            type='plain-object',
+            content=list(_entries(path))
+        ))
+
+    elif req.path == '/_meta':
+        res.data = cbor2.dumps(dict(
+            type='plain-object',
+            content=dict(spec=None, schema=get_schema())
+        ))
+
+    elif req.path.endswith('/_meta'):
+        key = req.path[1:-len('/_meta')]
+        if (root / key).with_suffix('.h5').is_file():
             res.data = cbor2.dumps(dict(
                 type='plain-object',
-                content=sorted([
-                    re.sub(r'\.h5$', '', p.name) + ('/' if p.is_dir() else '')
-                    for p in path.glob('[!_]*')
-                ])
+                content={'IS_ARRAY': True}
             ))
-
-        elif req.path.endswith('/_entries'):
-            path = root / req.path[1:-len('/_entries')]
-            if path.is_file(): raise HTTPStatus(HTTP_404)
-            res.data = cbor2.dumps(dict(
-                type='plain-object',
-                content=list(_entries(path))
-            ))
-
-        elif req.path.endswith('/_meta'):
-            key = req.path[1:-len('/_meta')]
-            if (root / key).with_suffix('.h5').is_file():
-                res.data = cbor2.dumps(dict(
-                    type='plain-object',
-                    content={'IS_ARRAY': True}
-                ))
-            else:
-                res.data = cbor2.dumps(_read_meta(root, key))
-
         else:
-            t_last = float(req.get_param('t_last') or 0) / 1000
-            entry = _read(root, req.path[1:], t_last)
-            if entry['type'] == 'file':
-                res.data = (root / cast(str, entry['content'])).read_bytes()
-            else:
-                res.data = cbor2.dumps(entry)
+            res.data = cbor2.dumps(_read_meta(root, key))
 
-        res.status = HTTP_200
+    else:
+        t_last = float(req.get_param('t_last') or 0) / 1000
+        entry = _read(root, req.path[1:], t_last)
+        if entry['type'] == 'file':
+            res.data = (root / cast(str, entry['content'])).read_bytes()
+        else:
+            res.data = cbor2.dumps(entry)
 
-    app = API(middleware=[_HandleCORS()])
-    app.add_sink(write_response)
-
-    class Server(GunicornApp): # type: ignore
-        def load(self) -> API:
-            return app
-        def load_config(self) -> None:
-            self.cfg.set('bind', f'localhost:{port}')
-            self.cfg.set('workers', cpu_count())
-    Server().run()
+    res.status = HTTP_200
 
 
-class _HandleCORS(object):
+class HandleCORS(object):
     def process_request(self, req: Request, res: Response) -> None:
         res.set_header('Access-Control-Allow-Origin', '*')
         res.set_header('Access-Control-Allow-Methods', '*')
@@ -86,8 +86,11 @@ class _HandleCORS(object):
         if req.method == 'OPTIONS':
             raise HTTPStatus(HTTP_200)
 
-#------------------------------------------------------------------------------
-# I/O
+
+wsgi_app = API(middleware=[HandleCORS()])
+wsgi_app.add_sink(write_response)
+
+#-- I/O -----------------------------------------------------------------------
 
 _web_dtypes = dict(
     bool='uint8',

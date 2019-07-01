@@ -100,7 +100,7 @@ definition.
           # Encoded files can also be extended, performing
           # byte-level concatenation.
           #
-          self.extend('poems__txt', Path('the-iliad.txt'))
+          self.extend('poems.txt', Path('the-iliad.txt'))
 
           ####
           # Assigning a mapping to a field creates a subartifact.
@@ -119,12 +119,12 @@ definition.
           ))
 
           ####
-          # Accessing an attribute without "." or "__" in the name
-          # returns an empty Artifact.
+          # Accessing an uninitialized attribute without "." or "__"
+          # in the name returns an empty Artifact.
           #
           assert (
-              isinstance(self.empty_dir, Artifact)
-              and len(self.empty_dir) == 0
+              isinstance(self.nonexistent_dir, Artifact)
+              and len(self.nonexistent_dir) == 0
           )
 
 

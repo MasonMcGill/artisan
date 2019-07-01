@@ -1,7 +1,21 @@
+'''
+This module exports the `Artifact` class, an array- and metadata-friendly view
+into a directory.
+
+Instances of the base artifact class have methods to simplify reading/writing
+collections of arrays. `Artifact` can also be subclassed to define configurable,
+persistent computed asset types, within Python/PEP 484's type system.
+
+This module also exports `ArrayFile` and `EncodedFile`, descriptor protocols
+that intended to be used as attribute type annotations within `Artifact`
+subclass definition.
+'''
+
 import itertools
 import json
 from pathlib import Path
 import shutil
+import threading
 from time import sleep
 from typing import (
     Any, Iterator, List, Mapping, MutableMapping,
@@ -13,18 +27,35 @@ import h5py as h5
 import numpy as np
 from ruamel import yaml
 
-from ._configurables import Configurable, schema
-from ._global_conf import get_conf
-from ._namespaces import namespacify, Namespace
+from ._configurables import Configurable, get_scope
+from ._namespaces import Namespace, namespacify
 
-__all__ = ['Artifact', 'ArrayFile', 'EncodedFile', 'write_global_meta']
+__all__ = ['Artifact', 'ArrayFile', 'EncodedFile']
+
+#-- Root artifact directory management ----------------------------------------
+
+context = threading.local()
+
+def set_root_dir(root_dir: Optional[Path]) -> None:
+    '''
+    Set the directory in which to search for artifacts.
+    '''
+    context.root_dir = root_dir if root_dir is not None else Path('.')
+
+def get_root_dir() -> Path:
+    '''
+    Return the current artifact search directory.
+    '''
+    return getattr(context, 'root_dir', Path('.'))
 
 #-- Static type definitions ---------------------------------------------------
 
 from pathlib import Path as EncodedFile
 
 class ArrayFile(Protocol):
-    ''' A property that corresponds to a single-array HDF5 file '''
+    '''
+    A property that corresponds to a single-array HDF5 file
+    '''
     def __get__(self, obj: object, type_: Optional[type]) -> h5.Dataset: ...
     def __set__(self, obj: object, val: object) -> None: ...
 
@@ -37,9 +68,9 @@ class Artifact(Configurable):
     Arguments:
         path (Path|str): The path at which the artifact is, or should be,
             stored
-        conf (Mapping[str, object]): The subtype-specific configuration,
-            optionally including a "type" field indicating what type of
-            artifact to construct
+        conf (Mapping[str, object]): The build configuration, optionally
+            including a "type" field indicating the type of artifact to search
+            for/construct
 
     Constructors:
         - Artifact(conf: *Mapping[str, object]*)
@@ -48,17 +79,46 @@ class Artifact(Configurable):
         - Artifact(path: *Path|str*, conf: *Mapping[str, object]*)
         - Artifact(path: *Path|str*, **conf_elem: *object*)
 
+    If only `path` is provided, the artifact corresponding to `Path` is
+    returned. It will be empty if `path` points to an empty or nonexistent
+    directory.
+
+    If only `conf` is provided, Artisan will search the current `root_dir`
+    for a matching directory, and return an artifact pointing there if it
+    exists. Otherwise, a new artifact will be constructed at the top level of
+    the `root_dir`.
+
+    If both `path` and `conf` are provided, Artisan will return the artifact
+    at `path`, building it if necessary. If `path` points to an existing
+    directory that is not a sucessfully built artifact matching `conf`, an
+    error is raised.
+
     Fields:
         - **path** (*Path*): The path to the root of the file tree backing this \
             artifact
-        - **meta** (*Mapping[str, object]*): The metadata stored in \
+        - **conf** (*Namespace*): The configuration (inherited from
+            `Configurable`)
+        - **meta** (*Namespace*): The metadata stored in \
             `{self.path}/_meta.yaml`
 
-    Type lookup is performed in the current scope, which can be modified via
-    the global configuration API.
+    After instantiation, artifacts act as string-keyed `MutableMapping`s (with
+    some additional capabilities), containing three types of entries:
+    `ArrayFile`s, `EncodedFile`s, and other `Artifact`s.
 
-    Reading/writing/extending/deleting `ArrayFile`, `EncodedFile`, and
-    `Artifact` fields is supported.
+    `ArrayFile`s are single-entry HDF5 files, in SWMR mode. Array-like numeric
+    and byte-string data (valid operands of `numpy.asarray`) written into an
+    artifact via `__setitem__`, `__setattr__`, or `extend` is stored as an array
+    file.
+
+    `EncodedFile`s are non-array files, presumed to be encoded in a format that
+    Artisan does not understand. They are written and read as normalized
+    `Path`s, which support simple text and byte I/O, and can be passed to more
+    specialized libraries for further processing.
+
+    `Artifact` entries are returned as properly subtyped artifacts, and can be
+    created, via `__setitem__`, `__setattr__`, or `extend`, from existing
+    artifacts or (possibly nested) string-keyed `Mapping`s (*e.g* a dictionary
+    of arrays).
     '''
     path: Path
 
@@ -116,10 +176,10 @@ class Artifact(Configurable):
         attributes (i.e. `artifact['name.ext']` is equivalent to
         `artifact.name__ext`).
         '''
-        path = self.path / key.replace('__', '.')
+        path = self.path / key
 
         # Return an array.
-        if Path(f'{path}.h5').is_file():
+        if path.with_suffix('.h5').is_file():
             return _read_h5(path.with_suffix('.h5'))
 
         # Return the path to a file.
@@ -143,7 +203,7 @@ class Artifact(Configurable):
         attributes (i.e. `artifact['name.ext'] = val` is equivalent to
         `artifact.name__ext = val`).
         '''
-        path = self.path / key.replace('__', '.')
+        path = self.path / key
 
         # Copy an existing file.
         if isinstance(val, Path):
@@ -169,8 +229,19 @@ class Artifact(Configurable):
         attributes (i.e. `del artifact['name.ext']` is equivalent to
         `del artifact.name__ext`).
         '''
-        path = self.path / key.replace('__', '.')
-        shutil.rmtree(path, ignore_errors=True)
+        path = self.path / key
+
+        # Delete an array file.
+        if path.with_suffix('.h5').is_file():
+            path.with_suffix('.h5').unlink()
+
+        # Delete a non-array file.
+        elif path.is_file():
+            path.unlink()
+
+        # Delete an artifact.
+        else:
+            shutil.rmtree(path, ignore_errors=True)
 
     def extend(self, key: str, val: object) -> None:
         '''
@@ -193,8 +264,8 @@ class Artifact(Configurable):
         # Append a subartifact.
         elif isinstance(val, (Mapping, Artifact)):
             assert path.suffix == ''
-            for k, v in val.items():
-                Artifact(path).extend(k, v)
+            for k in val:
+                Artifact(path).extend(k, val[k])
 
         # Append an array.
         else:
@@ -204,13 +275,13 @@ class Artifact(Configurable):
     #-- Attribute-style element access --------------------
 
     def __getattr__(self, key: str) -> Any:
-        return self.__getitem__(key)
+        return self.__getitem__(key.replace('__', '.'))
 
     def __setattr__(self, key: str, value: object) -> None:
-        self.__setitem__(key, value)
+        self.__setitem__(key.replace('__', '.'), value)
 
     def __delattr__(self, key: str) -> None:
-        self.__delitem__(key)
+        self.__delitem__(key.replace('__', '.'))
 
     #-- Attribute preemption, for REPL autocompletion -----
 
@@ -298,7 +369,13 @@ def _artifact_from_path(cls: type, path: Path) -> Artifact:
     subtype of `cls`.
     '''
     spec = _read_meta(path).spec or {}
-    written_type = get_conf().scope.get(spec.get('type', None), None)
+    written_type = get_scope().get(spec.get('type', None), None)
+
+    if path.is_file():
+        raise FileExistsError(f'{path} is a file.')
+
+    if hasattr(cls, 'build') and not path.is_dir():
+        raise FileNotFoundError(f'{path} does not exist.')
 
     if written_type is not None and not issubclass(written_type, cls):
         raise FileExistsError(
@@ -320,7 +397,7 @@ def _artifact_from_conf(cls: type, conf: Mapping[str, object]) -> Artifact:
     object.__setattr__(artifact, '_cached_keys', set())
     spec = Namespace(type=_identify(type(artifact)), **artifact.conf)
 
-    for path in Path(get_conf().root_dir).glob('*'):
+    for path in Path(get_root_dir()).glob('*'):
         meta = _read_meta(path)
         if meta.spec == spec:
             while meta.status == 'running':
@@ -364,13 +441,12 @@ def _build(artifact: Artifact) -> None:
     '''
     Create parent directories, invoke `artifact.build`, and store metadata.
     '''
-    if Path(get_conf().root_dir) in artifact.path.parents:
-        write_global_meta()
-
     # TODO: Fix YAML generation.
     meta_path = artifact.path / '_meta.yaml'
     spec = Namespace(type=_identify(type(artifact)), **artifact.conf)
-    write_meta = lambda **kwargs: meta_path.write_text(json.dumps(kwargs))
+    write_meta = lambda **kwargs: meta_path.write_text(
+        json.dumps(_identify_elements(kwargs))
+    )
 
     artifact.path.mkdir(parents=True)
     write_meta(spec=spec, status='running')
@@ -391,7 +467,7 @@ def _resolve_path(path: Path) -> Path:
     Dereference ".", "..", "~", and "@".
     '''
     if str(path).startswith('@/'):
-        path = Path(get_conf().root_dir) / str(path)[2:]
+        path = Path(get_root_dir()) / str(path)[2:]
     return path.expanduser().resolve()
 
 
@@ -399,7 +475,7 @@ def _new_artifact_path(type_: type) -> Path:
     '''
     Generate an unused path in the artifact root directory.
     '''
-    root = Path(get_conf().root_dir)
+    root = Path(get_root_dir())
     type_name = _identify(type_)
     for i in itertools.count():
         dst = root / f'{type_name}_{i:04x}'
@@ -442,19 +518,22 @@ def _extend_h5(path: Path, val: object) -> None:
         f.swmr_mode = True
     else:
         dset = f['data']
-    dset.resize(dset.len() + len(val), 0)
-    dset[-len(val):] = val
-    dset.flush()
+    if len(val) > 0:
+        dset.resize(dset.len() + len(val), 0)
+        dset[-len(val):] = val
+        dset.flush()
 
 
 def _copy_file(dst: Path, src: Path) -> None:
     shutil.rmtree(dst, ignore_errors=True)
+    dst.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy(src, dst)
 
 
 def _extend_file(dst: Path, src: Path) -> None:
-    with open(src, 'r') as f_src:
-        with open(dst, 'a+') as f_dst:
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    with open(src, 'rb') as f_src:
+        with open(dst, 'ab+') as f_dst:
             f_dst.write(f_src.read())
 
 
@@ -469,17 +548,18 @@ def _read_meta(path: Path) -> Namespace:
     except:
         return Namespace(spec=None, status='done')
 
-
-def write_global_meta() -> None:
-    '''
-    Write global config information to `{root_path}/_meta.yaml`.
-    '''
-    meta = {'spec': None, 'schema': schema()}
-    meta_text = yaml.round_trip_dump(meta)
-    Path(get_conf().root_dir).mkdir(parents=True, exist_ok=True)
-    Path(f'{get_conf().root_dir}/_meta.yaml').write_text(meta_text)
-
 #-- Scope search --------------------------------------------------------------
 
 def _identify(type_: type) -> str:
-    return next(sym for sym, t in get_conf().scope.items() if t == type_)
+    return next(sym for sym, t in get_scope().items() if t == type_)
+
+
+def _identify_elements(obj: object) -> object:
+    if isinstance(obj, type):
+        return _identify(obj)
+    elif isinstance(obj, list):
+        return [_identify_elements(elem) for elem in obj]
+    elif isinstance(obj, dict):
+        return Namespace({k: _identify_elements(obj[k]) for k in obj})
+    else:
+        return obj

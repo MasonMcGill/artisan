@@ -148,14 +148,40 @@
            <div itemprop="articleBody">
             
   <h1>Source code for artisan._configurables</h1><div class="highlight"><pre>
-<span></span><span class="kn">from</span> <span class="nn">typing</span> <span class="k">import</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">,</span> <span class="n">Tuple</span>
-<span class="kn">from</span> <span class="nn">typing_extensions</span> <span class="k">import</span> <span class="n">Protocol</span><span class="p">,</span> <span class="n">runtime</span>
+<span></span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">This module defines `Configurable`, a class of objects whose constructors accept</span>
+<span class="sd">a JSON-like configuration as their first argument. Configurable objects provide</span>
+<span class="sd">the following features:</span>
 
-<span class="kn">from</span> <span class="nn">._global_conf</span> <span class="k">import</span> <span class="n">get_conf</span><span class="p">,</span> <span class="n">default_scope</span>
+<span class="sd">- A `conf` field that stores the configuration passed into the constructor</span>
+<span class="sd">- The ability to define a `Conf` class (which is converted to a JSON-Schema) </span>
+<span class="sd">  that documents/validates the expected form of the configuration</span>
+<span class="sd">- Subclass forwarding — If the configuration contains a &quot;type&quot; field, it</span>
+<span class="sd">  determines the class of `Configurable` that is constructed. This is useful</span>
+<span class="sd">  e.g. when constructing objects from deserialized configurations.</span>
+<span class="sd">&#39;&#39;&#39;</span>
+
+<span class="kn">import</span> <span class="nn">threading</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="k">import</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Type</span>
+<span class="kn">from</span> <span class="nn">typing_extensions</span> <span class="k">import</span> <span class="n">Protocol</span>
+
 <span class="kn">from</span> <span class="nn">._namespaces</span> <span class="k">import</span> <span class="n">Namespace</span><span class="p">,</span> <span class="n">namespacify</span>
 <span class="kn">from</span> <span class="nn">._schemas</span> <span class="k">import</span> <span class="n">conf_schema_from_type</span>
 
-<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;Configurable&#39;</span><span class="p">,</span> <span class="s1">&#39;NameConflict&#39;</span><span class="p">,</span> <span class="s1">&#39;schema&#39;</span><span class="p">]</span>
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s1">&#39;Configurable&#39;</span><span class="p">,</span> <span class="s1">&#39;NameConflict&#39;</span><span class="p">,</span> <span class="s1">&#39;get_schema&#39;</span><span class="p">,</span> <span class="s1">&#39;get_scope&#39;</span><span class="p">,</span> <span class="s1">&#39;set_scope&#39;</span>
+<span class="p">]</span>
+
+<span class="c1">#-- Scope management ----------------------------------------------------------</span>
+
+<span class="n">default_scope</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">type</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+<span class="n">context</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">local</span><span class="p">()</span>
+
+<span class="k">def</span> <span class="nf">set_scope</span><span class="p">(</span><span class="n">scope</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">type</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="n">context</span><span class="o">.</span><span class="n">scope</span> <span class="o">=</span> <span class="n">scope</span> <span class="k">if</span> <span class="n">scope</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">default_scope</span>
+
+<span class="k">def</span> <span class="nf">get_scope</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">type</span><span class="p">]:</span>
+    <span class="k">return</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="s1">&#39;scope&#39;</span><span class="p">,</span> <span class="n">default_scope</span><span class="p">)</span>
 
 <span class="c1">#-- Configurable object metaclass ---------------------------------------------</span>
 
@@ -175,13 +201,10 @@
 
         <span class="c1"># Generate `Conf` if it does not exist.</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;Conf&#39;</span><span class="p">):</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">Conf</span> <span class="o">=</span> <span class="n">runtime</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="s1">&#39;Conf&#39;</span><span class="p">,</span> <span class="p">(</span><span class="n">Protocol</span><span class="p">,),</span> <span class="p">{</span> <span class="c1"># type: ignore</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">Conf</span> <span class="o">=</span> <span class="nb">type</span><span class="p">(</span><span class="s1">&#39;Conf&#39;</span><span class="p">,</span> <span class="p">(</span><span class="n">Protocol</span><span class="p">,),</span> <span class="p">{</span> <span class="c1"># type: ignore</span>
                 <span class="s1">&#39;__qualname__&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__qualname__</span><span class="o">+</span><span class="s1">&#39;.Conf&#39;</span><span class="p">,</span>
                 <span class="s1">&#39;__module__&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__module__</span>
-            <span class="p">}))</span>
-
-        <span class="c1"># Make the configurable class accessable from the configuration class.</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">Conf</span><span class="o">.</span><span class="n">__recipient_type__</span> <span class="o">=</span> <span class="bp">self</span> <span class="c1"># type: ignore</span>
+            <span class="p">})</span>
 
         <span class="c1"># Add the configurable class to the default scope.</span>
         <span class="n">default_scope</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="vm">__qualname__</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
@@ -211,19 +234,20 @@
 
 <span class="sd">    Similarly, if `conf` contains a &quot;type&quot; field that is a string, `__new__`</span>
 <span class="sd">    dereferences it in the current type scope and returns an instance of the</span>
-<span class="sd">    resulting type (see `push_conf`/`pop_conf`/`get_conf`).</span>
+<span class="sd">    resulting type (the `Artisan` class can be used to manipulate the type</span>
+<span class="sd">    scope).</span>
 <span class="sd">    &#39;&#39;&#39;</span>
 
 <div class="viewcode-block" id="Configurable.Conf"><a class="viewcode-back" href="../../api-reference.html#artisan.Configurable.Conf">[docs]</a>    <span class="k">class</span> <span class="nc">Conf</span><span class="p">(</span><span class="n">Protocol</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        A configuration</span>
 
-<span class="sd">        If its definition is inline, it will be translated into a JSON-Schema to</span>
-<span class="sd">        validate configurations passed into the outer class&#39; constructor.</span>
+<span class="sd">        If its definition is inline (lexically within the containing class&#39;</span>
+<span class="sd">        definition), it will be translated into a JSON-Schema to validate</span>
+<span class="sd">        configurations passed into the outer class&#39; constructor.</span>
 
 <span class="sd">        `Conf` classes are intended to be interface definitions. They can extend</span>
-<span class="sd">        `typing_extensions.Protocol` to support static analysis and `isinstance`</span>
-<span class="sd">        calls (with the `typing_extensions.runtime` decorator).</span>
+<span class="sd">        `typing_extensions.Protocol` to support static analysis.</span>
 
 <span class="sd">        An empty `Conf` definition is created for every `Configurable` subclass</span>
 <span class="sd">        defined without one.</span>
@@ -231,7 +255,7 @@
         <span class="k">pass</span></div>
 
     <span class="n">conf</span><span class="p">:</span> <span class="n">Namespace</span><span class="p">;</span> <span class="s1">&#39;&#39;&#39;</span>
-<span class="s1">        The configuration passed into the constructer, coerced to a `Namespace`</span>
+<span class="s1">        The configuration passed into the constructor, coerced to a `Namespace`</span>
 <span class="s1">    &#39;&#39;&#39;</span>
 
     <span class="k">def</span> <span class="nf">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span>
@@ -250,7 +274,7 @@
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">cls_override</span><span class="p">,</span> <span class="nb">type</span><span class="p">):</span>
             <span class="bp">cls</span> <span class="o">=</span> <span class="n">cls_override</span>
         <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">cls_override</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
-            <span class="k">try</span><span class="p">:</span> <span class="bp">cls</span> <span class="o">=</span> <span class="n">get_conf</span><span class="p">()</span><span class="o">.</span><span class="n">scope</span><span class="p">[</span><span class="n">cls_override</span><span class="p">]</span>
+            <span class="k">try</span><span class="p">:</span> <span class="bp">cls</span> <span class="o">=</span> <span class="n">get_scope</span><span class="p">()[</span><span class="n">cls_override</span><span class="p">]</span>
             <span class="k">except</span><span class="p">:</span> <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="n">f</span><span class="s1">&#39;&quot;</span><span class="si">{cls_override}</span><span class="s1">&quot; can</span><span class="se">\&#39;</span><span class="s1">t be resolved.&#39;</span><span class="p">)</span>
 
         <span class="c1"># Construct and return a `Configurable` instance.</span>
@@ -260,20 +284,20 @@
 
 <span class="c1">#-- Schema generation ---------------------------------------------------------</span>
 
-<span class="k">def</span> <span class="nf">schema</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="k">def</span> <span class="nf">get_schema</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
     <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">    Return a schema with a definition for each exposed type.</span>
 <span class="sd">    &#39;&#39;&#39;</span>
     <span class="n">conf_types</span> <span class="o">=</span> <span class="p">{</span>
         <span class="n">sym</span><span class="p">:</span> <span class="n">type_</span><span class="o">.</span><span class="n">Conf</span> <span class="c1"># type: ignore</span>
-        <span class="k">for</span> <span class="n">sym</span><span class="p">,</span> <span class="n">type_</span> <span class="ow">in</span> <span class="n">get_conf</span><span class="p">()</span><span class="o">.</span><span class="n">scope</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">sym</span><span class="p">,</span> <span class="n">type_</span> <span class="ow">in</span> <span class="n">get_scope</span><span class="p">()</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
         <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">type_</span><span class="p">,</span> <span class="s1">&#39;Conf&#39;</span><span class="p">)</span>
     <span class="p">}</span>
     <span class="k">return</span> <span class="p">{</span>
         <span class="s1">&#39;$schema&#39;</span><span class="p">:</span> <span class="s1">&#39;http://json-schema.org/draft-07/schema#&#39;</span><span class="p">,</span>
         <span class="s1">&#39;definitions&#39;</span><span class="p">:</span> <span class="p">{</span>
             <span class="n">sym</span><span class="p">:</span> <span class="n">conf_schema_from_type</span><span class="p">(</span><span class="n">type_</span><span class="p">,</span> <span class="n">conf_types</span><span class="p">)</span>
-            <span class="k">for</span> <span class="n">sym</span><span class="p">,</span> <span class="n">type_</span> <span class="ow">in</span> <span class="n">get_conf</span><span class="p">()</span><span class="o">.</span><span class="n">scope</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+            <span class="k">for</span> <span class="n">sym</span><span class="p">,</span> <span class="n">type_</span> <span class="ow">in</span> <span class="n">get_scope</span><span class="p">()</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
         <span class="p">},</span>
         <span class="s1">&#39;$ref&#39;</span><span class="p">:</span> <span class="s1">&#39;#/definitions/Configurable&#39;</span>
     <span class="p">}</span>

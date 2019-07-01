@@ -1,6 +1,12 @@
-from typing import Any, Dict, List, Mapping, cast
+'''
+This module exports `Namespace`, a `dict` that supports accessing items at
+attributes, for convenience, and to better support static analysis.
 
-from ._global_conf import get_conf
+It also exports`namespacify`, a function that recursively converts mappings and
+namespace-like containers in JSON-like objects to `Namespace`s.
+'''
+
+from typing import Any, Dict, List, Mapping
 
 __all__ = ['Namespace', 'namespacify']
 
@@ -78,13 +84,8 @@ def namespacify(obj: object) -> object:
     Recursively convert mappings (item access only) and ad-hoc namespaces
     (attribute access only) to `Namespace`s (both item and element access).
     '''
-    if isinstance(obj, (type(None), bool, int, float, str)):
+    if isinstance(obj, (type(None), bool, int, float, str, type)):
         return obj
-    elif isinstance(obj, type):
-        return next(
-            (sym for sym, t in get_conf().scope.items() if t is obj),
-            '<UnknownType>'
-        )
     elif isinstance(obj, list):
         return [namespacify(v) for v in obj]
     elif isinstance(obj, Mapping):

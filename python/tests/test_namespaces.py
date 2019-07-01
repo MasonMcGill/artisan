@@ -27,7 +27,8 @@ def test_namespacify():
         'str': 'three',
         'list': [0, 1, 2],
         'dict': {'a': 0, 'b': 1},
-        'namespace': SimpleNamespace(c=2, d=3)
+        'namespace': SimpleNamespace(c=2, d=3),
+        'type': int
     }
     obj_as_ns = Namespace(
         bool = False,
@@ -36,7 +37,8 @@ def test_namespacify():
         str = 'three',
         list = [0, 1, 2],
         dict = Namespace(a=0, b=1),
-        namespace = Namespace(c=2, d=3)
+        namespace = Namespace(c=2, d=3),
+        type = int
     )
     assert namespacify(obj) == obj_as_ns
     assert isinstance(namespacify(obj).dict, Namespace)

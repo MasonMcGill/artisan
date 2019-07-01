@@ -5,7 +5,7 @@ sys.path.insert(0, os.path.normpath(f'{__file__}../../../python'))
 from shutil import rmtree
 from typing import Union
 
-import artisan; from artisan import Artifact, ArrayFile, EncodedFile
+from artisan import Artifact, Artisan, ArrayFile, EncodedFile
 import numpy as np
 
 #-- Define artifact types. ----------------------------------------------------
@@ -97,7 +97,7 @@ class BoxFilterTest(Artifact):
 #-- Construct and serve artifacts. --------------------------------------------
 
 rmtree('.test-data', ignore_errors=True)
-artisan.push_conf(root_dir='.test-data')
+Artisan.push(root_dir='.test-data')
 
 BoxFilterTest(
     signal = dict(
@@ -111,6 +111,6 @@ BoxFilterTest(
 )
 
 try:
-    artisan.serve()
+    Artisan.get_current().serve()
 except BaseException:
     rmtree('.test-data', ignore_errors=True)
