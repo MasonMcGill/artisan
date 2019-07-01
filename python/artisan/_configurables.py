@@ -95,6 +95,14 @@ class NameConflict:
 
 #-- Configurable objects ------------------------------------------------------
 
+class GenericConf(Protocol):
+    '''
+    [A descriptor type that enables Jedi autocompletion support for conf fields]
+    '''
+    def __get__(self, obj, type_):
+        return obj.Conf()
+
+
 class Configurable(metaclass=ConfigurableMeta):
     '''
     An object whose behavior is configured via a JSON-object-like configuration
@@ -130,7 +138,7 @@ class Configurable(metaclass=ConfigurableMeta):
         '''
         pass
 
-    conf: Namespace; '''
+    conf: GenericConf; '''
         The configuration passed into the constructor, coerced to a `Namespace`
     '''
 
