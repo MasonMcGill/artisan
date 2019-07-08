@@ -2,6 +2,8 @@
 A build system for explainable science
 '''
 
+__version__ = '0.2.1'
+
 from ._artifacts import Artifact, ArrayFile, EncodedFile
 from ._artisan import Artisan
 from ._configurables import Configurable

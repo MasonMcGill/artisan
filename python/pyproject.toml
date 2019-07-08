@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "artisan-builder"
-version = "0.1.0"
+version = "0.2.1"
 description = "A build system for explainable science"
 license = "MIT"
 authors = ["Mason McGill <mmcgill@caltech.edu>"]
