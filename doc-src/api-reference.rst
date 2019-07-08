@@ -14,12 +14,7 @@ Summary
   Artifact
   ArrayFile
   EncodedFile
-  Conf
-  push_conf
-  pop_conf
-  using_conf
-  get_conf
-  serve
+  Artisan
 
 
 Details
@@ -37,10 +32,12 @@ Details
   .. automethod:: __delitem__
   .. automethod:: extend
 
-.. autoclass:: Conf
-.. autofunction:: push_conf(conf: Optional[Conf] = None, **updates) -> None
-.. autofunction:: pop_conf() -> Conf
-.. autofunction:: using_conf(conf: Optional[Conf] = None, **updates) -> Iterator[None]
-.. autofunction:: get_conf() -> Conf
+.. autoclass:: Artisan
 
-.. autofunction:: serve
+  .. automethod:: get_current
+  .. automethod:: push
+  .. automethod:: pop
+  .. automethod:: __enter__
+  .. automethod:: __exit__
+  .. automethod:: __call__
+  .. automethod:: serve

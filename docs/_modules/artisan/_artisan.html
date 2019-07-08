@@ -1,0 +1,338 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>artisan._artisan &mdash; artisan  documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../../_static/jquery.js"></script>
+        <script type="text/javascript" src="../../_static/underscore.js"></script>
+        <script type="text/javascript" src="../../_static/doctools.js"></script>
+        <script type="text/javascript" src="../../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../index.html" class="icon icon-home"> artisan
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../using-artisan.html">Using Artisan</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../using-artisan-ui.html">Using ArtisanUI</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api-reference.html">API reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../related-projects.html">Related projects</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">artisan</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+        
+          <li><a href="../artisan.html">artisan</a> &raquo;</li>
+        
+      <li>artisan._artisan</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for artisan._artisan</h1><div class="highlight"><pre>
+<span></span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">This module exports the `Artisan` class. `Artisan` objects represent the</span>
+<span class="sd">thread-local state of an Artisan environment. They can also be used as an HTTP</span>
+<span class="sd">server or WSGI application.</span>
+<span class="sd">&#39;&#39;&#39;</span>
+
+<span class="kn">from</span> <span class="nn">pathlib</span> <span class="k">import</span> <span class="n">Path</span>
+<span class="kn">import</span> <span class="nn">threading</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="k">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Iterable</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span>
+<span class="kn">from</span> <span class="nn">wsgiref.simple_server</span> <span class="k">import</span> <span class="n">make_server</span>
+
+<span class="kn">from</span> <span class="nn">._artifacts</span> <span class="k">import</span> <span class="n">Artifact</span><span class="p">,</span> <span class="n">set_root_dir</span>
+<span class="kn">from</span> <span class="nn">._configurables</span> <span class="k">import</span> <span class="n">default_scope</span><span class="p">,</span> <span class="n">get_schema</span><span class="p">,</span> <span class="n">set_scope</span>
+<span class="kn">from</span> <span class="nn">._http</span> <span class="k">import</span> <span class="n">wsgi_app</span>
+<span class="kn">from</span> <span class="nn">._namespaces</span> <span class="k">import</span> <span class="n">Namespace</span>
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;Artisan&#39;</span><span class="p">]</span>
+
+<span class="c1">#------------------------------------------------------------------------------</span>
+
+<span class="k">class</span> <span class="nc">Artisan</span><span class="p">:</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    The thread-local state of an Artisan environment</span>
+
+<span class="sd">    `Artisan` objects can also be used as an HTTP or WSGI server.</span>
+
+<span class="sd">    Parameters:</span>
+<span class="sd">        root_dir: The default directory for artifact creation, and the</span>
+<span class="sd">            directory that will be searched for matches when an artifact is</span>
+<span class="sd">            instantiated from a specification</span>
+<span class="sd">        scope: The mapping used to resolve `type`s in specifications during</span>
+<span class="sd">            configurable object instantiation</span>
+<span class="sd">        build: [Not currently used]</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">root_dir</span><span class="p">:</span> <span class="n">Path</span>
+    <span class="n">scope</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">type</span><span class="p">]</span>
+    <span class="n">build</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Callable</span><span class="p">[[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">],</span> <span class="kc">None</span><span class="p">]]</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span>
+                 <span class="n">root_dir</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                 <span class="n">scope</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">type</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                 <span class="n">build</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Callable</span><span class="p">[[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">],</span> <span class="kc">None</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">root_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">)</span> <span class="k">if</span> <span class="n">root_dir</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">Path</span><span class="p">(</span><span class="n">root_dir</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">scope</span> <span class="o">=</span> <span class="n">default_scope</span> <span class="k">if</span> <span class="n">scope</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">Namespace</span><span class="p">(</span><span class="n">scope</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">build</span> <span class="o">=</span> <span class="n">Artifact</span> <span class="k">if</span> <span class="n">build</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">build</span> <span class="c1"># type: ignore</span>
+
+    <span class="c1">#-- Context manipulation ------------------------------</span>
+
+<div class="viewcode-block" id="Artisan.get_current"><a class="viewcode-back" href="../../api-reference.html#artisan.Artisan.get_current">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">get_current</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="s1">&#39;Artisan&#39;</span><span class="p">:</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Return the currently active artisan.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">return</span> <span class="n">artisan_stack</span><span class="o">.</span><span class="n">contents</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span></div>
+
+<div class="viewcode-block" id="Artisan.push"><a class="viewcode-back" href="../../api-reference.html#artisan.Artisan.push">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">push</span><span class="p">(</span><span class="n">artisan</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="s1">&#39;Artisan&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span>
+             <span class="n">root_dir</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+             <span class="n">scope</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">type</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+             <span class="n">build</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Callable</span><span class="p">[[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">],</span> <span class="kc">None</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Push an artisan onto the thread-local artisan stack, making it active.</span>
+
+<span class="sd">        `root_dir`, `scope`, and `build` override the corresponding attributes</span>
+<span class="sd">        of `artisan` if they are defined.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">top_artisan</span> <span class="o">=</span> <span class="n">Artisan</span><span class="p">(</span>
+            <span class="n">root_dir</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="n">root_dir</span> <span class="k">if</span> <span class="n">root_dir</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+                <span class="k">else</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">artisan</span><span class="p">,</span> <span class="s1">&#39;root_dir&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+            <span class="p">),</span>
+            <span class="n">scope</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="n">scope</span> <span class="k">if</span> <span class="n">scope</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+                <span class="k">else</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">artisan</span><span class="p">,</span> <span class="s1">&#39;scope&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+            <span class="p">),</span>
+            <span class="n">build</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="n">build</span> <span class="k">if</span> <span class="n">build</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+                <span class="k">else</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">artisan</span><span class="p">,</span> <span class="s1">&#39;build&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
+        <span class="n">artisan_stack</span><span class="o">.</span><span class="n">contents</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">top_artisan</span><span class="p">)</span>
+        <span class="n">set_scope</span><span class="p">(</span><span class="n">top_artisan</span><span class="o">.</span><span class="n">scope</span><span class="p">)</span>
+        <span class="n">set_root_dir</span><span class="p">(</span><span class="n">top_artisan</span><span class="o">.</span><span class="n">root_dir</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Artisan.pop"><a class="viewcode-back" href="../../api-reference.html#artisan.Artisan.pop">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">pop</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="s1">&#39;Artisan&#39;</span><span class="p">:</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Remove and return the current artisan from the artisan stack.</span>
+
+<span class="sd">        The previously present artisan becomes active after this method is</span>
+<span class="sd">        called.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">set_scope</span><span class="p">(</span><span class="n">artisan_stack</span><span class="o">.</span><span class="n">contents</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">scope</span><span class="p">)</span>
+        <span class="n">set_root_dir</span><span class="p">(</span><span class="n">artisan_stack</span><span class="o">.</span><span class="n">contents</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">root_dir</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">artisan_stack</span><span class="o">.</span><span class="n">contents</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Artisan.__enter__"><a class="viewcode-back" href="../../api-reference.html#artisan.Artisan.__enter__">[docs]</a>    <span class="k">def</span> <span class="nf">__enter__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="sd">&#39;&#39;&#39; [Equivalent to `Artisan.push(self)`] &#39;&#39;&#39;</span>
+        <span class="n">Artisan</span><span class="o">.</span><span class="n">push</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Artisan.__exit__"><a class="viewcode-back" href="../../api-reference.html#artisan.Artisan.__exit__">[docs]</a>    <span class="k">def</span> <span class="nf">__exit__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">:</span> <span class="nb">object</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="sd">&#39;&#39;&#39; [Equivalent to `Artisan.pop()`] &#39;&#39;&#39;</span>
+        <span class="n">Artisan</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span></div>
+
+    <span class="c1">#-- JSON-Schema generation ----------------------------</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">schema</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        The JSON Schema describing specifications accepted by this artisan</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">with</span> <span class="bp">self</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">get_schema</span><span class="p">()</span>
+
+    <span class="c1">#-- HTTP API ------------------------------------------</span>
+
+<div class="viewcode-block" id="Artisan.__call__"><a class="viewcode-back" href="../../api-reference.html#artisan.Artisan.__call__">[docs]</a>    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">env</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">start_response</span><span class="p">:</span> <span class="n">Callable</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">bytes</span><span class="p">]:</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Respond to a WSGI server request.</span>
+
+<span class="sd">        This method is defined so WSGI servers (*e.g.* `Gunicorn</span>
+<span class="sd">        &lt;https://gunicorn.org/&gt;`_ ) can use an `Artisan` object as a WSGI</span>
+<span class="sd">        application.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">with</span> <span class="bp">self</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">wsgi_app</span><span class="p">(</span><span class="n">env</span><span class="p">,</span> <span class="n">start_response</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Artisan.serve"><a class="viewcode-back" href="../../api-reference.html#artisan.Artisan.serve">[docs]</a>    <span class="k">def</span> <span class="nf">serve</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">port</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">3000</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Start an HTTP server providing access to artifacts and the current</span>
+<span class="sd">        schema.</span>
+
+<span class="sd">        This method uses the reference WSGI server defined in the standard</span>
+<span class="sd">        library. Other servers, which can be installed via `pip`, may be more</span>
+<span class="sd">        robust and performant.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">with</span> <span class="n">make_server</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">port</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span> <span class="k">as</span> <span class="n">server</span><span class="p">:</span>
+            <span class="n">server</span><span class="o">.</span><span class="n">serve_forever</span><span class="p">()</span></div>
+
+<span class="c1">#------------------------------------------------------------------------------</span>
+
+<span class="k">class</span> <span class="nc">ArtisanStack</span><span class="p">(</span><span class="n">threading</span><span class="o">.</span><span class="n">local</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">contents</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Artisan</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">Artisan</span><span class="p">()]</span>
+
+<span class="n">artisan_stack</span> <span class="o">=</span> <span class="n">ArtisanStack</span><span class="p">()</span>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2019, Mason McGill
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

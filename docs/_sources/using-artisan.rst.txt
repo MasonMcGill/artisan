@@ -100,7 +100,7 @@ definition.
           # Encoded files can also be extended, performing
           # byte-level concatenation.
           #
-          self.extend('poems__txt', Path('the-iliad.txt'))
+          self.extend('poems.txt', Path('the-iliad.txt'))
 
           ####
           # Assigning a mapping to a field creates a subartifact.
@@ -119,12 +119,12 @@ definition.
           ))
 
           ####
-          # Accessing an attribute without "." or "__" in the name
-          # returns an empty Artifact.
+          # Accessing an uninitialized attribute without "." or "__"
+          # in the name returns an empty Artifact.
           #
           assert (
-              isinstance(self.empty_dir, Artifact)
-              and len(self.empty_dir) == 0
+              isinstance(self.nonexistent_dir, Artifact)
+              and len(self.nonexistent_dir) == 0
           )
 
 
@@ -173,35 +173,6 @@ and flexible docstring authoring (artifacts inherit these properties from
 `Configurable`), but their items/attributes aren't backed by the filesystem.
 
 
-Global configuration
---------------------
-
-The following thread-local configuration options exist:
-
-- `root_dir` (*str|Path*): The directory in which artifacts are created by
-  default. When artifact instantiation searches for a matching directory, it
-  performs a shallow search in `root_dir`. By default, the current working
-  directory.
-- `scope` (*{str: type}*): The mapping `Configurable` instantiation uses to
-  resolve types, when a specification includes a "type" field. By default, the
-  set of all defined `Configurable` subtypes, whose names don't start with an
-  underscore, keyed by their names (if this produces a name clash that leads to
-  an ambiguous lookup, an error is raised).
-
-Thread-local configuration options can be manipulated via the `push_conf`,
-`pop_conf`, and `using_conf` functions.
-
-.. code-block:: python
-
-  artisan.push_conf(root_dir='data')
-  ... # <create artifacts in 'data/'>
-  artisan.pop_conf()
-
-  # Or, equivalently
-  with artisan.using_conf(root_dir='data'):
-      ... # <create artifacts in 'data/'>
-
-
 Configuration schema details
 ----------------------------
 
@@ -226,15 +197,42 @@ A configurating entry matching `<SomeArtifactType>.Conf` must
 - have every field required by that subclass' configuration schema.
 
 
-Generating a REST API
----------------------
+Context management
+------------------
 
-Artifacts can be exposed as a REST API by calling `serve`.
+The following thread-local configuration options exist:
+
+- `root_dir` (*str|Path*): The directory in which artifacts are created by
+  default. When artifact instantiation searches for a matching directory, it
+  performs a shallow search in `root_dir`. By default, the current working
+  directory.
+- `scope` (*{str: type}*): The mapping `Configurable` instantiation uses to
+  resolve types, when a specification includes a "type" field. By default, the
+  set of all defined `Configurable` subtypes, whose names don't start with an
+  underscore, keyed by their names (if this produces a name clash that leads to
+  an ambiguous lookup, an error is raised).
+
+These options can be configured via the `Artisan` class:
 
 .. code-block:: python
 
-  artisan.serve(4000) # Serves the contents of `root_dir` on port 4000
-  artisan.serve(4001, 'data') # Serves the contents of "data/" on port 4001
+  with Artisan(root_dir='data'):
+      ... # <create artifacts in 'data/'>
+
+  # Or, equivalently
+  Artisan.push(root_dir='data')
+  ... # <create artifacts in 'data/'>
+  Artisan.pop()
+
+
+Generating a REST API
+---------------------
+
+Artifacts can be exposed as a REST API by calling `Artisan.serve`.
+
+.. code-block:: python
+
+  Artisan(root_dir=root_dir, scope=scope).serve(4000) # Serves data on port 4000
 
 The REST API supports the following route forms:
 
@@ -246,3 +244,7 @@ The REST API supports the following route forms:
 - **path/to/artifact/_entry-names**: A CBOR-encoded object mapping entry names
   to small metadata objects
 - **path/to/artifact/_meta**: The contents of *meta.yaml*, CBOR-encoded
+
+.. note::
+
+  The REST API will change slightly (for the better) in the near future.

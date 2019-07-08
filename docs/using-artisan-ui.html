@@ -174,62 +174,62 @@ configuration object.</p>
 frontmatter, allowing build-time options to specified, even though the code in
 the file is only ever executed within the ArtisanUI web app.</p>
 <p>An example, with all of the supported fields:</p>
-<div class="highlight-jsx notranslate"><div class="highlight"><pre><span></span>/*
-  scripts:
-    # Each entry inserts a corresponding &lt;script&gt; tag into the app.
-    # Both URLs and file paths are supported. When resolving paths, the
-    # current working directory is treated as the filesystem root.
-    - https://cdn.jsdelivr.net/npm/lodash@4.17.11/lodash.min.js
-    - https://cdn.plot.ly/plotly-latest.min.js
-    - /my-local-library.min.js
+<div class="highlight-jsx notranslate"><div class="highlight"><pre><span></span><span class="cm">/*</span>
+<span class="cm">  scripts:</span>
+<span class="cm">    # Each entry inserts a corresponding &lt;script&gt; tag into the app.</span>
+<span class="cm">    # Both URLs and file paths are supported. When resolving paths, the</span>
+<span class="cm">    # current working directory is treated as the filesystem root.</span>
+<span class="cm">    - https://cdn.jsdelivr.net/npm/lodash@4.17.11/lodash.min.js</span>
+<span class="cm">    - https://cdn.plot.ly/plotly-latest.min.js</span>
+<span class="cm">    - /my-local-library.min.js</span>
 
-  styles:
-    # Like `scripts`, but each entry generates a corresponding &lt;link&gt; tag.
-    - https://cdnjs.cloudflare.com/ajax/libs/bulma/0.7.4/css/bulma.min.css
-    - /dependencies/my-fork-of-artisan-ui-styles.min.css
+<span class="cm">  styles:</span>
+<span class="cm">    # Like `scripts`, but each entry generates a corresponding &lt;link&gt; tag.</span>
+<span class="cm">    - https://cdnjs.cloudflare.com/ajax/libs/bulma/0.7.4/css/bulma.min.css</span>
+<span class="cm">    - /dependencies/my-fork-of-artisan-ui-styles.min.css</span>
 
-  bindings:
-    # Allows global symbols (defined by the scripts in the `scripts` list)
-    # to be `import`ed. ArtisanUI&#39;s core dependencies, &quot;react&quot; and &quot;numjs&quot;,
-    # are bound implicitly. When more library authors start providing
-    # ECMAScript module builds, this field (and possibly all build
-    # configuration) will no longer be necessary.
-    lodash: _
-    plotly: Plotly
-    my-local-library: SomeIdiosyncraticGlobal
-*/
+<span class="cm">  bindings:</span>
+<span class="cm">    # Allows global symbols (defined by the scripts in the `scripts` list)</span>
+<span class="cm">    # to be `import`ed. ArtisanUI&#39;s core dependencies, &quot;react&quot; and &quot;numjs&quot;,</span>
+<span class="cm">    # are bound implicitly. When more library authors start providing</span>
+<span class="cm">    # ECMAScript module builds, this field (and possibly all build</span>
+<span class="cm">    # configuration) will no longer be necessary.</span>
+<span class="cm">    lodash: _</span>
+<span class="cm">    plotly: Plotly</span>
+<span class="cm">    my-local-library: SomeIdiosyncraticGlobal</span>
+<span class="cm">*/</span>
 
-export default {
-  /**
-   * The default host to view
-   */
-  host: &#39;localhost:3000&#39;,
+<span class="kr">export</span> <span class="k">default</span> <span class="p">{</span>
+  <span class="cm">/**</span>
+<span class="cm">   * The default host to view</span>
+<span class="cm">   */</span>
+  <span class="nx">host</span><span class="o">:</span> <span class="s1">&#39;localhost:3000&#39;</span><span class="p">,</span>
 
-  /**
-   * The time between automatic data refreshes, in milliseconds
-   * (`null` disables automatic data refreshing.)
-   */
-  refreshInterval: 5000,
+  <span class="cm">/**</span>
+<span class="cm">   * The time between automatic data refreshes, in milliseconds</span>
+<span class="cm">   * (`null` disables automatic data refreshing.)</span>
+<span class="cm">   */</span>
+  <span class="nx">refreshInterval</span><span class="o">:</span> <span class="mi">5000</span><span class="p">,</span>
 
-  /**
-   * A custom view library, expressed as an array of `[pattern, view]` pairs.
-   * When a page corresponding to an artifact is loaded, the first pair
-   * matching the artifact&#39;s path is used. Patterns use the glob syntax
-   * parsed by the `minimatch` library. Views can be React components or
-   * arrays or React components.
-   */
-  views: [
-    [&#39;FooSimulation*&#39;, () =&gt; (
-      &lt;div&gt;This is totally what an actual foo would do.&lt;/div&gt;
-    )],
-    [&#39;BarRegression*/errors&#39;, ({ app }) =&gt; (
-      &lt;pre&gt;residuals: {app.fetch(&#39;residuals&#39;)}&lt;/pre&gt;
-    )],
-    [&#39;**&#39;, () =&gt; (
-      &lt;div&gt;No specialized views to show&lt;/div&gt;
-    )]
-  ]
-}
+  <span class="cm">/**</span>
+<span class="cm">   * A custom view library, expressed as an array of `[pattern, view]` pairs.</span>
+<span class="cm">   * When a page corresponding to an artifact is loaded, the first pair</span>
+<span class="cm">   * matching the artifact&#39;s path is used. Patterns use the glob syntax</span>
+<span class="cm">   * parsed by the `minimatch` library. Views can be React components or</span>
+<span class="cm">   * arrays or React components.</span>
+<span class="cm">   */</span>
+  <span class="nx">views</span><span class="o">:</span> <span class="p">[</span>
+    <span class="p">[</span><span class="s1">&#39;FooSimulation*&#39;</span><span class="p">,</span> <span class="p">()</span> <span class="p">=&gt;</span> <span class="p">(</span>
+      <span class="p">&lt;</span><span class="nt">div</span><span class="p">&gt;</span><span class="nx">This</span> <span class="nx">is</span> <span class="nx">totally</span> <span class="nx">what</span> <span class="nx">an</span> <span class="nx">actual</span> <span class="nx">foo</span> <span class="nx">would</span> <span class="k">do</span><span class="p">.&lt;/</span><span class="nt">div</span><span class="p">&gt;</span>
+    <span class="p">)],</span>
+    <span class="p">[</span><span class="s1">&#39;BarRegression*/errors&#39;</span><span class="p">,</span> <span class="p">({</span> <span class="nx">app</span> <span class="p">})</span> <span class="p">=&gt;</span> <span class="p">(</span>
+      <span class="p">&lt;</span><span class="nt">pre</span><span class="p">&gt;</span><span class="nx">residuals</span><span class="o">:</span> <span class="p">{</span><span class="nx">app</span><span class="p">.</span><span class="nx">fetch</span><span class="p">(</span><span class="s1">&#39;residuals&#39;</span><span class="p">)}&lt;/</span><span class="nt">pre</span><span class="p">&gt;</span>
+    <span class="p">)],</span>
+    <span class="p">[</span><span class="s1">&#39;**&#39;</span><span class="p">,</span> <span class="p">()</span> <span class="p">=&gt;</span> <span class="p">(</span>
+      <span class="p">&lt;</span><span class="nt">div</span><span class="p">&gt;</span><span class="nx">No</span> <span class="nx">specialized</span> <span class="nx">views</span> <span class="nx">to</span> <span class="nx">show</span><span class="p">&lt;/</span><span class="nt">div</span><span class="p">&gt;</span>
+    <span class="p">)]</span>
+  <span class="p">]</span>
+<span class="p">}</span>
 </pre></div>
 </div>
 <p>ArtisanUI uses <a class="reference external" href="https://rollupjs.org/guide/en">Rollup</a> to bundle user-defined

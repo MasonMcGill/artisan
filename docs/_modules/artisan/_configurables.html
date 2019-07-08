@@ -154,7 +154,7 @@
 <span class="sd">the following features:</span>
 
 <span class="sd">- A `conf` field that stores the configuration passed into the constructor</span>
-<span class="sd">- The ability to define a `Conf` class (which is converted to a JSON-Schema) </span>
+<span class="sd">- The ability to define a `Conf` class (which is converted to a JSON-Schema)</span>
 <span class="sd">  that documents/validates the expected form of the configuration</span>
 <span class="sd">- Subclass forwarding — If the configuration contains a &quot;type&quot; field, it</span>
 <span class="sd">  determines the class of `Configurable` that is constructed. This is useful</span>
@@ -169,7 +169,8 @@
 <span class="kn">from</span> <span class="nn">._schemas</span> <span class="k">import</span> <span class="n">conf_schema_from_type</span>
 
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
-    <span class="s1">&#39;Configurable&#39;</span><span class="p">,</span> <span class="s1">&#39;NameConflict&#39;</span><span class="p">,</span> <span class="s1">&#39;get_schema&#39;</span><span class="p">,</span> <span class="s1">&#39;get_scope&#39;</span><span class="p">,</span> <span class="s1">&#39;set_scope&#39;</span>
+    <span class="s1">&#39;Configurable&#39;</span><span class="p">,</span> <span class="s1">&#39;NameConflict&#39;</span><span class="p">,</span> <span class="s1">&#39;default_scope&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;get_schema&#39;</span><span class="p">,</span> <span class="s1">&#39;get_scope&#39;</span><span class="p">,</span> <span class="s1">&#39;set_scope&#39;</span>
 <span class="p">]</span>
 
 <span class="c1">#-- Scope management ----------------------------------------------------------</span>
@@ -178,10 +179,33 @@
 <span class="n">context</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">local</span><span class="p">()</span>
 
 <span class="k">def</span> <span class="nf">set_scope</span><span class="p">(</span><span class="n">scope</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">type</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Set the scope used for &quot;type&quot; field resolution.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
     <span class="n">context</span><span class="o">.</span><span class="n">scope</span> <span class="o">=</span> <span class="n">scope</span> <span class="k">if</span> <span class="n">scope</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">default_scope</span>
 
+
 <span class="k">def</span> <span class="nf">get_scope</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">type</span><span class="p">]:</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Return the scope used for &quot;type&quot; field resolution.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
     <span class="k">return</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="s1">&#39;scope&#39;</span><span class="p">,</span> <span class="n">default_scope</span><span class="p">)</span>
+
+<span class="c1">#-- Schema generation ---------------------------------------------------------</span>
+
+<span class="k">def</span> <span class="nf">get_schema</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Return a schema with a definition for each exposed type.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">scope</span> <span class="o">=</span> <span class="n">get_scope</span><span class="p">()</span>
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="s1">&#39;$schema&#39;</span><span class="p">:</span> <span class="s1">&#39;http://json-schema.org/draft-07/schema#&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;definitions&#39;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="n">sym</span><span class="p">:</span> <span class="n">conf_schema_from_type</span><span class="p">(</span><span class="n">type_</span><span class="p">,</span> <span class="n">scope</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">sym</span><span class="p">,</span> <span class="n">type_</span> <span class="ow">in</span> <span class="n">scope</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+        <span class="p">},</span>
+        <span class="s1">&#39;$ref&#39;</span><span class="p">:</span> <span class="s1">&#39;#/definitions/Configurable&#39;</span>
+    <span class="p">}</span>
 
 <span class="c1">#-- Configurable object metaclass ---------------------------------------------</span>
 
@@ -192,6 +216,8 @@
 
 <span class="sd">    `ConfigurableMeta` is the metaclass for `Configurable`.</span>
 <span class="sd">    &#39;&#39;&#39;</span>
+    <span class="c1"># TODO: Eliminate this class.</span>
+
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                  <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
                  <span class="n">bases</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">type</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span>
@@ -218,6 +244,14 @@
         <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="s1">&#39;[Name conflict in the current Artisan scope]&#39;</span><span class="p">)</span>
 
 <span class="c1">#-- Configurable objects ------------------------------------------------------</span>
+
+<span class="k">class</span> <span class="nc">GenericConf</span><span class="p">(</span><span class="n">Protocol</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    [A descriptor type that enables Jedi autocompletion support for conf fields]</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">def</span> <span class="nf">__get__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obj</span><span class="p">,</span> <span class="n">type_</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">obj</span><span class="o">.</span><span class="n">Conf</span><span class="p">()</span>
+
 
 <span class="k">class</span> <span class="nc">Configurable</span><span class="p">(</span><span class="n">metaclass</span><span class="o">=</span><span class="n">ConfigurableMeta</span><span class="p">):</span>
     <span class="sd">&#39;&#39;&#39;</span>
@@ -254,7 +288,7 @@
 <span class="sd">        &#39;&#39;&#39;</span>
         <span class="k">pass</span></div>
 
-    <span class="n">conf</span><span class="p">:</span> <span class="n">Namespace</span><span class="p">;</span> <span class="s1">&#39;&#39;&#39;</span>
+    <span class="n">conf</span><span class="p">:</span> <span class="n">GenericConf</span><span class="p">;</span> <span class="s1">&#39;&#39;&#39;</span>
 <span class="s1">        The configuration passed into the constructor, coerced to a `Namespace`</span>
 <span class="s1">    &#39;&#39;&#39;</span>
 
@@ -281,26 +315,6 @@
         <span class="n">obj</span> <span class="o">=</span> <span class="nb">object</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span>
         <span class="nb">object</span><span class="o">.</span><span class="fm">__setattr__</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="s1">&#39;conf&#39;</span><span class="p">,</span> <span class="n">namespacify</span><span class="p">(</span><span class="n">conf</span><span class="p">))</span>
         <span class="k">return</span> <span class="n">obj</span>
-
-<span class="c1">#-- Schema generation ---------------------------------------------------------</span>
-
-<span class="k">def</span> <span class="nf">get_schema</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
-    <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">    Return a schema with a definition for each exposed type.</span>
-<span class="sd">    &#39;&#39;&#39;</span>
-    <span class="n">conf_types</span> <span class="o">=</span> <span class="p">{</span>
-        <span class="n">sym</span><span class="p">:</span> <span class="n">type_</span><span class="o">.</span><span class="n">Conf</span> <span class="c1"># type: ignore</span>
-        <span class="k">for</span> <span class="n">sym</span><span class="p">,</span> <span class="n">type_</span> <span class="ow">in</span> <span class="n">get_scope</span><span class="p">()</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
-        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">type_</span><span class="p">,</span> <span class="s1">&#39;Conf&#39;</span><span class="p">)</span>
-    <span class="p">}</span>
-    <span class="k">return</span> <span class="p">{</span>
-        <span class="s1">&#39;$schema&#39;</span><span class="p">:</span> <span class="s1">&#39;http://json-schema.org/draft-07/schema#&#39;</span><span class="p">,</span>
-        <span class="s1">&#39;definitions&#39;</span><span class="p">:</span> <span class="p">{</span>
-            <span class="n">sym</span><span class="p">:</span> <span class="n">conf_schema_from_type</span><span class="p">(</span><span class="n">type_</span><span class="p">,</span> <span class="n">conf_types</span><span class="p">)</span>
-            <span class="k">for</span> <span class="n">sym</span><span class="p">,</span> <span class="n">type_</span> <span class="ow">in</span> <span class="n">get_scope</span><span class="p">()</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
-        <span class="p">},</span>
-        <span class="s1">&#39;$ref&#39;</span><span class="p">:</span> <span class="s1">&#39;#/definitions/Configurable&#39;</span>
-    <span class="p">}</span>
 </pre></div>
 
            </div>

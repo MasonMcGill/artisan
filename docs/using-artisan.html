@@ -85,8 +85,8 @@
 <li class="toctree-l2"><a class="reference internal" href="#defining-artifact-types">Defining artifact types</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#instantiating-artifacts">Instantiating artifacts</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#in-memory-components">In-memory components</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#global-configuration">Global configuration</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#configuration-schema-details">Configuration schema details</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#context-management">Context management</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#generating-a-rest-api">Generating a REST API</a></li>
 </ul>
 </li>
@@ -250,7 +250,7 @@ definition.</p>
         <span class="c1"># Encoded files can also be extended, performing</span>
         <span class="c1"># byte-level concatenation.</span>
         <span class="c1">#</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="s1">&#39;poems__txt&#39;</span><span class="p">,</span> <span class="n">Path</span><span class="p">(</span><span class="s1">&#39;the-iliad.txt&#39;</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="s1">&#39;poems.txt&#39;</span><span class="p">,</span> <span class="n">Path</span><span class="p">(</span><span class="s1">&#39;the-iliad.txt&#39;</span><span class="p">))</span>
 
         <span class="c1">####</span>
         <span class="c1"># Assigning a mapping to a field creates a subartifact.</span>
@@ -269,12 +269,12 @@ definition.</p>
         <span class="p">))</span>
 
         <span class="c1">####</span>
-        <span class="c1"># Accessing an attribute without &quot;.&quot; or &quot;__&quot; in the name</span>
-        <span class="c1"># returns an empty Artifact.</span>
+        <span class="c1"># Accessing an uninitialized attribute without &quot;.&quot; or &quot;__&quot;</span>
+        <span class="c1"># in the name returns an empty Artifact.</span>
         <span class="c1">#</span>
         <span class="k">assert</span> <span class="p">(</span>
-            <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">empty_dir</span><span class="p">,</span> <span class="n">Artifact</span><span class="p">)</span>
-            <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">empty_dir</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span>
+            <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nonexistent_dir</span><span class="p">,</span> <span class="n">Artifact</span><span class="p">)</span>
+            <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nonexistent_dir</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span>
         <span class="p">)</span>
 </pre></div>
 </div>
@@ -308,35 +308,9 @@ specified path.</p>
 <div class="section" id="in-memory-components">
 <h2>In-memory components<a class="headerlink" href="#in-memory-components" title="Permalink to this headline">¶</a></h2>
 <p>Non-serialized configurable objects can be created by subclassing
-<a class="reference internal" href="api-reference.html#artisan.Configurable" title="artisan.Configurable"><code class="xref py py-obj docutils literal notranslate"><span class="pre">artisan.Configurable</span></code></a>. Configurable objects support <a class="reference internal" href="api-reference.html#artisan.Conf" title="artisan.Conf"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Conf</span></code></a> class definitions
+<a class="reference internal" href="api-reference.html#artisan.Configurable" title="artisan.Configurable"><code class="xref py py-obj docutils literal notranslate"><span class="pre">artisan.Configurable</span></code></a>. Configurable objects support <code class="xref py py-obj docutils literal notranslate"><span class="pre">Conf</span></code> class definitions
 and flexible docstring authoring (artifacts inherit these properties from
 <a class="reference internal" href="api-reference.html#artisan.Configurable" title="artisan.Configurable"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Configurable</span></code></a>), but their items/attributes aren’t backed by the filesystem.</p>
-</div>
-<div class="section" id="global-configuration">
-<h2>Global configuration<a class="headerlink" href="#global-configuration" title="Permalink to this headline">¶</a></h2>
-<p>The following thread-local configuration options exist:</p>
-<ul class="simple">
-<li><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">root_dir</span></code> (<em>str|Path</em>): The directory in which artifacts are created by
-default. When artifact instantiation searches for a matching directory, it
-performs a shallow search in <code class="xref py py-obj docutils literal notranslate"><span class="pre">root_dir</span></code>. By default, the current working
-directory.</p></li>
-<li><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">scope</span></code> (<em>{str: type}</em>): The mapping <a class="reference internal" href="api-reference.html#artisan.Configurable" title="artisan.Configurable"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Configurable</span></code></a> instantiation uses to
-resolve types, when a specification includes a “type” field. By default, the
-set of all defined <a class="reference internal" href="api-reference.html#artisan.Configurable" title="artisan.Configurable"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Configurable</span></code></a> subtypes, whose names don’t start with an
-underscore, keyed by their names (if this produces a name clash that leads to
-an ambiguous lookup, an error is raised).</p></li>
-</ul>
-<p>Thread-local configuration options can be manipulated via the <a class="reference internal" href="api-reference.html#artisan.push_conf" title="artisan.push_conf"><code class="xref py py-obj docutils literal notranslate"><span class="pre">push_conf</span></code></a>,
-<a class="reference internal" href="api-reference.html#artisan.pop_conf" title="artisan.pop_conf"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pop_conf</span></code></a>, and <a class="reference internal" href="api-reference.html#artisan.using_conf" title="artisan.using_conf"><code class="xref py py-obj docutils literal notranslate"><span class="pre">using_conf</span></code></a> functions.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">artisan</span><span class="o">.</span><span class="n">push_conf</span><span class="p">(</span><span class="n">root_dir</span><span class="o">=</span><span class="s1">&#39;data&#39;</span><span class="p">)</span>
-<span class="o">...</span> <span class="c1"># &lt;create artifacts in &#39;data/&#39;&gt;</span>
-<span class="n">artisan</span><span class="o">.</span><span class="n">pop_conf</span><span class="p">()</span>
-
-<span class="c1"># Or, equivalently</span>
-<span class="k">with</span> <span class="n">artisan</span><span class="o">.</span><span class="n">using_conf</span><span class="p">(</span><span class="n">root_dir</span><span class="o">=</span><span class="s1">&#39;data&#39;</span><span class="p">):</span>
-    <span class="o">...</span> <span class="c1"># &lt;create artifacts in &#39;data/&#39;&gt;</span>
-</pre></div>
-</div>
 </div>
 <div class="section" id="configuration-schema-details">
 <h2>Configuration schema details<a class="headerlink" href="#configuration-schema-details" title="Permalink to this headline">¶</a></h2>
@@ -361,11 +335,35 @@ artifact or component configuration types (<em>e.g.</em> <code class="xref py py
 <li><p>have every field required by that subclass’ configuration schema.</p></li>
 </ul>
 </div>
+<div class="section" id="context-management">
+<h2>Context management<a class="headerlink" href="#context-management" title="Permalink to this headline">¶</a></h2>
+<p>The following thread-local configuration options exist:</p>
+<ul class="simple">
+<li><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">root_dir</span></code> (<em>str|Path</em>): The directory in which artifacts are created by
+default. When artifact instantiation searches for a matching directory, it
+performs a shallow search in <code class="xref py py-obj docutils literal notranslate"><span class="pre">root_dir</span></code>. By default, the current working
+directory.</p></li>
+<li><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">scope</span></code> (<em>{str: type}</em>): The mapping <a class="reference internal" href="api-reference.html#artisan.Configurable" title="artisan.Configurable"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Configurable</span></code></a> instantiation uses to
+resolve types, when a specification includes a “type” field. By default, the
+set of all defined <a class="reference internal" href="api-reference.html#artisan.Configurable" title="artisan.Configurable"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Configurable</span></code></a> subtypes, whose names don’t start with an
+underscore, keyed by their names (if this produces a name clash that leads to
+an ambiguous lookup, an error is raised).</p></li>
+</ul>
+<p>These options can be configured via the <a class="reference internal" href="api-reference.html#artisan.Artisan" title="artisan.Artisan"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Artisan</span></code></a> class:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">Artisan</span><span class="p">(</span><span class="n">root_dir</span><span class="o">=</span><span class="s1">&#39;data&#39;</span><span class="p">):</span>
+    <span class="o">...</span> <span class="c1"># &lt;create artifacts in &#39;data/&#39;&gt;</span>
+
+<span class="c1"># Or, equivalently</span>
+<span class="n">Artisan</span><span class="o">.</span><span class="n">push</span><span class="p">(</span><span class="n">root_dir</span><span class="o">=</span><span class="s1">&#39;data&#39;</span><span class="p">)</span>
+<span class="o">...</span> <span class="c1"># &lt;create artifacts in &#39;data/&#39;&gt;</span>
+<span class="n">Artisan</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
 <div class="section" id="generating-a-rest-api">
 <h2>Generating a REST API<a class="headerlink" href="#generating-a-rest-api" title="Permalink to this headline">¶</a></h2>
-<p>Artifacts can be exposed as a REST API by calling <a class="reference internal" href="api-reference.html#artisan.serve" title="artisan.serve"><code class="xref py py-obj docutils literal notranslate"><span class="pre">serve</span></code></a>.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">artisan</span><span class="o">.</span><span class="n">serve</span><span class="p">(</span><span class="mi">4000</span><span class="p">)</span> <span class="c1"># Serves the contents of `root_dir` on port 4000</span>
-<span class="n">artisan</span><span class="o">.</span><span class="n">serve</span><span class="p">(</span><span class="mi">4001</span><span class="p">,</span> <span class="s1">&#39;data&#39;</span><span class="p">)</span> <span class="c1"># Serves the contents of &quot;data/&quot; on port 4001</span>
+<p>Artifacts can be exposed as a REST API by calling <a class="reference internal" href="api-reference.html#artisan.Artisan.serve" title="artisan.Artisan.serve"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Artisan.serve</span></code></a>.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">Artisan</span><span class="p">(</span><span class="n">root_dir</span><span class="o">=</span><span class="n">root_dir</span><span class="p">,</span> <span class="n">scope</span><span class="o">=</span><span class="n">scope</span><span class="p">)</span><span class="o">.</span><span class="n">serve</span><span class="p">(</span><span class="mi">4000</span><span class="p">)</span> <span class="c1"># Serves data on port 4000</span>
 </pre></div>
 </div>
 <p>The REST API supports the following route forms:</p>
@@ -379,6 +377,10 @@ relative to <code class="xref py py-obj docutils literal notranslate"><span clas
 to small metadata objects</p></li>
 <li><p><strong>path/to/artifact/_meta</strong>: The contents of <em>meta.yaml</em>, CBOR-encoded</p></li>
 </ul>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The REST API will change slightly (for the better) in the near future.</p>
+</div>
 </div>
 </div>
 

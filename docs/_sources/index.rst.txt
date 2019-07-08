@@ -31,7 +31,6 @@ to generate file trees like this
 
 .. code-block:: sh
 
-  ├── _meta.yaml
   ├── SineWave_0000/
   │   ├── _meta.yaml
   │   ├── t.h5

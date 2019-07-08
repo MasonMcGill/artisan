@@ -99,7 +99,7 @@ class Artisan:
         Artisan.push(self)
 
     def __exit__(self, *args: object) -> None:
-        ''' [Equivalent to `Artisan.pop(self)`] '''
+        ''' [Equivalent to `Artisan.pop()`] '''
         Artisan.pop()
 
     #-- JSON-Schema generation ----------------------------

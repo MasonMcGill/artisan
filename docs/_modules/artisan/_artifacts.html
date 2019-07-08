@@ -148,10 +148,24 @@
            <div itemprop="articleBody">
             
   <h1>Source code for artisan._artifacts</h1><div class="highlight"><pre>
-<span></span><span class="kn">import</span> <span class="nn">itertools</span>
+<span></span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">This module exports the `Artifact` class, an array- and metadata-friendly view</span>
+<span class="sd">into a directory.</span>
+
+<span class="sd">Instances of the base artifact class have methods to simplify reading/writing</span>
+<span class="sd">collections of arrays. `Artifact` can also be subclassed to define configurable,</span>
+<span class="sd">persistent computed asset types, within Python/PEP 484&#39;s type system.</span>
+
+<span class="sd">This module also exports `ArrayFile` and `EncodedFile`, descriptor protocols</span>
+<span class="sd">that intended to be used as attribute type annotations within `Artifact`</span>
+<span class="sd">subclass definition.</span>
+<span class="sd">&#39;&#39;&#39;</span>
+
+<span class="kn">import</span> <span class="nn">itertools</span>
 <span class="kn">import</span> <span class="nn">json</span>
 <span class="kn">from</span> <span class="nn">pathlib</span> <span class="k">import</span> <span class="n">Path</span>
 <span class="kn">import</span> <span class="nn">shutil</span>
+<span class="kn">import</span> <span class="nn">threading</span>
 <span class="kn">from</span> <span class="nn">time</span> <span class="k">import</span> <span class="n">sleep</span>
 <span class="kn">from</span> <span class="nn">typing</span> <span class="k">import</span> <span class="p">(</span>
     <span class="n">Any</span><span class="p">,</span> <span class="n">Iterator</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">,</span> <span class="n">MutableMapping</span><span class="p">,</span>
@@ -163,18 +177,35 @@
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">from</span> <span class="nn">ruamel</span> <span class="k">import</span> <span class="n">yaml</span>
 
-<span class="kn">from</span> <span class="nn">._configurables</span> <span class="k">import</span> <span class="n">Configurable</span><span class="p">,</span> <span class="n">get_schema</span>
-<span class="kn">from</span> <span class="nn">._global_conf</span> <span class="k">import</span> <span class="n">get_conf</span>
-<span class="kn">from</span> <span class="nn">._namespaces</span> <span class="k">import</span> <span class="n">namespacify</span><span class="p">,</span> <span class="n">Namespace</span>
+<span class="kn">from</span> <span class="nn">._configurables</span> <span class="k">import</span> <span class="n">Configurable</span><span class="p">,</span> <span class="n">get_scope</span>
+<span class="kn">from</span> <span class="nn">._namespaces</span> <span class="k">import</span> <span class="n">Namespace</span><span class="p">,</span> <span class="n">namespacify</span>
 
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;Artifact&#39;</span><span class="p">,</span> <span class="s1">&#39;ArrayFile&#39;</span><span class="p">,</span> <span class="s1">&#39;EncodedFile&#39;</span><span class="p">]</span>
+
+<span class="c1">#-- Root artifact directory management ----------------------------------------</span>
+
+<span class="n">context</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">local</span><span class="p">()</span>
+
+<span class="k">def</span> <span class="nf">set_root_dir</span><span class="p">(</span><span class="n">root_dir</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Path</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Set the directory in which to search for artifacts.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">context</span><span class="o">.</span><span class="n">root_dir</span> <span class="o">=</span> <span class="n">root_dir</span> <span class="k">if</span> <span class="n">root_dir</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">Path</span><span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">get_root_dir</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Return the current artifact search directory.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">return</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="s1">&#39;root_dir&#39;</span><span class="p">,</span> <span class="n">Path</span><span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">))</span>
 
 <span class="c1">#-- Static type definitions ---------------------------------------------------</span>
 
 <span class="kn">from</span> <span class="nn">pathlib</span> <span class="k">import</span> <span class="n">Path</span> <span class="k">as</span> <span class="n">EncodedFile</span>
 
 <span class="k">class</span> <span class="nc">ArrayFile</span><span class="p">(</span><span class="n">Protocol</span><span class="p">):</span>
-    <span class="sd">&#39;&#39;&#39; A property that corresponds to a single-array HDF5 file &#39;&#39;&#39;</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    A property that corresponds to a single-array HDF5 file</span>
+<span class="sd">    &#39;&#39;&#39;</span>
     <span class="k">def</span> <span class="nf">__get__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obj</span><span class="p">:</span> <span class="nb">object</span><span class="p">,</span> <span class="n">type_</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">type</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">h5</span><span class="o">.</span><span class="n">Dataset</span><span class="p">:</span> <span class="o">...</span>
     <span class="k">def</span> <span class="nf">__set__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obj</span><span class="p">:</span> <span class="nb">object</span><span class="p">,</span> <span class="n">val</span><span class="p">:</span> <span class="nb">object</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span> <span class="o">...</span>
 
@@ -187,9 +218,9 @@
 <span class="sd">    Arguments:</span>
 <span class="sd">        path (Path|str): The path at which the artifact is, or should be,</span>
 <span class="sd">            stored</span>
-<span class="sd">        conf (Mapping[str, object]): The subtype-specific configuration,</span>
-<span class="sd">            optionally including a &quot;type&quot; field indicating what type of</span>
-<span class="sd">            artifact to construct</span>
+<span class="sd">        conf (Mapping[str, object]): The build configuration, optionally</span>
+<span class="sd">            including a &quot;type&quot; field indicating the type of artifact to search</span>
+<span class="sd">            for/construct</span>
 
 <span class="sd">    Constructors:</span>
 <span class="sd">        - Artifact(conf: *Mapping[str, object]*)</span>
@@ -198,17 +229,46 @@
 <span class="sd">        - Artifact(path: *Path|str*, conf: *Mapping[str, object]*)</span>
 <span class="sd">        - Artifact(path: *Path|str*, **conf_elem: *object*)</span>
 
+<span class="sd">    If only `path` is provided, the artifact corresponding to `Path` is</span>
+<span class="sd">    returned. It will be empty if `path` points to an empty or nonexistent</span>
+<span class="sd">    directory.</span>
+
+<span class="sd">    If only `conf` is provided, Artisan will search the current `root_dir`</span>
+<span class="sd">    for a matching directory, and return an artifact pointing there if it</span>
+<span class="sd">    exists. Otherwise, a new artifact will be constructed at the top level of</span>
+<span class="sd">    the `root_dir`.</span>
+
+<span class="sd">    If both `path` and `conf` are provided, Artisan will return the artifact</span>
+<span class="sd">    at `path`, building it if necessary. If `path` points to an existing</span>
+<span class="sd">    directory that is not a sucessfully built artifact matching `conf`, an</span>
+<span class="sd">    error is raised.</span>
+
 <span class="sd">    Fields:</span>
 <span class="sd">        - **path** (*Path*): The path to the root of the file tree backing this \</span>
 <span class="sd">            artifact</span>
-<span class="sd">        - **meta** (*Mapping[str, object]*): The metadata stored in \</span>
+<span class="sd">        - **conf** (*Namespace*): The configuration (inherited from</span>
+<span class="sd">            `Configurable`)</span>
+<span class="sd">        - **meta** (*Namespace*): The metadata stored in \</span>
 <span class="sd">            `{self.path}/_meta.yaml`</span>
 
-<span class="sd">    Type lookup is performed in the current scope, which can be modified via</span>
-<span class="sd">    the global configuration API.</span>
+<span class="sd">    After instantiation, artifacts act as string-keyed `MutableMapping`s (with</span>
+<span class="sd">    some additional capabilities), containing three types of entries:</span>
+<span class="sd">    `ArrayFile`s, `EncodedFile`s, and other `Artifact`s.</span>
 
-<span class="sd">    Reading/writing/extending/deleting `ArrayFile`, `EncodedFile`, and</span>
-<span class="sd">    `Artifact` fields is supported.</span>
+<span class="sd">    `ArrayFile`s are single-entry HDF5 files, in SWMR mode. Array-like numeric</span>
+<span class="sd">    and byte-string data (valid operands of `numpy.asarray`) written into an</span>
+<span class="sd">    artifact via `__setitem__`, `__setattr__`, or `extend` is stored as an array</span>
+<span class="sd">    file.</span>
+
+<span class="sd">    `EncodedFile`s are non-array files, presumed to be encoded in a format that</span>
+<span class="sd">    Artisan does not understand. They are written and read as normalized</span>
+<span class="sd">    `Path`s, which support simple text and byte I/O, and can be passed to more</span>
+<span class="sd">    specialized libraries for further processing.</span>
+
+<span class="sd">    `Artifact` entries are returned as properly subtyped artifacts, and can be</span>
+<span class="sd">    created, via `__setitem__`, `__setattr__`, or `extend`, from existing</span>
+<span class="sd">    artifacts or (possibly nested) string-keyed `Mapping`s (*e.g* a dictionary</span>
+<span class="sd">    of arrays).</span>
 <span class="sd">    &#39;&#39;&#39;</span>
     <span class="n">path</span><span class="p">:</span> <span class="n">Path</span>
 
@@ -266,10 +326,10 @@
 <span class="sd">        attributes (i.e. `artifact[&#39;name.ext&#39;]` is equivalent to</span>
 <span class="sd">        `artifact.name__ext`).</span>
 <span class="sd">        &#39;&#39;&#39;</span>
-        <span class="n">path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">path</span> <span class="o">/</span> <span class="n">key</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;__&#39;</span><span class="p">,</span> <span class="s1">&#39;.&#39;</span><span class="p">)</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">path</span> <span class="o">/</span> <span class="n">key</span>
 
         <span class="c1"># Return an array.</span>
-        <span class="k">if</span> <span class="n">Path</span><span class="p">(</span><span class="n">f</span><span class="s1">&#39;</span><span class="si">{path}</span><span class="s1">.h5&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">path</span><span class="o">.</span><span class="n">with_suffix</span><span class="p">(</span><span class="s1">&#39;.h5&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
             <span class="k">return</span> <span class="n">_read_h5</span><span class="p">(</span><span class="n">path</span><span class="o">.</span><span class="n">with_suffix</span><span class="p">(</span><span class="s1">&#39;.h5&#39;</span><span class="p">))</span>
 
         <span class="c1"># Return the path to a file.</span>
@@ -293,7 +353,7 @@
 <span class="sd">        attributes (i.e. `artifact[&#39;name.ext&#39;] = val` is equivalent to</span>
 <span class="sd">        `artifact.name__ext = val`).</span>
 <span class="sd">        &#39;&#39;&#39;</span>
-        <span class="n">path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">path</span> <span class="o">/</span> <span class="n">key</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;__&#39;</span><span class="p">,</span> <span class="s1">&#39;.&#39;</span><span class="p">)</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">path</span> <span class="o">/</span> <span class="n">key</span>
 
         <span class="c1"># Copy an existing file.</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">val</span><span class="p">,</span> <span class="n">Path</span><span class="p">):</span>
@@ -319,8 +379,19 @@
 <span class="sd">        attributes (i.e. `del artifact[&#39;name.ext&#39;]` is equivalent to</span>
 <span class="sd">        `del artifact.name__ext`).</span>
 <span class="sd">        &#39;&#39;&#39;</span>
-        <span class="n">path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">path</span> <span class="o">/</span> <span class="n">key</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;__&#39;</span><span class="p">,</span> <span class="s1">&#39;.&#39;</span><span class="p">)</span>
-        <span class="n">shutil</span><span class="o">.</span><span class="n">rmtree</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">ignore_errors</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></div>
+        <span class="n">path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">path</span> <span class="o">/</span> <span class="n">key</span>
+
+        <span class="c1"># Delete an array file.</span>
+        <span class="k">if</span> <span class="n">path</span><span class="o">.</span><span class="n">with_suffix</span><span class="p">(</span><span class="s1">&#39;.h5&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
+            <span class="n">path</span><span class="o">.</span><span class="n">with_suffix</span><span class="p">(</span><span class="s1">&#39;.h5&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">unlink</span><span class="p">()</span>
+
+        <span class="c1"># Delete a non-array file.</span>
+        <span class="k">elif</span> <span class="n">path</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
+            <span class="n">path</span><span class="o">.</span><span class="n">unlink</span><span class="p">()</span>
+
+        <span class="c1"># Delete an artifact.</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">shutil</span><span class="o">.</span><span class="n">rmtree</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">ignore_errors</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="Artifact.extend"><a class="viewcode-back" href="../../api-reference.html#artisan.Artifact.extend">[docs]</a>    <span class="k">def</span> <span class="nf">extend</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">val</span><span class="p">:</span> <span class="nb">object</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="sd">&#39;&#39;&#39;</span>
@@ -343,8 +414,8 @@
         <span class="c1"># Append a subartifact.</span>
         <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">val</span><span class="p">,</span> <span class="p">(</span><span class="n">Mapping</span><span class="p">,</span> <span class="n">Artifact</span><span class="p">)):</span>
             <span class="k">assert</span> <span class="n">path</span><span class="o">.</span><span class="n">suffix</span> <span class="o">==</span> <span class="s1">&#39;&#39;</span>
-            <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">val</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-                <span class="n">Artifact</span><span class="p">(</span><span class="n">path</span><span class="p">)</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">val</span><span class="p">:</span>
+                <span class="n">Artifact</span><span class="p">(</span><span class="n">path</span><span class="p">)</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">val</span><span class="p">[</span><span class="n">k</span><span class="p">])</span>
 
         <span class="c1"># Append an array.</span>
         <span class="k">else</span><span class="p">:</span>
@@ -354,13 +425,13 @@
     <span class="c1">#-- Attribute-style element access --------------------</span>
 
     <span class="k">def</span> <span class="nf">__getattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="fm">__getitem__</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="fm">__getitem__</span><span class="p">(</span><span class="n">key</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;__&#39;</span><span class="p">,</span> <span class="s1">&#39;.&#39;</span><span class="p">))</span>
 
     <span class="k">def</span> <span class="nf">__setattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">object</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="bp">self</span><span class="o">.</span><span class="fm">__setitem__</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="fm">__setitem__</span><span class="p">(</span><span class="n">key</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;__&#39;</span><span class="p">,</span> <span class="s1">&#39;.&#39;</span><span class="p">),</span> <span class="n">value</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">__delattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="bp">self</span><span class="o">.</span><span class="fm">__delitem__</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="fm">__delitem__</span><span class="p">(</span><span class="n">key</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;__&#39;</span><span class="p">,</span> <span class="s1">&#39;.&#39;</span><span class="p">))</span>
 
     <span class="c1">#-- Attribute preemption, for REPL autocompletion -----</span>
 
@@ -448,7 +519,13 @@
 <span class="sd">    subtype of `cls`.</span>
 <span class="sd">    &#39;&#39;&#39;</span>
     <span class="n">spec</span> <span class="o">=</span> <span class="n">_read_meta</span><span class="p">(</span><span class="n">path</span><span class="p">)</span><span class="o">.</span><span class="n">spec</span> <span class="ow">or</span> <span class="p">{}</span>
-    <span class="n">written_type</span> <span class="o">=</span> <span class="n">get_conf</span><span class="p">()</span><span class="o">.</span><span class="n">scope</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;type&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="n">written_type</span> <span class="o">=</span> <span class="n">get_scope</span><span class="p">()</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;type&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span> <span class="kc">None</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">path</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
+        <span class="k">raise</span> <span class="ne">FileExistsError</span><span class="p">(</span><span class="n">f</span><span class="s1">&#39;</span><span class="si">{path}</span><span class="s1"> is a file.&#39;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="s1">&#39;build&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">path</span><span class="o">.</span><span class="n">is_dir</span><span class="p">():</span>
+        <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="n">f</span><span class="s1">&#39;</span><span class="si">{path}</span><span class="s1"> does not exist.&#39;</span><span class="p">)</span>
 
     <span class="k">if</span> <span class="n">written_type</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">issubclass</span><span class="p">(</span><span class="n">written_type</span><span class="p">,</span> <span class="bp">cls</span><span class="p">):</span>
         <span class="k">raise</span> <span class="ne">FileExistsError</span><span class="p">(</span>
@@ -470,7 +547,7 @@
     <span class="nb">object</span><span class="o">.</span><span class="fm">__setattr__</span><span class="p">(</span><span class="n">artifact</span><span class="p">,</span> <span class="s1">&#39;_cached_keys&#39;</span><span class="p">,</span> <span class="nb">set</span><span class="p">())</span>
     <span class="n">spec</span> <span class="o">=</span> <span class="n">Namespace</span><span class="p">(</span><span class="nb">type</span><span class="o">=</span><span class="n">_identify</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">artifact</span><span class="p">)),</span> <span class="o">**</span><span class="n">artifact</span><span class="o">.</span><span class="n">conf</span><span class="p">)</span>
 
-    <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="n">Path</span><span class="p">(</span><span class="n">get_conf</span><span class="p">()</span><span class="o">.</span><span class="n">root_dir</span><span class="p">)</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="s1">&#39;*&#39;</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="n">Path</span><span class="p">(</span><span class="n">get_root_dir</span><span class="p">())</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="s1">&#39;*&#39;</span><span class="p">):</span>
         <span class="n">meta</span> <span class="o">=</span> <span class="n">_read_meta</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">meta</span><span class="o">.</span><span class="n">spec</span> <span class="o">==</span> <span class="n">spec</span><span class="p">:</span>
             <span class="k">while</span> <span class="n">meta</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="s1">&#39;running&#39;</span><span class="p">:</span>
@@ -514,13 +591,12 @@
     <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">    Create parent directories, invoke `artifact.build`, and store metadata.</span>
 <span class="sd">    &#39;&#39;&#39;</span>
-    <span class="k">if</span> <span class="n">Path</span><span class="p">(</span><span class="n">get_conf</span><span class="p">()</span><span class="o">.</span><span class="n">root_dir</span><span class="p">)</span> <span class="ow">in</span> <span class="n">artifact</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">parents</span><span class="p">:</span>
-        <span class="n">write_global_meta</span><span class="p">()</span>
-
     <span class="c1"># TODO: Fix YAML generation.</span>
     <span class="n">meta_path</span> <span class="o">=</span> <span class="n">artifact</span><span class="o">.</span><span class="n">path</span> <span class="o">/</span> <span class="s1">&#39;_meta.yaml&#39;</span>
     <span class="n">spec</span> <span class="o">=</span> <span class="n">Namespace</span><span class="p">(</span><span class="nb">type</span><span class="o">=</span><span class="n">_identify</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">artifact</span><span class="p">)),</span> <span class="o">**</span><span class="n">artifact</span><span class="o">.</span><span class="n">conf</span><span class="p">)</span>
-    <span class="n">write_meta</span> <span class="o">=</span> <span class="k">lambda</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">meta_path</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">kwargs</span><span class="p">))</span>
+    <span class="n">write_meta</span> <span class="o">=</span> <span class="k">lambda</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">meta_path</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span>
+        <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">_identify_elements</span><span class="p">(</span><span class="n">kwargs</span><span class="p">))</span>
+    <span class="p">)</span>
 
     <span class="n">artifact</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
     <span class="n">write_meta</span><span class="p">(</span><span class="n">spec</span><span class="o">=</span><span class="n">spec</span><span class="p">,</span> <span class="n">status</span><span class="o">=</span><span class="s1">&#39;running&#39;</span><span class="p">)</span>
@@ -541,7 +617,7 @@
 <span class="sd">    Dereference &quot;.&quot;, &quot;..&quot;, &quot;~&quot;, and &quot;@&quot;.</span>
 <span class="sd">    &#39;&#39;&#39;</span>
     <span class="k">if</span> <span class="nb">str</span><span class="p">(</span><span class="n">path</span><span class="p">)</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;@/&#39;</span><span class="p">):</span>
-        <span class="n">path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">get_conf</span><span class="p">()</span><span class="o">.</span><span class="n">root_dir</span><span class="p">)</span> <span class="o">/</span> <span class="nb">str</span><span class="p">(</span><span class="n">path</span><span class="p">)[</span><span class="mi">2</span><span class="p">:]</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">get_root_dir</span><span class="p">())</span> <span class="o">/</span> <span class="nb">str</span><span class="p">(</span><span class="n">path</span><span class="p">)[</span><span class="mi">2</span><span class="p">:]</span>
     <span class="k">return</span> <span class="n">path</span><span class="o">.</span><span class="n">expanduser</span><span class="p">()</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
 
 
@@ -549,7 +625,7 @@
     <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">    Generate an unused path in the artifact root directory.</span>
 <span class="sd">    &#39;&#39;&#39;</span>
-    <span class="n">root</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">get_conf</span><span class="p">()</span><span class="o">.</span><span class="n">root_dir</span><span class="p">)</span>
+    <span class="n">root</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">get_root_dir</span><span class="p">())</span>
     <span class="n">type_name</span> <span class="o">=</span> <span class="n">_identify</span><span class="p">(</span><span class="n">type_</span><span class="p">)</span>
     <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">itertools</span><span class="o">.</span><span class="n">count</span><span class="p">():</span>
         <span class="n">dst</span> <span class="o">=</span> <span class="n">root</span> <span class="o">/</span> <span class="n">f</span><span class="s1">&#39;</span><span class="si">{type_name}</span><span class="s1">_</span><span class="si">{i:04x}</span><span class="s1">&#39;</span>
@@ -592,19 +668,22 @@
         <span class="n">f</span><span class="o">.</span><span class="n">swmr_mode</span> <span class="o">=</span> <span class="kc">True</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="n">dset</span> <span class="o">=</span> <span class="n">f</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">]</span>
-    <span class="n">dset</span><span class="o">.</span><span class="n">resize</span><span class="p">(</span><span class="n">dset</span><span class="o">.</span><span class="n">len</span><span class="p">()</span> <span class="o">+</span> <span class="nb">len</span><span class="p">(</span><span class="n">val</span><span class="p">),</span> <span class="mi">0</span><span class="p">)</span>
-    <span class="n">dset</span><span class="p">[</span><span class="o">-</span><span class="nb">len</span><span class="p">(</span><span class="n">val</span><span class="p">):]</span> <span class="o">=</span> <span class="n">val</span>
-    <span class="n">dset</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">val</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">dset</span><span class="o">.</span><span class="n">resize</span><span class="p">(</span><span class="n">dset</span><span class="o">.</span><span class="n">len</span><span class="p">()</span> <span class="o">+</span> <span class="nb">len</span><span class="p">(</span><span class="n">val</span><span class="p">),</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">dset</span><span class="p">[</span><span class="o">-</span><span class="nb">len</span><span class="p">(</span><span class="n">val</span><span class="p">):]</span> <span class="o">=</span> <span class="n">val</span>
+        <span class="n">dset</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
 
 
 <span class="k">def</span> <span class="nf">_copy_file</span><span class="p">(</span><span class="n">dst</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">src</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
     <span class="n">shutil</span><span class="o">.</span><span class="n">rmtree</span><span class="p">(</span><span class="n">dst</span><span class="p">,</span> <span class="n">ignore_errors</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">dst</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
     <span class="n">shutil</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">src</span><span class="p">,</span> <span class="n">dst</span><span class="p">)</span>
 
 
 <span class="k">def</span> <span class="nf">_extend_file</span><span class="p">(</span><span class="n">dst</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">src</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">src</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f_src</span><span class="p">:</span>
-        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">dst</span><span class="p">,</span> <span class="s1">&#39;a+&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f_dst</span><span class="p">:</span>
+    <span class="n">dst</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">src</span><span class="p">,</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f_src</span><span class="p">:</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">dst</span><span class="p">,</span> <span class="s1">&#39;ab+&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f_dst</span><span class="p">:</span>
             <span class="n">f_dst</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">f_src</span><span class="o">.</span><span class="n">read</span><span class="p">())</span>
 
 
@@ -619,20 +698,21 @@
     <span class="k">except</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">Namespace</span><span class="p">(</span><span class="n">spec</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">status</span><span class="o">=</span><span class="s1">&#39;done&#39;</span><span class="p">)</span>
 
-
-<span class="k">def</span> <span class="nf">write_global_meta</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-    <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">    Write global config information to `{root_path}/_meta.yaml`.</span>
-<span class="sd">    &#39;&#39;&#39;</span>
-    <span class="n">meta</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;spec&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;schema&#39;</span><span class="p">:</span> <span class="n">get_schema</span><span class="p">()}</span>
-    <span class="n">meta_text</span> <span class="o">=</span> <span class="n">yaml</span><span class="o">.</span><span class="n">round_trip_dump</span><span class="p">(</span><span class="n">meta</span><span class="p">)</span>
-    <span class="n">Path</span><span class="p">(</span><span class="n">get_conf</span><span class="p">()</span><span class="o">.</span><span class="n">root_dir</span><span class="p">)</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-    <span class="n">Path</span><span class="p">(</span><span class="n">f</span><span class="s1">&#39;{get_conf().root_dir}/_meta.yaml&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="n">meta_text</span><span class="p">)</span>
-
 <span class="c1">#-- Scope search --------------------------------------------------------------</span>
 
 <span class="k">def</span> <span class="nf">_identify</span><span class="p">(</span><span class="n">type_</span><span class="p">:</span> <span class="nb">type</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-    <span class="k">return</span> <span class="nb">next</span><span class="p">(</span><span class="n">sym</span> <span class="k">for</span> <span class="n">sym</span><span class="p">,</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">get_conf</span><span class="p">()</span><span class="o">.</span><span class="n">scope</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">t</span> <span class="o">==</span> <span class="n">type_</span><span class="p">)</span>
+    <span class="k">return</span> <span class="nb">next</span><span class="p">(</span><span class="n">sym</span> <span class="k">for</span> <span class="n">sym</span><span class="p">,</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">get_scope</span><span class="p">()</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">t</span> <span class="o">==</span> <span class="n">type_</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_identify_elements</span><span class="p">(</span><span class="n">obj</span><span class="p">:</span> <span class="nb">object</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">object</span><span class="p">:</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="nb">type</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">_identify</span><span class="p">(</span><span class="n">obj</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">_identify_elements</span><span class="p">(</span><span class="n">elem</span><span class="p">)</span> <span class="k">for</span> <span class="n">elem</span> <span class="ow">in</span> <span class="n">obj</span><span class="p">]</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">Namespace</span><span class="p">({</span><span class="n">k</span><span class="p">:</span> <span class="n">_identify_elements</span><span class="p">(</span><span class="n">obj</span><span class="p">[</span><span class="n">k</span><span class="p">])</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">obj</span><span class="p">})</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">obj</span>
 </pre></div>
 
            </div>
