@@ -466,8 +466,8 @@ def _resolve_path(path: Path) -> Path:
     '''
     Dereference ".", "..", "~", and "@".
     '''
-    if str(path).startswith('@/'):
-        path = Path(get_root_dir()) / str(path)[2:]
+    if path.parts[0] == '@':
+        path = get_root_dir() / '/'.join(path.parts[1:])
     return path.expanduser().resolve()
 
 
