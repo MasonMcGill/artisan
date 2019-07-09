@@ -6,11 +6,13 @@ server or WSGI application.
 
 from pathlib import Path
 import threading
-from typing import Callable, Dict, Iterable, List, Mapping, Optional, Union
+from typing import (
+    Any, Callable, Dict, Iterable, List, Mapping, Optional, Union, cast
+)
 from wsgiref.simple_server import make_server
 
 from ._artifacts import Artifact, set_root_dir
-from ._configurables import default_scope, get_schema, set_scope
+from ._configurables import get_default_scope, get_schema, set_scope
 from ._http import wsgi_app
 from ._namespaces import Namespace
 
@@ -40,9 +42,25 @@ class Artisan:
                  root_dir: Union[str, Path, None] = None,
                  scope: Optional[Mapping[str, type]] = None,
                  build: Optional[Callable[[str, dict], None]] = None) -> None:
-        self.root_dir = Path('.') if root_dir is None else Path(root_dir)
-        self.scope = default_scope if scope is None else Namespace(scope)
-        self.build = Artifact if build is None else build # type: ignore
+        self._root_dir = Path('.') if root_dir is None else Path(root_dir)
+        self._scope = None if scope is None else Namespace(scope)
+        self._build = cast(Any, Artifact) if build is None else build
+
+    @property
+    def root_dir(self) -> Path:
+        return self._root_dir
+
+    @property
+    def scope(self) -> Namespace:
+        return (
+            Namespace(get_default_scope())
+            if self._scope is None
+            else self._scope
+        )
+
+    @property
+    def build(self) -> Callable[[str, dict], None]:
+        return self._build
 
     #-- Context manipulation ------------------------------
 

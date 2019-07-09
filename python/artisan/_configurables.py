@@ -10,36 +10,55 @@ the following features:
   determines the class of `Configurable` that is constructed. This is useful
   e.g. when constructing objects from deserialized configurations.
 '''
-
+from itertools import chain
 import threading
-from typing import Dict, Mapping, Optional, Tuple, Type
+from typing import Dict, Iterator, Mapping, Optional, Tuple, Type
 from typing_extensions import Protocol
 
 from ._namespaces import Namespace, namespacify
 from ._schemas import conf_schema_from_type
 
 __all__ = [
-    'Configurable', 'NameConflict', 'default_scope',
+    'Configurable', 'get_default_scope',
     'get_schema', 'get_scope', 'set_scope'
 ]
 
 #-- Scope management ----------------------------------------------------------
 
-default_scope: Dict[str, type] = {}
 context = threading.local()
 
 def set_scope(scope: Optional[Dict[str, type]]) -> None:
     '''
     Set the scope used for "type" field resolution.
     '''
-    context.scope = scope if scope is not None else default_scope
+    if hasattr(context, 'scope'):
+        del context.scope
+    if scope is not None:
+        context.scope = scope
 
 
 def get_scope() -> Dict[str, type]:
     '''
     Return the scope used for "type" field resolution.
     '''
-    return getattr(context, 'scope', default_scope)
+    return context.scope if hasattr(context, 'scope') else get_default_scope()
+
+
+def get_default_scope() -> Dict[str, type]:
+    '''
+    Return the default scope used for "type" field resolution.
+    '''
+    def subclasses(t: type) -> Iterator[type]:
+        yield from chain([t], *map(subclasses, t.__subclasses__()))
+    scope: Dict[str, type] = {}
+    for t in subclasses(Configurable):
+        if t.__qualname__ in scope:
+            t1 = scope.pop(t.__qualname__)
+            scope[f'{t.__module__}.{t.__qualname__}'] = t
+            scope[f'{t1.__module__}.{t1.__qualname__}'] = t1
+        else:
+            scope[t.__qualname__] = t
+    return scope
 
 #-- Schema generation ---------------------------------------------------------
 
@@ -57,42 +76,6 @@ def get_schema() -> dict:
         '$ref': '#/definitions/Configurable'
     }
 
-#-- Configurable object metaclass ---------------------------------------------
-
-class ConfigurableMeta(type):
-    '''
-    A type that generates an inner `Conf` class and adds itself to the default
-    Artisan scope upon creation
-
-    `ConfigurableMeta` is the metaclass for `Configurable`.
-    '''
-    # TODO: Eliminate this class.
-
-    def __init__(self,
-                 name: str,
-                 bases: Tuple[type, ...],
-                 dict_: Dict[str, object]) -> None:
-
-        super().__init__(name, bases, dict_)
-
-        # Generate `Conf` if it does not exist.
-        if not hasattr(self, 'Conf'):
-            self.Conf = type('Conf', (Protocol,), { # type: ignore
-                '__qualname__': self.__qualname__+'.Conf',
-                '__module__': self.__module__
-            })
-
-        # Add the configurable class to the default scope.
-        default_scope[self.__qualname__] = (
-            NameConflict if self.__qualname__ in default_scope
-            else self
-        )
-
-
-class NameConflict:
-    def __init__(self, *args: object, **kwargs: object) -> None:
-        raise KeyError('[Name conflict in the current Artisan scope]')
-
 #-- Configurable objects ------------------------------------------------------
 
 class GenericConf(Protocol):
@@ -103,7 +86,7 @@ class GenericConf(Protocol):
         return obj.Conf()
 
 
-class Configurable(metaclass=ConfigurableMeta):
+class Configurable:
     '''
     An object whose behavior is configured via a JSON-object-like configuration
     passed as the first argument to its constructor
