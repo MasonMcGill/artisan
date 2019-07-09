@@ -11,7 +11,7 @@ from typing import (
 )
 from wsgiref.simple_server import make_server
 
-from ._artifacts import Artifact, set_root_dir
+from ._artifacts import Artifact, get_root_dir, set_root_dir
 from ._configurables import get_default_scope, get_schema, set_scope
 from ._http import wsgi_app
 from ._namespaces import Namespace
@@ -42,7 +42,7 @@ class Artisan:
                  root_dir: Union[str, Path, None] = None,
                  scope: Optional[Mapping[str, type]] = None,
                  build: Optional[Callable[[str, dict], None]] = None) -> None:
-        self._root_dir = Path('.') if root_dir is None else Path(root_dir)
+        self._root_dir = Path('.') if root_dir is None else resolve(root_dir)
         self._scope = None if scope is None else Namespace(scope)
         self._build = cast(Any, Artifact) if build is None else build
 
@@ -162,3 +162,10 @@ class ArtisanStack(threading.local):
         self.contents: List[Artisan] = [Artisan()]
 
 artisan_stack = ArtisanStack()
+
+
+def resolve(path: Union[str, Path]) -> Path:
+    path = Path(path)
+    if path.parts[0] == '@':
+        path = get_root_dir() / '/'.join(path.parts[1:])
+    return path.expanduser()
