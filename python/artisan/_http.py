@@ -8,14 +8,12 @@ TODO: Switch to the following HTTP endpoints:
 - `/x/y/z/_meta[depth=0]`: Artifact/file/array metadata
 '''
 
-from multiprocessing import cpu_count
 from pathlib import Path
 import re
 from typing import Dict, Iterator, Optional as Opt, cast
 
 import cbor2
 from falcon import API, HTTPStatus, Request, Response, HTTP_200, HTTP_404
-from gunicorn.app.base import BaseApplication as GunicornApp
 import h5py as h5
 from ruamel import yaml
 
