@@ -486,17 +486,30 @@ def _new_artifact_path(type_: type) -> Path:
 #-- I/O -----------------------------------------------------------------------
 
 def _read_h5(path: Path) -> ArrayFile:
-    f = h5.File(path, 'r', libver='latest', swmr=True)
-    return f['data']
+    try:
+        f = h5.File(path, 'r', libver='latest', swmr=True)
+        return f['data']
+    except OSError as e:
+        if 'errno = 2' in str(e): # 2 := File not found.
+            raise e
+        sleep(0.001)
+        return _read_h5(path)
 
 
 def _write_h5(path: Path, val: object) -> None:
     val = np.asarray(val)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    if path.is_dir(): path.rmdir()
-    elif path.exists(): path.unlink()
-    f = h5.File(path, libver='latest')
-    f.create_dataset('data', data=np.asarray(val))
+    try:
+        f = h5.File(path, libver='latest')
+        if f['data'].dtype != val.dtype:
+            raise ValueError()
+        f['data'][...] = val
+    except Exception:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        if path.is_dir(): path.rmdir()
+        elif path.exists(): path.unlink()
+        f = h5.File(path, libver='latest')
+        f['data'] = val
+        f.swmr_mode = True
 
 
 def _extend_h5(path: Path, val: object) -> None:
