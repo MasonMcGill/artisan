@@ -12,7 +12,9 @@ the following features:
 '''
 from itertools import chain
 import threading
-from typing import Dict, Iterator, Mapping, Optional, Tuple, Type
+from typing import (
+    DefaultDict, Dict, Iterator, Mapping, Optional, Tuple, Type
+)
 from typing_extensions import Protocol
 
 from ._namespaces import Namespace, namespacify
@@ -148,3 +150,13 @@ class Configurable:
         obj = object.__new__(cls)
         object.__setattr__(obj, 'conf', namespacify(conf))
         return obj
+
+#------------------------------------------------------------------------------
+# Monkey-patch `Configurable` to generate `Conf` types for its subclasses.
+
+class ConfAccessor:
+    def __get__(self, obj: object, type_: type) -> type:
+        type_.Conf = type('Conf', (Protocol,), {}) # type: ignore
+        return type_.Conf # type: ignore
+
+setattr(Configurable, 'Conf', ConfAccessor())
