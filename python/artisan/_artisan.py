@@ -97,8 +97,8 @@ class Artisan:
             )
         )
         artisan_stack.contents.append(top_artisan)
-        set_scope(top_artisan.scope)
-        set_root_dir(top_artisan.root_dir)
+        set_scope(top_artisan._scope)
+        set_root_dir(top_artisan._root_dir)
 
     @staticmethod
     def pop() -> 'Artisan':
