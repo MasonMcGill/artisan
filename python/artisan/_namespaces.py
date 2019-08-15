@@ -20,7 +20,10 @@ class Namespace(Dict[str, Any]):
         return list(set([*dict.__dir__(self), *dict.__iter__(self)]))
 
     def __getattr__(self, key: str) -> Any:
-        return dict.__getitem__(self, key)
+        try:
+            return dict.__getitem__(self, key)
+        except KeyError:
+            raise AttributeError(key)
 
     def __setattr__(self, key: str, val: object) -> None:
         dict.__setitem__(self, key, val)
@@ -38,7 +41,7 @@ class Namespace(Dict[str, Any]):
                 return '[' + ', '.join(map(single_line_repr, elem)) + ']'
             elif isinstance(elem, Namespace):
                 return (
-                    'Namespace('
+                    f'{self.__class__.__name__}('
                     + ', '.join(
                         f'{k}={single_line_repr(v)}'
                         for k, v in elem.items()
@@ -64,7 +67,7 @@ class Namespace(Dict[str, Any]):
                 )
             elif isinstance(elem, Namespace):
                 return (
-                    'Namespace(\n'
+                    f'{self.__class__.__name__}(\n'
                     + ' ' * (indent + 2)
                     + (',\n' + ' ' * (indent + 2)).join(
                         f'{k} = '
@@ -91,4 +94,7 @@ def namespacify(obj: object) -> object:
     elif isinstance(obj, Mapping):
         return Namespace({k: namespacify(obj[k]) for k in obj})
     else:
-        return namespacify(vars(obj))
+        try:
+            return namespacify(vars(obj))
+        except TypeError as e:
+            raise TypeError(f"{obj} of type {type(obj)} as {e}.")
