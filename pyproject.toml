@@ -1,3 +1,7 @@
+[build-system]
+requires = ["poetry>=1.0"]
+build-backend = "poetry.masonry.api"
+
 [tool.poetry]
 name = "artisan-builder"
 version = "0.3.0"
@@ -13,6 +17,7 @@ contextvars = { version = "^2.4", python = "~3.6" }
 cbor2 = "^5.2"
 numpy = "^1.19"
 typing-extensions = "^3.7"
+sphinx = { version = "^3", optional = true } # for ReadTheDocs
 
 [tool.poetry.dev-dependencies]
 gunicorn = "^20.0"
@@ -24,6 +29,9 @@ sphinx = "^3.2"
 sphinx-autobuild = "^2020.9"
 sphinx-rtd-theme = "^0.5"
 webtest = "^2.0"
+
+[tool.poetry.extras]
+docs = ["sphinx"] # for ReadTheDocs
 
 [tool.taskipy.tasks]
 test = "pytest"
