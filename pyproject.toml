@@ -1,0 +1,32 @@
+[tool.poetry]
+name = "artisan-builder"
+version = "0.3.0"
+description = "A build system for explainable science"
+license = "MIT"
+authors = ["Mason McGill <mmcgill@caltech.edu>"]
+readme = "readme.rst"
+packages = [{ include = "artisan" }]
+
+[tool.poetry.dependencies]
+python = "^3.6"
+contextvars = { version = "^2.4", python = "~3.6" }
+cbor2 = "^5.2"
+numpy = "^1.19"
+typing-extensions = "^3.7"
+
+[tool.poetry.dev-dependencies]
+gunicorn = "^20.0"
+hypothesis = "^5.37"
+mypy = "^0.790"
+pytest = "^6.1"
+taskipy = "^1.4"
+sphinx = "^3.2"
+sphinx-autobuild = "^2020.9"
+sphinx-rtd-theme = "^0.5"
+webtest = "^2.0"
+
+[tool.taskipy.tasks]
+test = "pytest"
+build-docs = "sphinx-build docs/ .html-docs/"
+serve-docs = "sphinx-autobuild docs/ .html-docs/ --watch artisan/"
+clean = "rm -rf .html-docs .hypothesis .mypy_cache .pytest_cache"
